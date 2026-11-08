@@ -1,6 +1,6 @@
 /* sw.js — ทำให้ติดตั้งเป็นแอปได้ และเปิดซ้ำได้แม้เน็ตช้า
  * ใช้ "เน็ตก่อน แล้วค่อยใช้ของที่เก็บไว้" เพื่อไม่ให้ค้างเวอร์ชันเก่าเวลาอัปเดตเกม */
-const CACHE = 'bamboo-creek-v6';
+const CACHE = 'bamboo-creek-v7';
 const SHELL = ['./', 'index.html', 'game.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -17,7 +17,7 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin || req.url.indexOf('/api/') >= 0) return;
   e.respondWith(
     fetch(req)
       .then(res => {

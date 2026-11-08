@@ -193,6 +193,42 @@ button{font-family:inherit}
 .go:active{transform:translateY(2px);box-shadow:0 1px 0 #8d2a22}
 .go:disabled{opacity:.6}
 #note{margin:0;font-size:12px;color:var(--muted);text-align:center;line-height:1.45}
+
+/* joystick */
+#joy{right:max(14px,calc(env(safe-area-inset-right) + 8px));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 70px);width:116px;height:116px;border-radius:50%;
+  pointer-events:auto;touch-action:none;z-index:6;background:radial-gradient(circle,rgba(255,255,255,.10),rgba(255,255,255,.04) 62%,rgba(255,255,255,.12) 64%,rgba(0,0,0,.16));
+  border:2px solid rgba(255,255,255,.35);box-shadow:0 0 0 3px rgba(0,0,0,.22),inset 0 0 18px rgba(0,0,0,.35);opacity:.78;user-select:none;-webkit-user-select:none}
+#joy.on{opacity:1}
+#joy:before,#joy:after{content:"";position:absolute;background:rgba(255,255,255,.22);left:50%;top:50%}
+#joy:before{width:2px;height:70%;transform:translate(-50%,-50%)}#joy:after{height:2px;width:70%;transform:translate(-50%,-50%)}
+#knob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 35% 30%,#fff6d0,#e8b94a 55%,#a9781f);border:2px solid #fff3c4;box-shadow:0 3px 6px rgba(0,0,0,.5);z-index:1}
+/* login */
+#join[hidden],#login[hidden],.lv[hidden]{display:none}
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:14px;
+  background:radial-gradient(ellipse at center,rgba(12,18,14,.35),rgba(8,12,10,.82));overflow:auto;touch-action:pan-y}
+.lv{display:flex;flex-direction:column;gap:10px}
+.inp{height:42px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);
+  font:16px var(--font);padding:0 12px;outline:none;min-width:0;width:100%;box-sizing:border-box;user-select:text;-webkit-user-select:text}
+.inp:focus{border-color:var(--accent2)}
+.lrow{display:flex;gap:9px;align-items:stretch}
+.lrow .cols{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+.lrow .go{width:78px;margin:0;height:auto;font-size:18px}
+.lsub{display:flex;justify-content:space-between;gap:8px}
+.lnk{background:none;border:0;color:var(--accent2);font:600 14px var(--font);padding:8px 4px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.gbtn{height:44px;border-radius:10px;border:1px solid rgba(255,255,255,.28);background:#fff;color:#2b2b2b;font:600 15px var(--font);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:10px}
+.gbtn b{font:700 18px Arial,sans-serif;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0);-webkit-background-clip:text;background-clip:text;color:transparent}
+#lgbox{display:flex;justify-content:center;min-height:44px;flex-direction:column}
+.lmsg{margin:0;min-height:18px;font-size:13px;line-height:1.4;text-align:center;color:#ffb4a8}
+.lmsg.ok{color:#9be7a8}
+.lh{margin:0;text-align:center;font-size:15px;font-weight:700;color:var(--text)}
+.codebox{font:700 24px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px;text-align:center;padding:14px 6px;border-radius:10px;
+  background:rgba(0,0,0,.35);border:1px dashed var(--accent2);color:var(--accent2);user-select:all;-webkit-user-select:all}
+.lp{margin:0;font-size:12.5px;color:var(--muted);line-height:1.5;text-align:center}
+#join.have .row,#join.have #nm{display:none}
+#joinwho{margin:0;text-align:center;font-size:18px;font-weight:700}
+#acct{margin:0;text-align:center;font-size:12px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -233,19 +269,73 @@ button{font-family:inherit}
   <div id="skills" class="panel" hidden></div>
   <div id="qwin" class="panel" hidden></div>
   <div id="dialog" class="panel" hidden></div>
+  <div id="joy" aria-label="จอยสติ๊ก"><i id="knob"></i></div>
   <div id="ghost" hidden></div>
   <div id="toast" class="panel" hidden></div>
 </div>
 
-<div id="join">
+<div id="login">
   <div class="card panel">
     <div class="brand"><b>ลำธารไผ่</b><span>Bamboo Creek Online</span></div>
+
+    <div class="lv" id="lv-main">
+      <form id="f-login" autocomplete="on">
+        <div class="lrow">
+          <div class="cols">
+            <input class="inp" id="lid" name="username" placeholder="ไอดี" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="16">
+            <input class="inp" id="lpw" name="password" type="password" placeholder="รหัสผ่าน" autocomplete="current-password" maxlength="64">
+          </div>
+          <button class="go" id="lplay" type="submit">เล่น</button>
+        </div>
+      </form>
+      <div class="lsub"><button class="lnk" id="lsign" type="button">สมัคร</button><button class="lnk" id="lforgot" type="button">ลืมรหัสผ่าน</button></div>
+      <div id="lgbox"><button class="gbtn" id="lg" type="button"><b>G</b>ล็อกอินด้วย Google</button></div>
+      <p class="lmsg" id="lmsg-main"></p>
+    </div>
+
+    <form class="lv" id="lv-signup" hidden autocomplete="on">
+      <p class="lh">สมัครบัญชีใหม่</p>
+      <input class="inp" id="sid" placeholder="ตั้งไอดี (a-z 0-9 _ , 3-16 ตัว)" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="16">
+      <input class="inp" id="spw" type="password" placeholder="ตั้งรหัสผ่าน (6 ตัวขึ้นไป)" autocomplete="new-password" maxlength="64">
+      <input class="inp" id="spw2" type="password" placeholder="ใส่รหัสผ่านอีกครั้ง" autocomplete="new-password" maxlength="64">
+      <button class="go" id="sgo" type="submit">สมัคร</button>
+      <button class="lnk" type="button" data-back>← กลับหน้าล็อกอิน</button>
+      <p class="lmsg" id="lmsg-signup"></p>
+    </form>
+
+    <div class="lv" id="lv-code" hidden>
+      <p class="lh" id="codeh">สมัครสำเร็จ!</p>
+      <p class="lp">นี่คือ <b>รหัสกู้คืน</b> ใช้ตอนลืมรหัสผ่าน — จดหรือแคปหน้าจอเก็บไว้ จะแสดงครั้งเดียวเท่านั้น</p>
+      <div class="codebox" id="codebox">XXXX-XXXX-XXXX</div>
+      <button class="lnk" id="codecopy" type="button">คัดลอกรหัส</button>
+      <button class="go" id="codego" type="button">จดไว้แล้ว ไปสร้างตัวละคร</button>
+    </div>
+
+    <form class="lv" id="lv-forgot" hidden autocomplete="off">
+      <p class="lh">ลืมรหัสผ่าน</p>
+      <p class="lp">ใส่ไอดี + รหัสกู้คืนที่ได้ตอนสมัคร แล้วตั้งรหัสผ่านใหม่</p>
+      <input class="inp" id="fid" placeholder="ไอดี" autocapitalize="none" spellcheck="false" maxlength="16">
+      <input class="inp" id="fcode" placeholder="รหัสกู้คืน XXXX-XXXX-XXXX" autocapitalize="characters" spellcheck="false" maxlength="14">
+      <input class="inp" id="fpw" type="password" placeholder="รหัสผ่านใหม่ (6 ตัวขึ้นไป)" autocomplete="new-password" maxlength="64">
+      <button class="go" id="fgo" type="submit">ตั้งรหัสผ่านใหม่</button>
+      <button class="lnk" type="button" data-back>← กลับหน้าล็อกอิน</button>
+      <p class="lmsg" id="lmsg-forgot"></p>
+    </form>
+    <p id="lnote" class="lp"></p>
+  </div>
+</div>
+
+<div id="join" hidden>
+  <div class="card panel">
+    <div class="brand"><b id="jt">สร้างตัวละคร</b><span id="acct"></span></div>
     <canvas id="pv" width="240" height="260"></canvas>
+    <p id="joinwho" hidden></p>
     <input id="nm" maxlength="12" placeholder="ชื่อตัวละคร" autocomplete="off">
     <div class="row"><label>ชุด</label><div id="sw-o" class="sw"></div></div>
     <div class="row"><label>ทรงผม</label><div id="sw-h" class="sw"></div></div>
     <div class="row"><label>สีผม</label><div id="sw-c" class="sw"></div></div>
-    <button id="go" class="go" type="button">เข้าสู่หมู่บ้าน</button>
+    <button id="go" class="go" type="button">สร้างตัวละคร</button>
+    <button id="lout" class="lnk" type="button">ออกจากระบบ</button>
     <p id="note"></p>
   </div>
 </div>
@@ -1023,6 +1113,7 @@ function iconEl(key, px) {
 /* ============================================================ UI: ถุง / คีย์ลัด / ร้านค้า / เควสต์ */
 const ITEM_ORDER = Object.keys(G.ITEMS);
 const qs = { list: [], done: [] };
+let pendingSkill = null;
 let bagSel = null, floating = null, curShop = null, nav = null, lastPtr = [200, 400], lastSig = '';
 const hb = new Array(12).fill(null);
 let hbSize = 12; try { const z = +localStorage.getItem('bc-hbsize'); if (z === 3 || z === 6 || z === 12) hbSize = z; } catch (e) {}
@@ -1037,9 +1128,9 @@ function statText(it) { return it.heal ? 'ฟื้นเลือด ' + it.hea
 const npcName = id => { const n = MAPS.village.npcs.find(q => q.id === id); return n ? n.name : id; };
 
 function saveLocal() {
-  if (mode !== 'demo') return;
+  if (mode !== 'demo' || !auth || auth.remote) return;
   const active = {}; for (const q of qs.list) if (q.st !== 'avail') active[q.id] = q.n;
-  try { localStorage.setItem('bc-save', JSON.stringify({ lv: my.lv, exp: my.exp, inv: my.inv, equip: my.equip, quests: { done: qs.done, active } })); } catch (e) {}
+  LDB.saveChar(auth.token, { lv: my.lv, exp: my.exp, inv: my.inv, equip: my.equip, quests: { done: qs.done, active } });
 }
 
 /* ---- ถุง ---- */
@@ -1118,13 +1209,46 @@ function hotbarTap(i) {
   const k = hb[i]; if (!k) return;
   if (k.indexOf('skill:') === 0) useSkillKey(k.slice(6)); else useItemKey(k);
 }
-function useSkillKey(id) {
+function skillReady(id, quiet) {
   const sk = G.SKILLS[id];
-  if (my.lv < sk.lv) { toast('ต้องเลเวล ' + sk.lv + ' ถึงจะใช้ ' + sk.name + ' ได้', 1800); return; }
-  const c = skCd[id]; if (c && c.end > performance.now()) return;
-  if (my.mp < sk.mp) { toast('MP ไม่พอ', 1200); return; }
-  net && net.send({ t: 'skill', id });
+  if (my.lv < sk.lv) { if (!quiet) toast('ต้องเลเวล ' + sk.lv + ' ถึงจะใช้ ' + sk.name + ' ได้', 1800); return false; }
+  const c = skCd[id]; if (c && c.end > performance.now()) return false;
+  if (my.mp < sk.mp) { if (!quiet) toast('MP ไม่พอ', 1200); return false; }
+  return true;
 }
+function nearestMon(me) {
+  let best = null, bd = 1e9;
+  for (const m of mons.values()) { if (m.dead) continue; const d = Math.hypot(m.x - me.x, m.y - me.y); if (d < bd) { bd = d; best = m; } }
+  return best ? { m: best, d: bd } : null;
+}
+/* แตะสกิลโจมตี → วิ่งไปหามอนที่ใกล้ที่สุดแล้วใช้เลย */
+function useSkillKey(id) {
+  if (!skillReady(id)) return;
+  if (id === 'mend') { net && net.send({ t: 'skill', id }); return; }
+  const me = ents.get(myId); if (!me || me.dead) return;
+  if (!nearestMon(me)) { toast(curZone === 'village' ? 'ในหมู่บ้านไม่มีมอนสเตอร์ — ไปทุ่งไผ่เขียวก่อนนะ' : 'ไม่เจอมอนสเตอร์ใกล้ ๆ', 2200); return; }
+  nav = null; pendingSkill = { id, t0: performance.now(), tid: null, sent: 0 };
+  skillTick();
+}
+function skillTick() {
+  const ps = pendingSkill; if (!ps || !joined) return;
+  const me = ents.get(myId), now = performance.now();
+  if (!me || me.dead || now - ps.t0 > 9000) { pendingSkill = null; return; }
+  let tm = ps.tid ? mons.get(ps.tid) : null; if (tm && tm.dead) tm = null;
+  if (!tm || ps.id === 'whirl') {
+    const n = nearestMon(me);
+    if (!n) { pendingSkill = null; return; }
+    if (!tm || n.m.id !== tm.id) tm = n.m;
+  }
+  if (ps.tid !== tm.id) { ps.tid = tm.id; ps.sent = now; myTarget = tm.id; net.send({ t: 'attack', id: tm.id }); return; }
+  if (now - ps.sent < 170) return;          // เซิร์ฟเวอร์จำกัดคำสั่งถี่ ๆ — เว้นจังหวะหลังสั่งโจมตี
+  let close = Math.hypot(tm.x - me.x, tm.y - me.y) < 2.0;
+  if (ps.id === 'whirl') { close = false; for (const m of mons.values()) if (!m.dead && Math.hypot(m.x - me.x, m.y - me.y) < 2.1) close = true; }
+  if (!close) return;
+  pendingSkill = null;
+  if (skillReady(ps.id)) net.send({ t: 'skill', id: ps.id });
+}
+setInterval(skillTick, 150);
 /* ---- สกิล ---- */
 function renderSkills() {
   const b = $('skills'); if (b.hidden) return;
@@ -1354,7 +1478,7 @@ function handle(m) {
       { const mm = ents.get(myId); if (mm) $('sname').textContent = mm.name; }
       $('join').hidden = true; $('hud').hidden = false; showBanner(curZone); restoreStatPos();
       try { if (!localStorage.getItem('bc-hint1')) { localStorage.setItem('bc-hint1', '1'); addLog('sys', '', 'เคล็ดลับ: กดค้างที่กรอบสถานะ (HP/MP/EXP) แล้วลากเพื่อย้ายตำแหน่งได้'); } } catch (e) {}
-      addLog('sys', '', 'แตะพื้นเพื่อเดิน · เดินผ่านประตูวาร์ปทางเหนือเพื่อไปล่ามอนสเตอร์ที่ทุ่งไผ่เขียว · แตะเจ้าของร้านเพื่อซื้อ/ขายของ');
+      addLog('sys', '', 'ลากจอยสติ๊กมุมขวาล่างหรือแตะพื้นเพื่อเดิน · เดินผ่านประตูวาร์ปทางเหนือเพื่อไปล่ามอนสเตอร์ที่ทุ่งไผ่เขียว · แตะเจ้าของร้านเพื่อซื้อ/ขายของ');
       break;
     }
     case 'join': {
@@ -1454,15 +1578,18 @@ function handle(m) {
       ring(m.x, m.y, '143,216,255');
       break;
     }
+    case 'kicked': kickedFlag = true; break;
+    case 'authfail': toast('เข้าสู่ระบบไม่สำเร็จ กรุณาล็อกอินใหม่', 4000); ldel(TOK_KEY); setTimeout(() => location.reload(), 1500); break;
     case 'full': toast('เซิร์ฟเวอร์เต็มแล้ว ลองใหม่ภายหลังนะ', 5000); $('go').disabled = false; break;
   }
 }
 
-function startDemo(name, look, notice) {
+let kickedFlag = false;
+function startDemo(name, look, notice, save) {
   mode = 'demo';
   const hub = new G.Hub();
   hub.trustSaves = true;
-  let save = null; try { save = JSON.parse(localStorage.getItem('bc-save') || 'null'); } catch (e) {}
+  save = save || null;
   const botDefs = [['มินตรา', 0, 1, 1], ['ลมหนาว', 1, 3, 0], ['เสี่ยวหลง', 4, 2, 0], ['ปลายฟ้า', 3, 0, 1], ['ไผ่เขียว', 2, 2, 3], ['แก้วใส', 0, 3, 2]];
   const lines = ['สวัสดีครับ!', 'ที่นี่สวยจังเลย', 'ใครรู้ทางไปสำนักยุทธ์บ้าง', 'โคมไฟสวยมากเลย', 'หิวแล้ว ไปโรงเตี๊ยมกัน', '555', 'มีใครไปเดินเล่นริมลำธารไหม', 'อากาศดีจัง'];
   const bots = botDefs.map(d => {
@@ -1501,19 +1628,19 @@ function startDemo(name, look, notice) {
   setTimeout(() => hub.message(bots[0].c, { t: 'chat', text: 'ยินดีต้อนรับ ' + G.cleanName(name) + '!' }), 1500);
   if (notice) toast(notice, 5000);
 }
-function startOnline(name, look) {
+function startOnline(name, look, token) {
   if (location.protocol === 'file:' || !location.host) { startDemo(name, look, 'เปิดจากไฟล์ตรง ๆ จึงเข้าโหมดเดโม · รัน node online-server.js เพื่อเล่นออนไลน์จริง'); return; }
   const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
   let opened = false, ws, done = false;
-  const fallback = () => { if (done) return; done = true; startDemo(name, look, 'ต่อเซิร์ฟเวอร์ไม่ได้ จึงเข้าโหมดเดโมแทน'); };
+  const fallback = () => { if (done) return; done = true; startDemo(name, look, 'ต่อเซิร์ฟเวอร์ไม่ได้ จึงเข้าโหมดเดโมแทน (ความคืบหน้าจะไม่ถูกบันทึก)'); };
   const to = setTimeout(() => { if (!opened) { try { ws.close(); } catch (e) {} fallback(); } }, 3500);
   try { ws = new WebSocket(url); } catch (e) { clearTimeout(to); fallback(); return; }
-  ws.onopen = () => { opened = true; clearTimeout(to); ws.send(JSON.stringify({ t: 'join', name, look })); };
+  ws.onopen = () => { opened = true; clearTimeout(to); ws.send(JSON.stringify({ t: 'join', token })); };
   ws.onmessage = e => { try { handle(JSON.parse(e.data)); } catch (err) {} };
   ws.onerror = () => {};
   ws.onclose = () => {
     if (!opened) { clearTimeout(to); fallback(); return; }
-    if (joined) { $('stxt').textContent = 'หลุดการเชื่อมต่อ · แตะเพื่อเข้าใหม่'; $('dot').className = 'demo'; $('status').style.pointerEvents = 'auto'; $('status').onclick = () => location.reload(); }
+    if (joined) { $('stxt').textContent = kickedFlag ? 'มีการเข้าสู่ระบบจากที่อื่น · แตะเพื่อเข้าใหม่' : 'หลุดการเชื่อมต่อ · แตะเพื่อเข้าใหม่'; $('dot').className = 'demo'; $('status').style.pointerEvents = 'auto'; $('status').onclick = () => location.reload(); }
   };
   net = { send(o) { if (ws.readyState === 1) ws.send(JSON.stringify(o)); }, close() { try { ws.close(); } catch (e) {} } };
   mode = 'online';
@@ -1532,7 +1659,7 @@ cv.addEventListener('pointerup', e => {
   down = null;
   if (d > 10 || dt > 700) return;
   if (floating) { cancelFloat(); return; }
-  nav = null;
+  nav = null; pendingSkill = null;
   if (curZone === 'village') {
     for (const [nid, act] of [['n2', 'potion'], ['n5', 'smith'], ['n1', 'talk'], ['n3', 'talk'], ['n4', 'talk']]) {
       const sn = ents.get(nid); if (!sn) continue;
@@ -1560,6 +1687,42 @@ cv.addEventListener('pointerup', e => {
   net.send({ t: 'move', x: t[0], y: t[1] });
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 });
+/* ---- จอยสติ๊ก: ลากแล้วเดิน ---- */
+const joy = { on: false, id: -1, dx: 0, dy: 0 };
+const jEl = $('joy'), jKnob = $('knob');
+function joyMove(e) {
+  const r = jEl.getBoundingClientRect(), R = r.width / 2 - 8;
+  let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const len = Math.hypot(dx, dy);
+  if (len > R) { dx = dx / len * R; dy = dy / len * R; }
+  joy.dx = dx / R; joy.dy = dy / R;
+  jKnob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+}
+function joyPush() {
+  if (!joy.on || !joined || !net) return;
+  const m = Math.hypot(joy.dx, joy.dy); if (m < 0.22) return;
+  const me = ents.get(myId); if (!me || me.dead) return;
+  // ทิศบนจอ → ทิศบนพื้น (มุมมองไอโซเมตริก)
+  let tx = joy.dy / 32 + joy.dx / 64, ty = joy.dy / 32 - joy.dx / 64;
+  const l = Math.hypot(tx, ty) || 1; tx /= l; ty /= l;
+  net.send({ t: 'move', x: clamp(me.x + tx * 3, 0.6, MW - 0.6), y: clamp(me.y + ty * 3, 0.6, MH - 0.6) });
+}
+jEl.addEventListener('pointerdown', e => {
+  if (!joined) return;
+  e.preventDefault(); joy.on = true; joy.id = e.pointerId; jEl.classList.add('on');
+  try { jEl.setPointerCapture(e.pointerId); } catch (err) {}
+  if (floating) cancelFloat();
+  nav = null; pendingSkill = null; myTarget = null; marker = null;
+  joyMove(e); joyPush();
+});
+jEl.addEventListener('pointermove', e => { if (joy.on && e.pointerId === joy.id) joyMove(e); });
+function joyEnd(e) {
+  if (!joy.on || e.pointerId !== joy.id) return;
+  joy.on = false; joy.dx = joy.dy = 0; jKnob.style.transform = ''; jEl.classList.remove('on');
+  const me = ents.get(myId); if (me && net) net.send({ t: 'move', x: me.x, y: me.y });
+}
+jEl.addEventListener('pointerup', joyEnd); jEl.addEventListener('pointercancel', joyEnd);
+setInterval(joyPush, 110);
 cv.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') hover = screenToTile(e.clientX, e.clientY); });
 cv.addEventListener('pointerleave', () => { hover = null; });
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom = clamp(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.5, 1.8); }, { passive: false });
@@ -1904,8 +2067,7 @@ setInterval(updateHud, 250);
 
 /* ============================================================ join screen */
 const sel = { o: Math.floor(Math.random() * 6), h: Math.floor(Math.random() * 4), c: Math.floor(Math.random() * 3) };
-try { const s = JSON.parse(localStorage.getItem('bc-look') || 'null'); if (s) { sel.o = s.o | 0; sel.h = s.h | 0; sel.c = s.c | 0; $('nm').value = String(s.n || '').slice(0, 12); } } catch (e) {}
-if (!$('nm').value) $('nm').value = ['ไผ่', 'ลม', 'เมฆ', 'ฟ้า', 'ดาว', 'หมอก'][Math.floor(Math.random() * 6)] + (10 + Math.floor(Math.random() * 90));
+$('nm').value = ['ไผ่', 'ลม', 'เมฆ', 'ฟ้า', 'ดาว', 'หมอก'][Math.floor(Math.random() * 6)] + (10 + Math.floor(Math.random() * 90));
 function drawPreview(c, scale, dir, t, look, yBase) {
   const g = c.getContext('2d'), prev = ctx;
   ctx = g; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
@@ -1928,15 +2090,218 @@ function refreshSel() {
   hairBtns.forEach((c, i) => drawPreview(c, 1.95, 2, 0, { o: sel.o, h: i, c: sel.c }, 128));
 }
 buildSwatches();
-$('note').textContent = DEMO_ONLY
-  ? 'โหมดเดโม — คนอื่นในหมู่บ้านเป็นบอทจำลอง · ตัวเกมออนไลน์จริงรันด้วย node online-server.js'
-  : 'เชื่อมต่อเซิร์ฟเวอร์เดียวกับหน้านี้ — ทุกคนที่เปิดหน้านี้จะเห็นกัน';
-$('go').onclick = () => {
-  const name = G.cleanName($('nm').value), look = { o: sel.o, h: sel.h, c: sel.c };
-  try { localStorage.setItem('bc-look', JSON.stringify({ n: name, o: sel.o, h: sel.h, c: sel.c })); } catch (e) {}
-  $('go').disabled = true; $('go').textContent = 'กำลังเข้าหมู่บ้าน…';
-  if (DEMO_ONLY) startDemo(name, look); else startOnline(name, look);
+
+/* ============================================================ accounts (ล็อกอิน/สมัคร) */
+const TOK_KEY = 'bc-tok';
+const lget = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lset = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const ldel = k => { try { localStorage.removeItem(k); } catch (e) {} };
+let auth = null;      // { token, me, remote }
+let remote = false;
+
+/* โหมดเดโม: บัญชีเก็บในเครื่องนี้ (localStorage) — ใช้ทดลองเท่านั้น ไม่ปลอดภัยเท่าเซิร์ฟเวอร์จริง */
+const LDB = {
+  d: null,
+  load() {
+    if (!this.d) { try { const x = JSON.parse(lget('bc-acc') || 'null'); if (x && x.users) this.d = x; } catch (e) {} if (!this.d) this.d = { users: {} }; }
+    return this.d;
+  },
+  store() { lset('bc-acc', JSON.stringify(this.d)); },
+  saveChar(token, save) { const d = this.load(), id = String(token).slice(2), u = d.users[id]; if (u && u.char) { u.char.save = save; this.store(); } }
 };
+async function sha(s) {
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bc|' + s)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
+  catch (e) { let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); } return (h1 >>> 0).toString(16) + (h2 >>> 0).toString(16) + s.length; }
+}
+const newCode = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 12; i++) s += a[Math.floor(Math.random() * a.length)]; return s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8); };
+const profileOf = id => { const u = LDB.load().users[id]; return { id, char: u.char ? { name: u.char.name, look: u.char.look, lv: (u.char.save && u.char.save.lv) || 1 } : null }; };
+async function localApi(route, b) {
+  const d = LDB.load(), id = String(b.id || '').trim().toLowerCase();
+  const tokId = t => { const k = typeof t === 'string' && t.startsWith('L:') ? t.slice(2) : ''; return d.users[k] ? k : null; };
+  switch (route) {
+    case 'signup': {
+      if (!/^[a-z0-9_]{3,16}$/.test(id)) return { err: 'ไอดีต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว' };
+      if (typeof b.pw !== 'string' || b.pw.length < 6 || b.pw.length > 64) return { err: 'รหัสผ่านต้องยาว 6-64 ตัว' };
+      if (d.users[id]) return { err: 'ไอดีนี้มีคนใช้แล้ว' };
+      const code = newCode();
+      d.users[id] = { hash: await sha(id + ':' + b.pw), rhash: await sha(id + ':' + code), char: null }; LDB.store();
+      return { ok: 1, token: 'L:' + id, recovery: code, me: profileOf(id) };
+    }
+    case 'login': {
+      const u = d.users[id];
+      if (!u || u.hash !== await sha(id + ':' + b.pw)) return { err: 'ไอดีหรือรหัสผ่านไม่ถูกต้อง' };
+      return { ok: 1, token: 'L:' + id, me: profileOf(id) };
+    }
+    case 'forgot': {
+      const u = d.users[id], code = String(b.code || '').trim().toUpperCase();
+      if (typeof b.pw !== 'string' || b.pw.length < 6 || b.pw.length > 64) return { err: 'รหัสผ่านใหม่ต้องยาว 6-64 ตัว' };
+      if (!u || u.rhash !== await sha(id + ':' + code)) return { err: 'ไอดีหรือรหัสกู้คืนไม่ถูกต้อง' };
+      const nc = newCode(); u.hash = await sha(id + ':' + b.pw); u.rhash = await sha(id + ':' + nc); LDB.store();
+      return { ok: 1, token: 'L:' + id, recovery: nc, me: profileOf(id) };
+    }
+    case 'google': return { err: 'ล็อกอินด้วย Google ใช้ได้เมื่อรันเซิร์ฟเวอร์ออนไลน์จริงและตั้งค่า Google ไว้' };
+    case 'me': { const k = tokId(b.token); return k ? { ok: 1, me: profileOf(k) } : { err: 'หมดเวลาเข้าสู่ระบบ', relogin: 1 }; }
+    case 'char': {
+      const k = tokId(b.token); if (!k) return { err: 'หมดเวลาเข้าสู่ระบบ', relogin: 1 };
+      if (d.users[k].char) return { err: 'บัญชีนี้มีตัวละครแล้ว' };
+      const name = G.cleanName(b.name);
+      if (name.length < 2) return { err: 'ชื่อตัวละครสั้นเกินไป (อย่างน้อย 2 ตัว)' };
+      d.users[k].char = { name, look: G.cleanLook(b.look), save: null }; LDB.store();
+      return { ok: 1, me: profileOf(k) };
+    }
+  }
+  return { err: 'ไม่รู้จักคำสั่งนี้' };
+}
+async function remoteApi(route, b) {
+  try {
+    const r = await fetch('/api/' + route, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+    return await r.json();
+  } catch (e) { return { err: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง' }; }
+}
+const api = (route, b) => (remote ? remoteApi : localApi)(route, b);
+
+const LVIEWS = ['main', 'signup', 'code', 'forgot'];
+function showLogin(v) {
+  $('login').hidden = false; $('join').hidden = true;
+  for (const k of LVIEWS) $('lv-' + k).hidden = k !== v;
+  for (const k of ['main', 'signup', 'forgot']) setMsg(k, '');
+}
+function setMsg(k, text, ok) { const e = $('lmsg-' + k); if (!e) return; e.textContent = text || ''; e.className = 'lmsg' + (ok ? ' ok' : ''); }
+function busy(btn, on, label) { btn.disabled = on; if (label) btn.textContent = on ? '…' : label; }
+
+function gotoChar() {
+  $('login').hidden = true; $('join').hidden = false;
+  const ch = auth.me.char;
+  $('acct').textContent = 'บัญชี: ' + auth.me.id;
+  $('join').classList.toggle('have', !!ch);
+  $('joinwho').hidden = !ch;
+  if (ch) {
+    sel.o = ch.look.o | 0; sel.h = ch.look.h | 0; sel.c = ch.look.c | 0;
+    $('jt').textContent = 'ตัวละครของคุณ'; $('joinwho').textContent = ch.name + (ch.lv > 1 ? ' · Lv ' + ch.lv : '');
+    $('go').textContent = 'เข้าสู่หมู่บ้าน';
+  } else {
+    $('jt').textContent = 'สร้างตัวละคร'; $('go').textContent = 'สร้างตัวละคร';
+  }
+  $('go').disabled = false;
+  refreshSel();
+  $('note').textContent = '';
+}
+function loggedIn(res) {
+  auth = { token: res.token, me: res.me, remote };
+  lset(TOK_KEY, res.token);
+  if (res.recovery) { $('codebox').textContent = res.recovery; $('codeh').textContent = res.fresh ? 'สมัครสำเร็จ!' : 'ตั้งรหัสผ่านใหม่แล้ว'; showLogin('code'); }
+  else gotoChar();
+}
+
+$('f-login').onsubmit = async e => {
+  e.preventDefault();
+  const id = $('lid').value.trim(), pw = $('lpw').value;
+  if (!id || !pw) { setMsg('main', 'ใส่ไอดีและรหัสผ่านก่อนนะ'); return; }
+  busy($('lplay'), true, 'เล่น'); setMsg('main', '');
+  const r = await api('login', { id, pw });
+  busy($('lplay'), false, 'เล่น');
+  if (r.err) { setMsg('main', r.err); return; }
+  $('lpw').value = ''; loggedIn(r);
+};
+$('lsign').onclick = () => { showLogin('signup'); };
+$('lforgot').onclick = () => { showLogin('forgot'); $('fid').value = $('lid').value; };
+document.querySelectorAll('[data-back]').forEach(b => { b.onclick = () => showLogin('main'); });
+$('lv-signup').onsubmit = async e => {
+  e.preventDefault();
+  const id = $('sid').value.trim().toLowerCase(), pw = $('spw').value;
+  if (pw !== $('spw2').value) { setMsg('signup', 'รหัสผ่านสองช่องไม่ตรงกัน'); return; }
+  busy($('sgo'), true, 'สมัคร'); setMsg('signup', '');
+  const r = await api('signup', { id, pw });
+  busy($('sgo'), false, 'สมัคร');
+  if (r.err) { setMsg('signup', r.err); return; }
+  $('spw').value = $('spw2').value = ''; r.fresh = true; loggedIn(r);
+};
+$('lv-forgot').onsubmit = async e => {
+  e.preventDefault();
+  busy($('fgo'), true, 'ตั้งรหัสผ่านใหม่'); setMsg('forgot', '');
+  const r = await api('forgot', { id: $('fid').value.trim(), code: $('fcode').value, pw: $('fpw').value });
+  busy($('fgo'), false, 'ตั้งรหัสผ่านใหม่');
+  if (r.err) { setMsg('forgot', r.err); return; }
+  $('fpw').value = $('fcode').value = ''; loggedIn(r);
+};
+$('codego').onclick = () => { if (auth) gotoChar(); else showLogin('main'); };
+$('codecopy').onclick = () => {
+  const t = $('codebox').textContent, done = () => { $('codecopy').textContent = 'คัดลอกแล้ว ✓'; };
+  try { navigator.clipboard.writeText(t).then(done, () => {}); } catch (e) {}
+  try { const r = document.createRange(); r.selectNodeContents($('codebox')); const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(r); } catch (e) {}
+};
+$('lout').onclick = () => { auth = null; ldel(TOK_KEY); $('lpw').value = ''; showLogin('main'); };
+
+let gReady = false;
+function setupGoogle(clientId) {
+  const sc = document.createElement('script');
+  sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
+  sc.onload = () => {
+    try {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async resp => { const r = await api('google', { credential: resp.credential }); if (r.err) { setMsg('main', r.err); return; } loggedIn(r); }
+      });
+      const box = $('lgbox'); box.textContent = '';
+      window.google.accounts.id.renderButton(box, { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill', width: 260 });
+      gReady = true;
+    } catch (e) {}
+  };
+  document.head.appendChild(sc);
+}
+$('lg').onclick = () => {
+  setMsg('main', remote ? 'ผู้ดูแลยังไม่ได้เปิดใช้ล็อกอินด้วย Google (ตั้ง GOOGLE_CLIENT_ID ที่เซิร์ฟเวอร์)' : 'ล็อกอินด้วย Google ใช้ได้เมื่อรันเซิร์ฟเวอร์ออนไลน์จริง — โหมดนี้ใช้ไอดี/รหัสผ่านไปก่อนนะ');
+};
+
+$('go').onclick = async () => {
+  if (!auth) { showLogin('main'); return; }
+  const btn = $('go');
+  btn.disabled = true;
+  if (!auth.me.char) {
+    const name = G.cleanName($('nm').value), look = { o: sel.o, h: sel.h, c: sel.c };
+    if (name.length < 2) { $('note').textContent = 'ตั้งชื่อตัวละครอย่างน้อย 2 ตัวอักษรนะ'; btn.disabled = false; return; }
+    btn.textContent = 'กำลังสร้าง…';
+    const r = await api('char', { token: auth.token, name, look });
+    if (r.err) {
+      $('note').textContent = r.err; btn.disabled = false; btn.textContent = 'สร้างตัวละคร';
+      if (r.relogin) { setTimeout(() => { auth = null; ldel(TOK_KEY); showLogin('main'); setMsg('main', r.err); }, 900); }
+      return;
+    }
+    auth.me = r.me;
+  }
+  btn.textContent = 'กำลังเข้าหมู่บ้าน…';
+  const ch = auth.me.char;
+  if (DEMO_ONLY || !remote) {
+    const u = LDB.load().users[auth.me.id];
+    startDemo(ch.name, ch.look, null, u && u.char && u.char.save);
+  } else startOnline(ch.name, ch.look, auth.token);
+};
+
+async function initAuth() {
+  $('lnote').textContent = 'กำลังเชื่อมต่อ…';
+  let cfg = null;
+  if (!DEMO_ONLY && /^https?:$/.test(location.protocol)) {
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 3500);
+      const r = await fetch('/api/config', { signal: ctl.signal, cache: 'no-store' });
+      clearTimeout(t);
+      const j = await r.json(); if (j && j.ok) cfg = j;
+    } catch (e) {}
+  }
+  remote = !!cfg;
+  $('lnote').textContent = remote
+    ? 'เชื่อมต่อเซิร์ฟเวอร์เดียวกับหน้านี้ — ทุกคนที่เล่นอยู่จะเห็นกัน'
+    : 'โหมดเดโม — บัญชีและความคืบหน้าเก็บในเครื่องนี้ · คนอื่นในหมู่บ้านเป็นบอทจำลอง · ออนไลน์จริงต้องรัน node online-server.js';
+  if (remote && cfg.google) setupGoogle(cfg.google);
+  const tok = lget(TOK_KEY);
+  if (tok) {
+    const r = await api('me', { token: tok });
+    if (r.ok) { auth = { token: tok, me: r.me, remote }; gotoChar(); return; }
+    ldel(TOK_KEY);
+  }
+  showLogin('main');
+}
+initAuth();
 
 /* ============================================================ main loop */
 function setZone(name) {
@@ -1957,7 +2322,7 @@ requestAnimationFrame(loop);
 window.__bc = {
   ents, mons, my, get map() { return map; }, get zone() { return curZone; }, get zoom() { return zoom; }, set zoom(v) { zoom = v; },
   setMode(m, snap) { timeMode = m; if (snap) { const h = targetHour(); tintNow = tintAt(h); LIGHTS = lightsAt(h); } },
-  cam, get me() { return ents.get(myId); }, get joined() { return joined; }, get mode() { return mode; },
+  cam, get me() { return ents.get(myId); }, get pending() { return pendingSkill; }, get joined() { return joined; }, get mode() { return mode; },
   toScreen(x, y) { const p = proj(x, y); return [S2X(p[0]), S2Y(p[1])]; }
 };
 })();

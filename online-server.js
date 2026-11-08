@@ -21,6 +21,162 @@ const WS_GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
 const hub = new Game.Hub();
 
+/* ------------------------------------------------------------------ บัญชีผู้เล่น
+ * เก็บใน DATA_DIR/accounts.json (ค่าเริ่มต้น ./data) — รหัสผ่านเก็บแบบ scrypt ไม่เก็บตัวจริง
+ * ล็อกอินสำเร็จได้ token ที่เซ็นด้วย HMAC (อายุ 30 วัน) ใช้ยืนยันตอนเข้า WebSocket
+ * Google: ตั้ง GOOGLE_CLIENT_ID แล้วปุ่ม G จะใช้งานได้
+ */
+const https = require('https');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const DB_FILE = path.join(DATA_DIR, 'accounts.json');
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const TOKEN_TTL = 30 * 24 * 3600 * 1000;
+let db = { secret: crypto.randomBytes(32).toString('hex'), users: {} };
+try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
+try { const d = JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); if (d && d.users) db = Object.assign(db, d); } catch (e) {}
+let dirty = true;
+function flush() {
+  if (!dirty) return;
+  dirty = false;
+  try { fs.writeFileSync(DB_FILE + '.tmp', JSON.stringify(db)); fs.renameSync(DB_FILE + '.tmp', DB_FILE); }
+  catch (e) { dirty = true; console.error('บันทึกบัญชีไม่ได้:', e.message); }
+}
+setInterval(flush, 8000).unref();
+
+const scrypt = (pw, salt) => new Promise((ok, no) => crypto.scrypt(pw, salt, 32, (e, k) => (e ? no(e) : ok(k.toString('hex')))));
+const safeEq = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
+const signTok = key => {
+  const body = Buffer.from(JSON.stringify({ k: key, e: Date.now() + TOKEN_TTL })).toString('base64url');
+  return body + '.' + crypto.createHmac('sha256', db.secret).update(body).digest('base64url');
+};
+function verifyTok(tok) {
+  if (typeof tok !== 'string' || tok.length > 400) return null;
+  const [body, sig] = tok.split('.');
+  if (!body || !sig) return null;
+  const good = crypto.createHmac('sha256', db.secret).update(body).digest('base64url');
+  if (!safeEq(sig, good)) return null;
+  try { const o = JSON.parse(Buffer.from(body, 'base64url').toString()); return o.e > Date.now() && db.users[o.k] ? o.k : null; } catch (e) { return null; }
+}
+function newRecovery() {
+  const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = ''; for (let i = 0; i < 12; i++) s += a[crypto.randomInt(a.length)];
+  return s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8);
+}
+const normId = s => String(s || '').trim().toLowerCase();
+const idOk = s => /^[a-z0-9_]{3,16}$/.test(s);
+const pwOk = s => typeof s === 'string' && s.length >= 6 && s.length <= 64;
+const profile = k => { const u = db.users[k]; return { id: u.label || k, char: u.char ? { name: u.char.name, look: u.char.look, lv: (u.char.save && u.char.save.lv) || 1 } : null }; };
+const nameTaken = (name, exceptKey) => Object.keys(db.users).some(k => k !== exceptKey && db.users[k].char && db.users[k].char.name.toLowerCase() === name.toLowerCase());
+
+const hits = new Map();   // ip -> [เวลา...]
+const fails = new Map();  // id -> {n, until}
+function limited(ip) {
+  const now = Date.now(), a = (hits.get(ip) || []).filter(t => now - t < 60000);
+  a.push(now); hits.set(ip, a);
+  return a.length > 30;
+}
+setInterval(() => { const now = Date.now(); for (const [k, a] of hits) if (!a.some(t => now - t < 60000)) hits.delete(k); for (const [k, f] of fails) if (f.until < now) fails.delete(k); }, 60000).unref();
+function locked(id) { const f = fails.get(id); return !!f && f.n >= 8 && f.until > Date.now(); }
+function failed(id) { const f = fails.get(id) || { n: 0, until: 0 }; f.n++; f.until = Date.now() + 5 * 60000; fails.set(id, f); }
+
+function googleVerify(cred) {
+  return new Promise(ok => {
+    if (!GOOGLE_CLIENT_ID || typeof cred !== 'string' || cred.length > 4000) return ok(null);
+    https.get('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(cred), r => {
+      let d = ''; r.on('data', c => { d += c; if (d.length > 8000) r.destroy(); });
+      r.on('end', () => { try { const o = JSON.parse(d); ok(o && o.aud === GOOGLE_CLIENT_ID && o.sub && (o.email_verified === true || o.email_verified === 'true') ? o : null); } catch (e) { ok(null); } });
+    }).on('error', () => ok(null)).setTimeout(6000, function () { this.destroy(); });
+  });
+}
+
+async function api(route, b) {
+  switch (route) {
+    case 'config': return { ok: 1, google: GOOGLE_CLIENT_ID || null };
+    case 'signup': {
+      const id = normId(b.id);
+      if (!idOk(id)) return { err: 'ไอดีต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว' };
+      if (!pwOk(b.pw)) return { err: 'รหัสผ่านต้องยาว 6-64 ตัว' };
+      if (db.users[id]) return { err: 'ไอดีนี้มีคนใช้แล้ว' };
+      if (Object.keys(db.users).length >= 20000) return { err: 'ระบบรับสมัครเต็มชั่วคราว' };
+      const salt = crypto.randomBytes(16).toString('hex'), rsalt = crypto.randomBytes(16).toString('hex'), code = newRecovery();
+      db.users[id] = { salt, hash: await scrypt(b.pw, salt), rsalt, rhash: await scrypt(code, rsalt), char: null, made: Date.now() };
+      dirty = true;
+      return { ok: 1, token: signTok(id), recovery: code, me: profile(id) };
+    }
+    case 'login': {
+      const id = normId(b.id);
+      if (locked(id)) return { err: 'ใส่ผิดหลายครั้ง รอ 5 นาทีแล้วลองใหม่' };
+      const u = db.users[id];
+      if (!u || !u.hash || !pwOk(b.pw) || !safeEq(await scrypt(b.pw, u.salt), u.hash)) { failed(id); return { err: 'ไอดีหรือรหัสผ่านไม่ถูกต้อง' }; }
+      fails.delete(id);
+      return { ok: 1, token: signTok(id), me: profile(id) };
+    }
+    case 'forgot': {
+      const id = normId(b.id);
+      if (locked(id)) return { err: 'ใส่ผิดหลายครั้ง รอ 5 นาทีแล้วลองใหม่' };
+      const u = db.users[id], code = String(b.code || '').trim().toUpperCase();
+      if (!pwOk(b.pw)) return { err: 'รหัสผ่านใหม่ต้องยาว 6-64 ตัว' };
+      if (!u || !u.rhash || !safeEq(await scrypt(code, u.rsalt), u.rhash)) { failed(id); return { err: 'ไอดีหรือรหัสกู้คืนไม่ถูกต้อง' }; }
+      fails.delete(id);
+      const nc = newRecovery();
+      u.salt = crypto.randomBytes(16).toString('hex'); u.hash = await scrypt(b.pw, u.salt);
+      u.rsalt = crypto.randomBytes(16).toString('hex'); u.rhash = await scrypt(nc, u.rsalt);
+      dirty = true;
+      return { ok: 1, token: signTok(id), recovery: nc, me: profile(id) };
+    }
+    case 'google': {
+      const g = await googleVerify(b.credential);
+      if (!g) return { err: 'ล็อกอินด้วย Google ไม่สำเร็จ' };
+      const key = 'g' + g.sub;
+      if (!db.users[key]) { db.users[key] = { label: String(g.name || g.email || 'Google').slice(0, 24), char: null, made: Date.now() }; dirty = true; }
+      return { ok: 1, token: signTok(key), me: profile(key) };
+    }
+    case 'me': {
+      const k = verifyTok(b.token);
+      return k ? { ok: 1, me: profile(k) } : { err: 'หมดเวลาเข้าสู่ระบบ ล็อกอินใหม่อีกครั้ง', relogin: 1 };
+    }
+    case 'char': {
+      const k = verifyTok(b.token);
+      if (!k) return { err: 'หมดเวลาเข้าสู่ระบบ ล็อกอินใหม่อีกครั้ง', relogin: 1 };
+      const u = db.users[k];
+      if (u.char) return { err: 'บัญชีนี้มีตัวละครแล้ว' };
+      const name = Game.cleanName(b.name);
+      if (name.length < 2) return { err: 'ชื่อตัวละครสั้นเกินไป (อย่างน้อย 2 ตัว)' };
+      if (nameTaken(name, k)) return { err: 'ชื่อนี้มีคนใช้แล้ว' };
+      u.char = { name, look: Game.cleanLook(b.look), save: null };
+      dirty = true;
+      return { ok: 1, me: profile(k) };
+    }
+  }
+  return { err: 'ไม่รู้จักคำสั่งนี้' };
+}
+
+function handleApi(req, res, route) {
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const out = (code, o) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(o)); };
+  if (limited(ip)) return out(429, { err: 'ลองถี่เกินไป รอสักครู่นะ' });
+  if (route === 'config' && req.method === 'GET') return out(200, { ok: 1, google: GOOGLE_CLIENT_ID || null });
+  if (req.method !== 'POST') return out(405, { err: 'method' });
+  let body = '', over = false;
+  req.on('data', c => { body += c; if (body.length > 4096) { over = true; req.destroy(); } });
+  req.on('end', () => {
+    if (over) return;
+    let b; try { b = JSON.parse(body || '{}'); } catch (e) { return out(400, { err: 'ข้อมูลไม่ถูกต้อง' }); }
+    if (!b || typeof b !== 'object') return out(400, { err: 'ข้อมูลไม่ถูกต้อง' });
+    api(route, b).then(r => out(r.err ? 400 : 200, r), () => out(500, { err: 'เซิร์ฟเวอร์ขัดข้อง ลองใหม่อีกครั้ง' }));
+  });
+}
+
+hub.auth = m => {
+  const k = verifyTok(m.token);
+  const u = k && db.users[k];
+  return u && u.char ? { key: k, name: u.char.name, look: u.char.look, save: u.char.save } : null;
+};
+hub.onLeave = (c, save) => { if (c.acct && db.users[c.acct] && db.users[c.acct].char) { db.users[c.acct].char.save = save; dirty = true; } };
+setInterval(() => {   // เซฟผู้เล่นที่ออนไลน์อยู่ทุก 30 วินาที กันเซิร์ฟเวอร์ดับกะทันหัน
+  for (const c of hub.conns) if (c.player && c.acct) hub.onLeave(c, hub.world.saveOf(c.player));
+}, 30000).unref();
+
 /* ------------------------------------------------------------- static files */
 const FILES = {
   '/': ['index.html', 'text/html; charset=utf-8'],
@@ -40,6 +196,7 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ ok: true, players: hub.world.players.size }));
     return;
   }
+  if (url.startsWith('/api/')) { handleApi(req, res, url.slice(5)); return; }
   const f = FILES[url];
   if (!f || (req.method !== 'GET' && req.method !== 'HEAD')) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
@@ -113,6 +270,7 @@ server.on('upgrade', (req, socket) => {
     socket.write(encodeFrame(Buffer.from(str), 0x1));
   };
   const conn = hub.connect(send);
+  conn.kick = () => { end(4001); socket.destroy(); };
 
   function end(code) {
     if (closed) return;
@@ -174,5 +332,9 @@ server.listen(PORT, () => {
   console.log('Bamboo Creek พร้อมแล้ว  →  http://localhost:' + PORT);
 });
 
-process.on('SIGINT', () => process.exit(0));
-process.on('SIGTERM', () => process.exit(0));
+function bye() {
+  for (const c of Array.from(hub.conns)) hub.drop(c);   // บันทึกตัวละครทุกคนก่อนปิด
+  flush(); process.exit(0);
+}
+process.on('SIGINT', bye);
+process.on('SIGTERM', bye);

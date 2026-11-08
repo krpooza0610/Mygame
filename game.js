@@ -478,6 +478,11 @@
       return p;
     }
     removePlayer(id) { this.players.delete(id); }
+    saveOf(p) {
+      const active = {};
+      for (const id of Object.keys(p.quests)) active[id] = p.quests[id].n | 0;
+      return { lv: p.lv, exp: p.exp, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip), quests: { done: Object.keys(p.qdone), active } };
+    }
     meMsg(p) { return { t: 'me', lv: p.lv, exp: p.exp, next: nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp, atk: p.atk, def: p.def, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip) }; }
     tellMe(p) { this.events.push(Object.assign({ _to: p.id }, this.meMsg(p))); }
     note(p, text) { this.events.push({ _to: p.id, t: 'note', text }); }
@@ -870,6 +875,8 @@
     constructor() {
       this.world = new World(); this.conns = new Set(); this.byPlayer = new Map();
       this.n = 0; this.trustSaves = false;
+      this.auth = null;      // (msg) => {key,name,look,save} | null  — เซิร์ฟเวอร์ออนไลน์ใช้ตรวจ token
+      this.onLeave = null;   // (conn, save) => void — เซิร์ฟเวอร์ใช้บันทึกตัวละคร
     }
     connect(send) {
       const c = { send, player: null, lastChat: 0, lastMove: 0, lastAct: 0 };
@@ -897,7 +904,14 @@
       if (m.t === 'join') {
         if (c.player) return;
         if (w.players.size >= MAX_PLAYERS) { c.send(JSON.stringify({ t: 'full' })); return; }
-        const p = w.addPlayer(m.name, m.look, this.trustSaves ? m.save : null);
+        let jn = m.name, jl = m.look, js = this.trustSaves ? m.save : null;
+        if (this.auth) {
+          const a = this.auth(m);
+          if (!a) { c.send(JSON.stringify({ t: 'authfail' })); return; }
+          for (const o of Array.from(this.conns)) if (o !== c && o.acct === a.key) { try { o.send(JSON.stringify({ t: 'kicked' })); } catch (e) {} if (o.kick) o.kick(); else this.drop(o); }
+          c.acct = a.key; jn = a.name; jl = a.look; js = a.save;
+        }
+        const p = w.addPlayer(jn, jl, js);
         c.player = p; this.byPlayer.set(p.id, c);
         c.send(JSON.stringify({
           t: 'init', id: p.id, zone: p.zone, phase: w.phase(now), dayMs: DAY_MS,
@@ -953,6 +967,7 @@
     drop(c) {
       if (!this.conns.delete(c)) return;
       if (c.player) {
+        if (this.onLeave) { try { this.onLeave(c, this.world.saveOf(c.player)); } catch (e) {} }
         this.byPlayer.delete(c.player.id);
         this.world.removePlayer(c.player.id);
         this.bcast({ t: 'leave', id: c.player.id }, c.player.zone);
