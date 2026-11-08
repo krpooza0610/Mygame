@@ -7,7 +7,7 @@
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
-<title>Bamboo Creek Online</title>
+<title>Chathai Online</title>
 <style>
 :root{
   --panel:rgba(22,28,24,.74); --line:rgba(255,255,255,.14);
@@ -220,6 +220,7 @@ button{font-family:inherit}
   display:flex;align-items:center;justify-content:center;gap:10px}
 .gbtn b{font:700 18px Arial,sans-serif;background:conic-gradient(#ea4335 0 25%,#fbbc05 0 50%,#34a853 0 75%,#4285f4 0);-webkit-background-clip:text;background-clip:text;color:transparent}
 #lgbox{display:flex;justify-content:center;min-height:44px;flex-direction:column}
+.gbtn.guest{background:transparent;color:var(--text);border-color:rgba(255,255,255,.35);height:40px;font-weight:600}
 .lmsg{margin:0;min-height:18px;font-size:13px;line-height:1.4;text-align:center;color:#ffb4a8}
 .lmsg.ok{color:#9be7a8}
 .lh{margin:0;text-align:center;font-size:15px;font-weight:700;color:var(--text)}
@@ -276,10 +277,10 @@ button{font-family:inherit}
 
 <div id="login">
   <div class="card panel">
-    <div class="brand"><b>ลำธารไผ่</b><span>Bamboo Creek Online</span></div>
+    <div class="brand"><b>Chathai Online</b><span>เกมออนไลน์สไตล์ RO</span></div>
 
-    <div class="lv" id="lv-main">
-      <form id="f-login" autocomplete="on">
+    <div class="lv" id="lv-main" hidden>
+      <form id="f-login" autocomplete="on" novalidate>
         <div class="lrow">
           <div class="cols">
             <input class="inp" id="lid" name="username" placeholder="ไอดี" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="16">
@@ -290,10 +291,11 @@ button{font-family:inherit}
       </form>
       <div class="lsub"><button class="lnk" id="lsign" type="button">สมัคร</button><button class="lnk" id="lforgot" type="button">ลืมรหัสผ่าน</button></div>
       <div id="lgbox"><button class="gbtn" id="lg" type="button"><b>G</b>ล็อกอินด้วย Google</button></div>
+      <button class="gbtn guest" id="lguest" type="button">เล่นแบบเกสต์ (ไม่ต้องสมัคร)</button>
       <p class="lmsg" id="lmsg-main"></p>
     </div>
 
-    <form class="lv" id="lv-signup" hidden autocomplete="on">
+    <form class="lv" id="lv-signup" hidden autocomplete="on" novalidate>
       <p class="lh">สมัครบัญชีใหม่</p>
       <input class="inp" id="sid" placeholder="ตั้งไอดี (a-z 0-9 _ , 3-16 ตัว)" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="16">
       <input class="inp" id="spw" type="password" placeholder="ตั้งรหัสผ่าน (6 ตัวขึ้นไป)" autocomplete="new-password" maxlength="64">
@@ -311,9 +313,9 @@ button{font-family:inherit}
       <button class="go" id="codego" type="button">จดไว้แล้ว ไปสร้างตัวละคร</button>
     </div>
 
-    <form class="lv" id="lv-forgot" hidden autocomplete="off">
+    <form class="lv" id="lv-forgot" hidden autocomplete="off" novalidate>
       <p class="lh">ลืมรหัสผ่าน</p>
-      <p class="lp">ใส่ไอดี + รหัสกู้คืนที่ได้ตอนสมัคร แล้วตั้งรหัสผ่านใหม่</p>
+      <p class="lp" id="fhelp">ใส่ไอดี + รหัสกู้คืนที่ได้ตอนสมัคร แล้วตั้งรหัสผ่านใหม่</p>
       <input class="inp" id="fid" placeholder="ไอดี" autocapitalize="none" spellcheck="false" maxlength="16">
       <input class="inp" id="fcode" placeholder="รหัสกู้คืน XXXX-XXXX-XXXX" autocapitalize="characters" spellcheck="false" maxlength="14">
       <input class="inp" id="fpw" type="password" placeholder="รหัสผ่านใหม่ (6 ตัวขึ้นไป)" autocomplete="new-password" maxlength="64">
@@ -340,6 +342,7 @@ button{font-family:inherit}
   </div>
 </div>
 
+<script src="firebase-config.js"></script>
 <script src="game.js"></script>
 <script>
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
@@ -1130,7 +1133,7 @@ const npcName = id => { const n = MAPS.village.npcs.find(q => q.id === id); retu
 function saveLocal() {
   if (mode !== 'demo' || !auth || auth.remote) return;
   const active = {}; for (const q of qs.list) if (q.st !== 'avail') active[q.id] = q.n;
-  LDB.saveChar(auth.token, { lv: my.lv, exp: my.exp, inv: my.inv, equip: my.equip, quests: { done: qs.done, active } });
+  LDB.saveChar(auth.key, { lv: my.lv, exp: my.exp, inv: my.inv, equip: my.equip, quests: { done: qs.done, active } });
 }
 
 /* ---- ถุง ---- */
@@ -2107,17 +2110,25 @@ const LDB = {
     return this.d;
   },
   store() { lset('bc-acc', JSON.stringify(this.d)); },
-  saveChar(token, save) { const d = this.load(), id = String(token).slice(2), u = d.users[id]; if (u && u.char) { u.char.save = save; this.store(); } }
+  saveChar(key, save) { const d = this.load(), u = d.users[key]; if (u && u.char) { u.char.save = save; this.store(); } }
 };
 async function sha(s) {
   try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bc|' + s)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
   catch (e) { let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); } return (h1 >>> 0).toString(16) + (h2 >>> 0).toString(16) + s.length; }
 }
 const newCode = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 12; i++) s += a[Math.floor(Math.random() * a.length)]; return s.slice(0, 4) + '-' + s.slice(4, 8) + '-' + s.slice(8); };
-const profileOf = id => { const u = LDB.load().users[id]; return { id, char: u.char ? { name: u.char.name, look: u.char.look, lv: (u.char.save && u.char.save.lv) || 1 } : null }; };
+const profileOf = id => { const u = LDB.load().users[id]; return { id: u.label || id, char: u.char ? { name: u.char.name, look: u.char.look, lv: (u.char.save && u.char.save.lv) || 1 } : null }; };
 async function localApi(route, b) {
   const d = LDB.load(), id = String(b.id || '').trim().toLowerCase();
-  const tokId = t => { const k = typeof t === 'string' && t.startsWith('L:') ? t.slice(2) : ''; return d.users[k] ? k : null; };
+  const tokId = t => {
+    if (b.fb && b.fb.uid) {   // ล็อกอินผ่าน Firebase แต่ไม่มีเซิร์ฟเวอร์เกม → เก็บตัวละครไว้ในเครื่องตาม uid
+      const k = 'f' + String(b.fb.uid).slice(0, 128);
+      if (!d.users[k]) { d.users[k] = { char: null, anon: !!b.fb.anon }; }
+      d.users[k].label = String(b.fb.label || (b.fb.anon ? 'เกสต์' : 'ผู้เล่น')).slice(0, 40); LDB.store();
+      return k;
+    }
+    const k = typeof t === 'string' && t.startsWith('L:') ? t.slice(2) : ''; return d.users[k] ? k : null;
+  };
   switch (route) {
     case 'signup': {
       if (!/^[a-z0-9_]{3,16}$/.test(id)) return { err: 'ไอดีต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว' };
@@ -2138,6 +2149,11 @@ async function localApi(route, b) {
       if (!u || u.rhash !== await sha(id + ':' + code)) return { err: 'ไอดีหรือรหัสกู้คืนไม่ถูกต้อง' };
       const nc = newCode(); u.hash = await sha(id + ':' + b.pw); u.rhash = await sha(id + ':' + nc); LDB.store();
       return { ok: 1, token: 'L:' + id, recovery: nc, me: profileOf(id) };
+    }
+    case 'guest': {
+      const gid = 'guest_' + Math.random().toString(16).slice(2, 10);
+      d.users[gid] = { hash: '', rhash: '', label: 'เกสต์', anon: true, char: null }; LDB.store();
+      return { ok: 1, token: 'L:' + gid, me: profileOf(gid) };
     }
     case 'google': return { err: 'ล็อกอินด้วย Google ใช้ได้เมื่อรันเซิร์ฟเวอร์ออนไลน์จริงและตั้งค่า Google ไว้' };
     case 'me': { const k = tokId(b.token); return k ? { ok: 1, me: profileOf(k) } : { err: 'หมดเวลาเข้าสู่ระบบ', relogin: 1 }; }
@@ -2182,21 +2198,65 @@ function gotoChar() {
   } else {
     $('jt').textContent = 'สร้างตัวละคร'; $('go').textContent = 'สร้างตัวละคร';
   }
+  $('lout').textContent = auth.anon ? 'ออกจากระบบ (เกสต์จะเสียตัวละคร)' : 'ออกจากระบบ';
   $('go').disabled = false;
   refreshSel();
   $('note').textContent = '';
 }
 function loggedIn(res) {
-  auth = { token: res.token, me: res.me, remote };
+  auth = { token: res.token, me: res.me, remote, key: res.token.startsWith('L:') ? res.token.slice(2) : null, anon: /guest|เกสต์/.test(res.me.id) };
   lset(TOK_KEY, res.token);
   if (res.recovery) { $('codebox').textContent = res.recovery; $('codeh').textContent = res.fresh ? 'สมัครสำเร็จ!' : 'ตั้งรหัสผ่านใหม่แล้ว'; showLogin('code'); }
   else gotoChar();
 }
 
+
+/* ---- Firebase (อีเมล / Google / เกสต์) — เปิดใช้เมื่อใส่ apiKey ใน firebase-config.js ---- */
+const FBC = window.FIREBASE_CONFIG || {};
+let fbOn = !DEMO_ONLY && /^https?:$/.test(location.protocol) && !!FBC.apiKey && !/^PASTE/i.test(FBC.apiKey);
+let fbAuth = null;
+const loadScript = src => new Promise((ok, no) => { const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = () => no(new Error('load')); document.head.appendChild(sc); });
+async function initFirebase() {
+  const base = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  await loadScript(base + 'firebase-app-compat.js'); await loadScript(base + 'firebase-auth-compat.js');
+  const f = window.firebase;
+  if (!f.apps.length) f.initializeApp(FBC);
+  fbAuth = f.auth();
+}
+const FBERR = {
+  'auth/invalid-email': 'อีเมลไม่ถูกต้อง', 'auth/missing-email': 'ใส่อีเมลก่อนนะ', 'auth/email-already-in-use': 'อีเมลนี้สมัครไว้แล้ว — ลองล็อกอินแทน',
+  'auth/weak-password': 'รหัสผ่านสั้นเกินไป (อย่างน้อย 6 ตัว)', 'auth/invalid-credential': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+  'auth/wrong-password': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง', 'auth/user-not-found': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง', 'auth/invalid-login-credentials': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+  'auth/too-many-requests': 'ลองถี่เกินไป รอสักครู่แล้วลองใหม่', 'auth/network-request-failed': 'เชื่อมต่ออินเทอร์เน็ตไม่ได้',
+  'auth/popup-closed-by-user': 'ปิดหน้าต่าง Google ก่อนล็อกอินเสร็จ', 'auth/cancelled-popup-request': 'ปิดหน้าต่าง Google ก่อนล็อกอินเสร็จ',
+  'auth/operation-not-allowed': 'วิธีล็อกอินนี้ยังไม่ถูกเปิดใน Firebase Console', 'auth/unauthorized-domain': 'โดเมนนี้ยังไม่อยู่ใน Authorized domains ของ Firebase',
+  'auth/user-disabled': 'บัญชีนี้ถูกระงับ', 'auth/missing-password': 'ใส่รหัสผ่านก่อนนะ', 'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'apiKey ใน firebase-config.js ไม่ถูกต้อง'
+};
+const fbMsg = e => FBERR[e && e.code] || ('เกิดข้อผิดพลาด (' + ((e && (e.code || e.message)) || 'unknown') + ')');
+const emailOk = v => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+
+async function authCtx() {   // ข้อมูลยืนยันตัวตนที่แนบไปกับ api()
+  if (auth.fb) { auth.token = await auth.user.getIdToken(); return { token: auth.token, idToken: auth.token, fb: { uid: auth.user.uid, label: auth.user.email || auth.user.displayName || '', anon: auth.user.isAnonymous } }; }
+  return { token: auth.token };
+}
+async function fbEnter(user) {
+  auth = { fb: true, user, key: 'f' + user.uid, remote, anon: user.isAnonymous, token: '' };
+  const r = await api('me', await authCtx());
+  if (r.err) { auth = null; showLogin('main'); setMsg('main', r.err); return false; }
+  auth.me = r.me; gotoChar(); return true;
+}
+async function fbDo(msgKey, btn, label, fn) {
+  busy(btn, true, label); setMsg(msgKey, '');
+  try { const cred = await fn(); const user = cred && cred.user ? cred.user : cred; if (user) await fbEnter(user); }
+  catch (e) { setMsg(msgKey, fbMsg(e)); }
+  busy(btn, false, label);
+}
+
 $('f-login').onsubmit = async e => {
   e.preventDefault();
   const id = $('lid').value.trim(), pw = $('lpw').value;
-  if (!id || !pw) { setMsg('main', 'ใส่ไอดีและรหัสผ่านก่อนนะ'); return; }
+  if (!id || !pw) { setMsg('main', fbAuth ? 'ใส่อีเมลและรหัสผ่านก่อนนะ' : 'ใส่ไอดีและรหัสผ่านก่อนนะ'); return; }
+  if (fbAuth) { if (!emailOk(id)) { setMsg('main', 'อีเมลไม่ถูกต้อง'); return; } await fbDo('main', $('lplay'), 'เล่น', () => fbAuth.signInWithEmailAndPassword(id, pw)); $('lpw').value = ''; return; }
   busy($('lplay'), true, 'เล่น'); setMsg('main', '');
   const r = await api('login', { id, pw });
   busy($('lplay'), false, 'เล่น');
@@ -2208,16 +2268,30 @@ $('lforgot').onclick = () => { showLogin('forgot'); $('fid').value = $('lid').va
 document.querySelectorAll('[data-back]').forEach(b => { b.onclick = () => showLogin('main'); });
 $('lv-signup').onsubmit = async e => {
   e.preventDefault();
-  const id = $('sid').value.trim().toLowerCase(), pw = $('spw').value;
+  const raw = $('sid').value.trim(), pw = $('spw').value;
   if (pw !== $('spw2').value) { setMsg('signup', 'รหัสผ่านสองช่องไม่ตรงกัน'); return; }
+  if (fbAuth) {
+    if (!emailOk(raw)) { setMsg('signup', 'อีเมลไม่ถูกต้อง'); return; }
+    if (pw.length < 6) { setMsg('signup', 'รหัสผ่านสั้นเกินไป (อย่างน้อย 6 ตัว)'); return; }
+    await fbDo('signup', $('sgo'), 'สมัคร', () => fbAuth.createUserWithEmailAndPassword(raw, pw));
+    $('spw').value = $('spw2').value = ''; return;
+  }
   busy($('sgo'), true, 'สมัคร'); setMsg('signup', '');
-  const r = await api('signup', { id, pw });
+  const r = await api('signup', { id: raw.toLowerCase(), pw });
   busy($('sgo'), false, 'สมัคร');
   if (r.err) { setMsg('signup', r.err); return; }
   $('spw').value = $('spw2').value = ''; r.fresh = true; loggedIn(r);
 };
 $('lv-forgot').onsubmit = async e => {
   e.preventDefault();
+  if (fbAuth) {
+    const em = $('fid').value.trim();
+    if (!emailOk(em)) { setMsg('forgot', 'ใส่อีเมลที่สมัครไว้ให้ถูกต้อง'); return; }
+    busy($('fgo'), true); setMsg('forgot', '');
+    try { await fbAuth.sendPasswordResetEmail(em); setMsg('forgot', 'ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่ ' + em + ' แล้ว (ถ้าไม่เห็นให้ดูในสแปม)', true); }
+    catch (err) { setMsg('forgot', fbMsg(err)); }
+    busy($('fgo'), false); return;
+  }
   busy($('fgo'), true, 'ตั้งรหัสผ่านใหม่'); setMsg('forgot', '');
   const r = await api('forgot', { id: $('fid').value.trim(), code: $('fcode').value, pw: $('fpw').value });
   busy($('fgo'), false, 'ตั้งรหัสผ่านใหม่');
@@ -2230,10 +2304,12 @@ $('codecopy').onclick = () => {
   try { navigator.clipboard.writeText(t).then(done, () => {}); } catch (e) {}
   try { const r = document.createRange(); r.selectNodeContents($('codebox')); const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(r); } catch (e) {}
 };
-$('lout').onclick = () => { auth = null; ldel(TOK_KEY); $('lpw').value = ''; showLogin('main'); };
+$('lout').onclick = async () => {
+  if (auth && auth.fb && fbAuth) { try { await fbAuth.signOut(); } catch (e) {} }
+  auth = null; ldel(TOK_KEY); $('lpw').value = ''; showLogin('main');
+};
 
-let gReady = false;
-function setupGoogle(clientId) {
+function setupGoogle(clientId) {   // ล็อกอิน Google แบบเดิม (เฉพาะเซิร์ฟเวอร์ที่ตั้ง GOOGLE_CLIENT_ID และไม่ได้ใช้ Firebase)
   const sc = document.createElement('script');
   sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true;
   sc.onload = () => {
@@ -2244,13 +2320,33 @@ function setupGoogle(clientId) {
       });
       const box = $('lgbox'); box.textContent = '';
       window.google.accounts.id.renderButton(box, { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill', width: 260 });
-      gReady = true;
     } catch (e) {}
   };
   document.head.appendChild(sc);
 }
-$('lg').onclick = () => {
-  setMsg('main', remote ? 'ผู้ดูแลยังไม่ได้เปิดใช้ล็อกอินด้วย Google (ตั้ง GOOGLE_CLIENT_ID ที่เซิร์ฟเวอร์)' : 'ล็อกอินด้วย Google ใช้ได้เมื่อรันเซิร์ฟเวอร์ออนไลน์จริง — โหมดนี้ใช้ไอดี/รหัสผ่านไปก่อนนะ');
+$('lg').onclick = async () => {
+  if (fbAuth) {
+    const f = window.firebase, prov = new f.auth.GoogleAuthProvider();
+    busy($('lg'), true);
+    try {
+      const cred = await fbAuth.signInWithPopup(prov);
+      await fbEnter(cred.user);
+    } catch (e) {
+      if (e && (e.code === 'auth/popup-blocked' || e.code === 'auth/operation-not-supported-in-this-environment')) { try { await fbAuth.signInWithRedirect(prov); return; } catch (e2) { e = e2; } }
+      setMsg('main', fbMsg(e));
+    }
+    busy($('lg'), false); return;
+  }
+  setMsg('main', remote ? 'ผู้ดูแลยังไม่ได้เปิดใช้ล็อกอินด้วย Google (ตั้งค่า Firebase หรือ GOOGLE_CLIENT_ID)' : 'ล็อกอินด้วย Google ใช้ได้เมื่อตั้งค่า Firebase ไว้ — โหมดนี้ใช้ไอดี/รหัสผ่านหรือเกสต์ไปก่อนนะ');
+};
+$('lguest').onclick = async () => {
+  setMsg('main', '');
+  if (fbAuth) { await fbDo('main', $('lguest'), 'เล่นแบบเกสต์ (ไม่ต้องสมัคร)', () => fbAuth.signInAnonymously()); return; }
+  busy($('lguest'), true);
+  const r = await api('guest', {});
+  busy($('lguest'), false);
+  if (r.err) { setMsg('main', r.err); return; }
+  loggedIn(r);
 };
 
 $('go').onclick = async () => {
@@ -2261,7 +2357,8 @@ $('go').onclick = async () => {
     const name = G.cleanName($('nm').value), look = { o: sel.o, h: sel.h, c: sel.c };
     if (name.length < 2) { $('note').textContent = 'ตั้งชื่อตัวละครอย่างน้อย 2 ตัวอักษรนะ'; btn.disabled = false; return; }
     btn.textContent = 'กำลังสร้าง…';
-    const r = await api('char', { token: auth.token, name, look });
+    let r;
+    try { r = await api('char', Object.assign({ name, look }, await authCtx())); } catch (e) { r = { err: fbMsg(e) }; }
     if (r.err) {
       $('note').textContent = r.err; btn.disabled = false; btn.textContent = 'สร้างตัวละคร';
       if (r.relogin) { setTimeout(() => { auth = null; ldel(TOK_KEY); showLogin('main'); setMsg('main', r.err); }, 900); }
@@ -2272,10 +2369,24 @@ $('go').onclick = async () => {
   btn.textContent = 'กำลังเข้าหมู่บ้าน…';
   const ch = auth.me.char;
   if (DEMO_ONLY || !remote) {
-    const u = LDB.load().users[auth.me.id];
+    const u = LDB.load().users[auth.key];
     startDemo(ch.name, ch.look, null, u && u.char && u.char.save);
-  } else startOnline(ch.name, ch.look, auth.token);
+  } else {
+    let tk = auth.token;
+    if (auth.fb) { try { tk = await auth.user.getIdToken(); } catch (e) {} }
+    startOnline(ch.name, ch.look, tk);
+  }
 };
+
+function applyAuthUi() {
+  const em = !!fbAuth;
+  for (const id of ['lid', 'sid', 'fid']) { const e = $(id); e.placeholder = em ? 'อีเมล' : id === 'sid' ? 'ตั้งไอดี (a-z 0-9 _ , 3-16 ตัว)' : 'ไอดี'; e.type = em ? 'email' : 'text'; e.maxLength = em ? 80 : 16; e.inputMode = em ? 'email' : 'text'; }
+  $('lid').autocomplete = 'username'; $('sid').autocomplete = 'email';
+  $('fcode').hidden = $('fpw').hidden = em;
+  $('fgo').textContent = em ? 'ส่งลิงก์รีเซ็ตรหัสผ่าน' : 'ตั้งรหัสผ่านใหม่';
+  $('fhelp').textContent = em ? 'ใส่อีเมลที่สมัครไว้ เราจะส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้' : 'ใส่ไอดี + รหัสกู้คืนที่ได้ตอนสมัคร แล้วตั้งรหัสผ่านใหม่';
+  $('spw').placeholder = 'ตั้งรหัสผ่าน (6 ตัวขึ้นไป)';
+}
 
 async function initAuth() {
   $('lnote').textContent = 'กำลังเชื่อมต่อ…';
@@ -2289,14 +2400,22 @@ async function initAuth() {
     } catch (e) {}
   }
   remote = !!cfg;
-  $('lnote').textContent = remote
+  let fbNote = '';
+  if (fbOn) { try { await initFirebase(); } catch (e) { fbOn = false; fbAuth = null; fbNote = ' · โหลด Firebase ไม่ได้ จึงใช้ระบบบัญชีสำรอง'; } }
+  applyAuthUi();
+  $('lnote').textContent = (remote
     ? 'เชื่อมต่อเซิร์ฟเวอร์เดียวกับหน้านี้ — ทุกคนที่เล่นอยู่จะเห็นกัน'
-    : 'โหมดเดโม — บัญชีและความคืบหน้าเก็บในเครื่องนี้ · คนอื่นในหมู่บ้านเป็นบอทจำลอง · ออนไลน์จริงต้องรัน node online-server.js';
-  if (remote && cfg.google) setupGoogle(cfg.google);
+    : 'โหมดเดโม — ' + (fbAuth ? 'ล็อกอินผ่าน Firebase แต่ตัวละคร' : 'บัญชีและความคืบหน้า') + 'เก็บในเครื่องนี้ · คนอื่นในหมู่บ้านเป็นบอทจำลอง · ออนไลน์จริงต้องรัน node online-server.js') + fbNote;
+  if (!fbAuth && remote && cfg.google) setupGoogle(cfg.google);
+  if (fbAuth) {
+    const user = await new Promise(res => { const un = fbAuth.onAuthStateChanged(u => { un(); res(u); }); });
+    if (user && await fbEnter(user)) return;
+    showLogin('main'); return;
+  }
   const tok = lget(TOK_KEY);
   if (tok) {
     const r = await api('me', { token: tok });
-    if (r.ok) { auth = { token: tok, me: r.me, remote }; gotoChar(); return; }
+    if (r.ok) { auth = { token: tok, me: r.me, remote, key: tok.startsWith('L:') ? tok.slice(2) : null, anon: /guest|เกสต์/.test(r.me.id) }; gotoChar(); return; }
     ldel(TOK_KEY);
   }
   showLogin('main');

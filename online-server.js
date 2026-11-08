@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* online-server.js — เซิร์ฟเวอร์ออนไลน์ของ Bamboo Creek
+/* online-server.js — เซิร์ฟเวอร์ออนไลน์ของ Chathai Online
  * ไม่ต้องติดตั้งแพ็กเกจเพิ่ม (ใช้แค่ Node 18+) : node online-server.js
  * - เสิร์ฟ index.html / game.js
  * - WebSocket ที่ /ws (เขียน RFC 6455 แบบย่อเอง)
@@ -89,9 +89,64 @@ function googleVerify(cred) {
   });
 }
 
+
+/* ---------------------------------------------------------- Firebase Authentication
+ * ไคลเอนต์ล็อกอินกับ Firebase (อีเมล / Google / เกสต์) แล้วส่ง ID token มาให้เซิร์ฟเวอร์
+ * เซิร์ฟเวอร์ตรวจลายเซ็น RS256 ด้วยใบรับรองสาธารณะของ Google (ไม่ต้องติดตั้งแพ็กเกจ)
+ * ตั้ง FIREBASE_PROJECT_ID ให้ตรงกับโปรเจกต์ (ค่าเริ่มต้น mygame-88bab)
+ */
+const FB_PROJECT = process.env.FIREBASE_PROJECT_ID || 'mygame-88bab';
+const FB_CERTS_URL = process.env.FIREBASE_CERTS_URL || 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
+let fbCerts = {}, fbCertsAt = 0, fbCertsBusy = null;
+function loadCerts() {
+  if (fbCertsBusy) return fbCertsBusy;
+  fbCertsBusy = new Promise(ok => {
+    const lib = FB_CERTS_URL.startsWith('http:') ? http : https;
+    lib.get(FB_CERTS_URL, r => {
+      let d = ''; r.on('data', c => { d += c; if (d.length > 100000) r.destroy(); });
+      r.on('end', () => { try { const o = JSON.parse(d); if (o && typeof o === 'object') { fbCerts = o; fbCertsAt = Date.now(); } } catch (e) {} ok(); });
+    }).on('error', () => ok()).setTimeout(8000, function () { this.destroy(); });
+  }).then(() => { fbCertsBusy = null; });
+  return fbCertsBusy;
+}
+loadCerts();
+setInterval(loadCerts, 6 * 3600 * 1000).unref();
+const looksJwt = t => typeof t === 'string' && t.length < 4000 && t.split('.').length === 3;
+function fbVerify(tok) {   // ตรวจแบบ sync จากใบรับรองที่โหลดไว้แล้ว → payload หรือ null
+  try {
+    const [h, p, sig] = tok.split('.');
+    const head = JSON.parse(Buffer.from(h, 'base64url').toString());
+    const cert = fbCerts[head.kid];
+    if (head.alg !== 'RS256' || !cert) return null;
+    if (!crypto.createVerify('RSA-SHA256').update(h + '.' + p).verify(cert, sig, 'base64url')) return null;
+    const pl = JSON.parse(Buffer.from(p, 'base64url').toString()), now = Date.now() / 1000;
+    if (pl.aud !== FB_PROJECT || pl.iss !== 'https://securetoken.google.com/' + FB_PROJECT) return null;
+    if (!pl.sub || pl.sub.length > 128 || !(pl.exp > now) || pl.iat > now + 300) return null;
+    return pl;
+  } catch (e) { return null; }
+}
+function fbUser(pl) {   // payload → key ของผู้ใช้ (สร้างระเบียนให้ถ้ายังไม่มี)
+  const key = 'f' + pl.sub;
+  const anon = !!(pl.firebase && pl.firebase.sign_in_provider === 'anonymous');
+  const label = String(pl.email || pl.name || (anon ? 'เกสต์' : 'ผู้เล่น')).slice(0, 40);
+  if (!db.users[key]) { db.users[key] = { label, char: null, made: Date.now(), anon }; dirty = true; }
+  else if (db.users[key].label !== label) { db.users[key].label = label; dirty = true; }
+  return key;
+}
+async function resolveKey(b) {
+  const t = b.idToken || b.token;
+  if (looksJwt(t)) {
+    if (!fbCerts || !Object.keys(fbCerts).length) await loadCerts();
+    let pl = fbVerify(t);
+    if (!pl && Date.now() - fbCertsAt > 60000) { await loadCerts(); pl = fbVerify(t); }   // กุญแจอาจถูกหมุน
+    return pl ? fbUser(pl) : null;
+  }
+  return verifyTok(t);
+}
+
 async function api(route, b) {
   switch (route) {
-    case 'config': return { ok: 1, google: GOOGLE_CLIENT_ID || null };
+    case 'config': return { ok: 1, google: GOOGLE_CLIENT_ID || null, firebase: FB_PROJECT };
     case 'signup': {
       const id = normId(b.id);
       if (!idOk(id)) return { err: 'ไอดีต้องเป็น a-z 0-9 _ ยาว 3-16 ตัว' };
@@ -131,12 +186,18 @@ async function api(route, b) {
       if (!db.users[key]) { db.users[key] = { label: String(g.name || g.email || 'Google').slice(0, 24), char: null, made: Date.now() }; dirty = true; }
       return { ok: 1, token: signTok(key), me: profile(key) };
     }
+    case 'guest': {
+      if (Object.keys(db.users).length >= 20000) return { err: 'ระบบรับสมัครเต็มชั่วคราว' };
+      const key = 'u' + crypto.randomBytes(8).toString('hex');
+      db.users[key] = { label: 'เกสต์', char: null, made: Date.now(), anon: true }; dirty = true;
+      return { ok: 1, token: signTok(key), me: profile(key) };
+    }
     case 'me': {
-      const k = verifyTok(b.token);
+      const k = await resolveKey(b);
       return k ? { ok: 1, me: profile(k) } : { err: 'หมดเวลาเข้าสู่ระบบ ล็อกอินใหม่อีกครั้ง', relogin: 1 };
     }
     case 'char': {
-      const k = verifyTok(b.token);
+      const k = await resolveKey(b);
       if (!k) return { err: 'หมดเวลาเข้าสู่ระบบ ล็อกอินใหม่อีกครั้ง', relogin: 1 };
       const u = db.users[k];
       if (u.char) return { err: 'บัญชีนี้มีตัวละครแล้ว' };
@@ -155,7 +216,7 @@ function handleApi(req, res, route) {
   const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
   const out = (code, o) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(o)); };
   if (limited(ip)) return out(429, { err: 'ลองถี่เกินไป รอสักครู่นะ' });
-  if (route === 'config' && req.method === 'GET') return out(200, { ok: 1, google: GOOGLE_CLIENT_ID || null });
+  if (route === 'config' && req.method === 'GET') return out(200, { ok: 1, google: GOOGLE_CLIENT_ID || null, firebase: FB_PROJECT });
   if (req.method !== 'POST') return out(405, { err: 'method' });
   let body = '', over = false;
   req.on('data', c => { body += c; if (body.length > 4096) { over = true; req.destroy(); } });
@@ -168,7 +229,8 @@ function handleApi(req, res, route) {
 }
 
 hub.auth = m => {
-  const k = verifyTok(m.token);
+  let k = null;
+  if (looksJwt(m.token)) { const pl = fbVerify(m.token); k = pl ? fbUser(pl) : null; } else k = verifyTok(m.token);
   const u = k && db.users[k];
   return u && u.char ? { key: k, name: u.char.name, look: u.char.look, save: u.char.save } : null;
 };
@@ -183,6 +245,7 @@ const FILES = {
   '/index.html': ['index.html', 'text/html; charset=utf-8'],
   '/game.js': ['game.js', 'text/javascript; charset=utf-8'],
   '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'],
+  '/firebase-config.js': ['firebase-config.js', 'text/javascript; charset=utf-8'],
   '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json; charset=utf-8'],
   '/icon-192.png': ['icon-192.png', 'image/png'],
   '/icon-512.png': ['icon-512.png', 'image/png'],
@@ -329,7 +392,7 @@ setInterval(() => {
 }, TICK_MS);
 
 server.listen(PORT, () => {
-  console.log('Bamboo Creek พร้อมแล้ว  →  http://localhost:' + PORT);
+  console.log('Chathai Online พร้อมแล้ว  →  http://localhost:' + PORT);
 });
 
 function bye() {

@@ -1,7 +1,7 @@
 {
-  "name": "bamboo-creek",
+  "name": "chathai-online",
   "version": "0.1.0",
-  "description": "Bamboo Creek Online - web game prototype in Ragnarok Online style",
+  "description": "Chathai Online - web game prototype in Ragnarok Online style",
   "scripts": {
     "start": "node online-server.js"
   },
