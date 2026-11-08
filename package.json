@@ -1,0 +1,12 @@
+{
+  "name": "bamboo-creek",
+  "version": "0.1.0",
+  "description": "Bamboo Creek Online - web game prototype in Ragnarok Online style",
+  "scripts": {
+    "start": "node online-server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}

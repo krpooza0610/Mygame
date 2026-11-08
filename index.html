@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1b2a22">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Bamboo Creek Online</title>
+<style>
+:root{
+  --panel:rgba(22,28,24,.74); --line:rgba(255,255,255,.14);
+  --text:#f3ecd9; --muted:#b9b39f; --accent:#d9473a; --accent2:#f2c14e; --ok:#7bd88f;
+  --font:'Sarabun','Noto Sans Thai','Loma',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#1b2a22;color:var(--text);font-family:var(--font);overflow:hidden;
+  touch-action:none;user-select:none;-webkit-user-select:none}
+#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+button{font-family:inherit}
+[hidden]{display:none!important}
+
+/* HUD */
+#hud>*{position:fixed;pointer-events:none}
+#tl{left:max(10px,env(safe-area-inset-left));top:max(10px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:8px}
+#status{padding:6px 11px;font-size:13px;display:flex;gap:8px;align-items:center;width:fit-content}
+#dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+#dot.demo{background:var(--accent2);box-shadow:0 0 8px var(--accent2)}
+#mini{display:block;width:120px;height:96px;border-radius:10px;border:1px solid var(--line);background:#1b2a22}
+#tr{right:max(10px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));display:flex;gap:8px;align-items:center}
+.btn{pointer-events:auto;min-width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--panel);
+  color:var(--text);font-size:16px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;padding:0 11px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.btn:active{transform:scale(.95)}
+#tbtn{font-size:14px;font-variant-numeric:tabular-nums}
+#chat{left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));
+  bottom:max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;max-width:440px}
+#log{display:flex;flex-direction:column;justify-content:flex-end;gap:3px;font-size:13px;line-height:1.35;
+  text-shadow:0 1px 2px #000;max-height:30vh;overflow:hidden}
+#log .l{padding:2px 9px;border-radius:7px;background:rgba(0,0,0,.34);width:fit-content;max-width:100%;
+  word-break:break-word;transition:opacity .6s}
+#log .l b{font-weight:700;margin-right:6px}
+#log .sys{color:var(--muted);font-style:italic}
+#log .npc b{color:#9be7ff}
+#log .me b{color:var(--accent2)}
+#log .l.fade{opacity:0}
+#cform{pointer-events:auto;display:flex;gap:6px;padding:5px}
+#cin{flex:1;min-width:0;height:36px;border:0;border-radius:8px;background:rgba(255,255,255,.08);color:var(--text);
+  font:16px var(--font);padding:0 11px;outline:none;user-select:text;-webkit-user-select:text}
+#cin::placeholder{color:#8f8a79}
+#cin:focus{background:rgba(255,255,255,.14)}
+.send{height:36px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:600 14px var(--font);padding:0 14px;cursor:pointer}
+#toast{left:50%;top:max(64px,calc(env(safe-area-inset-top) + 56px));transform:translateX(-50%);padding:8px 14px;font-size:13px;
+  text-align:center;max-width:min(92vw,420px);transition:opacity .4s;pointer-events:none}
+
+/* join */
+#join{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:14px;
+  background:radial-gradient(ellipse at center,rgba(12,18,14,.35),rgba(8,12,10,.82));overflow:auto;touch-action:pan-y}
+.card{width:min(100%,380px);padding:16px 16px 14px;display:flex;flex-direction:column;gap:11px;align-items:stretch;
+  background:rgba(24,30,26,.9)}
+.brand{text-align:center;line-height:1.15}
+.brand b{display:block;font-size:26px;letter-spacing:.5px;color:var(--accent2)}
+.brand span{font-size:12px;color:var(--muted);letter-spacing:1.4px;text-transform:uppercase}
+#pv{align-self:center;width:120px;height:130px}
+#nm{height:42px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.07);color:var(--text);
+  font:16px var(--font);padding:0 12px;text-align:center;outline:none;user-select:text;-webkit-user-select:text}
+#nm:focus{border-color:var(--accent2)}
+.row{display:flex;align-items:center;gap:10px}
+.row label{width:52px;font-size:13px;color:var(--muted);flex:none}
+.sw{display:flex;gap:8px;flex-wrap:wrap}
+.sw button{width:34px;height:34px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;
+  box-shadow:inset 0 0 0 2px rgba(0,0,0,.25)}
+.sw button.sel{border-color:#fff}
+.sw button.hs{width:46px;height:50px;border-radius:10px;background:rgba(255,255,255,.07);overflow:hidden;box-shadow:none}
+.sw button.hs canvas{width:100%;height:100%;display:block}
+.go{height:46px;border:0;border-radius:12px;background:linear-gradient(#e2564a,#c53c31);color:#fff;font:700 17px var(--font);
+  cursor:pointer;box-shadow:0 3px 0 #8d2a22;margin-top:2px}
+.go:active{transform:translateY(2px);box-shadow:0 1px 0 #8d2a22}
+.go:disabled{opacity:.6}
+#note{margin:0;font-size:12px;color:var(--muted);text-align:center;line-height:1.45}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" hidden>
+  <div id="tl">
+    <div id="status" class="panel"><i id="dot"></i><span id="stxt">กำลังเชื่อมต่อ…</span></div>
+    <canvas id="mini" width="120" height="96"></canvas>
+  </div>
+  <div id="tr">
+    <button id="tbtn" class="btn" type="button" aria-label="เวลาในเกม"><span id="ticon">☀</span><span id="ttxt">10:00</span></button>
+    <button id="zin" class="btn" type="button" aria-label="ซูมเข้า">＋</button>
+    <button id="zout" class="btn" type="button" aria-label="ซูมออก">－</button>
+  </div>
+  <div id="chat">
+    <div id="log"></div>
+    <form id="cform" class="panel" autocomplete="off">
+      <input id="cin" maxlength="80" placeholder="พิมพ์ข้อความ แล้วกดส่ง…" enterkeyhint="send">
+      <button class="send" type="submit">ส่ง</button>
+    </form>
+  </div>
+  <div id="toast" class="panel" hidden></div>
+</div>
+
+<div id="join">
+  <div class="card panel">
+    <div class="brand"><b>ลำธารไผ่</b><span>Bamboo Creek Online</span></div>
+    <canvas id="pv" width="240" height="260"></canvas>
+    <input id="nm" maxlength="12" placeholder="ชื่อตัวละคร" autocomplete="off">
+    <div class="row"><label>ชุด</label><div id="sw-o" class="sw"></div></div>
+    <div class="row"><label>ทรงผม</label><div id="sw-h" class="sw"></div></div>
+    <div class="row"><label>สีผม</label><div id="sw-c" class="sw"></div></div>
+    <button id="go" class="go" type="button">เข้าสู่หมู่บ้าน</button>
+    <p id="note"></p>
+  </div>
+</div>
+
+<script src="game.js"></script>
+<script>
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+</script>
+<script>
+(() => {
+'use strict';
+const G = window.Game;
+const DEMO_ONLY = !!window.__DEMO_ONLY;
+const FONT = "'Sarabun','Noto Sans Thai','Loma',system-ui,sans-serif";
+
+/* ============================================================ helpers */
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const $ = id => document.getElementById(id);
+function hex2rgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+const css = c => 'rgb(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ')';
+const shade = (h, f) => css(hex2rgb(h).map(v => clamp(v * f, 0, 255)));
+const mixc = (h1, h2, t) => { const a = hex2rgb(h1), b = hex2rgb(h2); return css(a.map((v, i) => lerp(v, b[i], t))); };
+function hsh(x, y, n) {
+  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(n || 0, 2147483647)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/* ============================================================ world / projection */
+const map = G.buildMap();
+const MW = G.W, MH = G.H;
+const proj = (x, y) => [(x - y) * 32, (x + y) * 16];
+const OX = MH * 32;
+const BW = (MW + MH) * 32, BH = (MW + MH) * 16 + 4;
+const tAt = (x, y) => (x < 0 || y < 0 || x >= MW || y >= MH ? -1 : map.tiles[y * MW + x]);
+
+const cv = $('game');
+let ctx = cv.getContext('2d');
+let vw = 0, vh = 0, dpr = 1;
+function resize() {
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  vw = window.innerWidth; vh = window.innerHeight;
+  cv.width = Math.round(vw * dpr); cv.height = Math.round(vh * dpr);
+}
+window.addEventListener('resize', resize); resize();
+let zoom = clamp(Math.min(vw, vh * 1.4) / 760, 0.7, 1.2);
+const cam = { x: 0, y: 0 };
+{ const p = proj(20, 16); cam.x = p[0]; cam.y = p[1]; }
+
+/* ============================================================ palette */
+const OUTFIT = ['#c0392b', '#2e86c1', '#2f9e5b', '#8e44ad', '#e0a020', '#34495e'];
+const HAIRC = ['#1d1a1a', '#5a3b24', '#cfd3d8', '#a8442a'];
+const SKIN = '#f6d6b5';
+const ROOFS = [['#5a6a86', '#42506a', '#303a50'], ['#4f7a6e', '#3b5f55', '#2b4640'], ['#a85a43', '#86452f', '#633222']];
+
+/* ============================================================ time of day */
+const KEYS = [[0, [96, 110, 178]], [5, [96, 110, 178]], [6.5, [255, 205, 170]], [8, [255, 255, 255]],
+  [16, [255, 255, 255]], [17.5, [255, 196, 150]], [19.5, [100, 112, 182]], [24, [96, 110, 178]]];
+function tintAt(h) {
+  for (let i = 0; i < KEYS.length - 1; i++) {
+    const a = KEYS[i], b = KEYS[i + 1];
+    if (h >= a[0] && h <= b[0]) { const f = (h - a[0]) / (b[0] - a[0]); return a[1].map((v, k) => lerp(v, b[1][k], f)); }
+  }
+  return KEYS[0][1].slice();
+}
+function lightsAt(h) {
+  if (h >= 19.5 || h < 5) return 1;
+  if (h >= 17.5) return (h - 17.5) / 2;
+  if (h < 6.5) return 1 - (h - 5) / 1.5;
+  return 0;
+}
+let phaseBase = G.START_HOUR / 24, phaseT0 = performance.now(), dayMs = G.DAY_MS;
+let timeMode = 'auto';
+const autoHour = () => (((phaseBase + (performance.now() - phaseT0) / dayMs) % 1) + 1) % 1 * 24;
+const targetHour = () => (timeMode === 'day' ? 12 : timeMode === 'night' ? 23 : autoHour());
+let tintNow = tintAt(targetHour()), LIGHTS = lightsAt(targetHour());
+
+/* ============================================================ terrain bake */
+let terrain = null;
+const TS = 1.5;
+function diamond(g, X, Y) { g.beginPath(); g.moveTo(X, Y); g.lineTo(X + 32, Y + 16); g.lineTo(X, Y + 32); g.lineTo(X - 32, Y + 16); g.closePath(); }
+function bakeTerrain() {
+  const c = document.createElement('canvas');
+  c.width = Math.ceil(BW * TS); c.height = Math.ceil(BH * TS);
+  const g = c.getContext('2d'); g.scale(TS, TS);
+  const GR = ['#88bb6c', '#82b668', '#8ec071', '#7db063'];
+  for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
+    const t = map.tiles[y * MW + x];
+    const p = proj(x, y), X = p[0] + OX, Y = p[1];
+    const n = (Math.sin(x * 0.35) + Math.sin(y * 0.31 + 1.3) + Math.sin((x + y) * 0.17)) / 3;
+    const r = hsh(x, y, 1);
+    let col, shore = false;
+    if (t === 0) {
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (tAt(x + dx, y + dy) === 3) shore = true;
+      col = shore ? shade('#dccb98', 1 + n * 0.03) : shade(GR[Math.floor(r * 4)], 1 + n * 0.05);
+    } else if (t === 1) col = shade(['#d9bb84', '#d3b47c', '#ddc08a'][Math.floor(r * 3)], 1 + n * 0.03);
+    else if (t === 2) col = (x + y) % 2 ? '#bcb7ac' : '#c6c1b6';
+    else if (t === 3) {
+      const edge = tAt(x + 1, y) !== 3 || tAt(x - 1, y) !== 3 || tAt(x, y + 1) !== 3 || tAt(x, y - 1) !== 3;
+      col = edge ? '#69b1d8' : shade('#4d9bcb', 1 + n * 0.05);
+    } else col = '#a0703f';
+    diamond(g, X, Y); g.fillStyle = col; g.fill(); g.strokeStyle = col; g.lineWidth = 1; g.stroke();
+
+    if (t === 0 && !shore) {
+      g.strokeStyle = 'rgba(60,110,50,.5)'; g.lineWidth = 1.2;
+      for (let k = 0; k < 3; k++) {
+        const q = proj(x + hsh(x, y, 10 + k), y + hsh(x, y, 20 + k));
+        const tx = q[0] + OX, ty = q[1];
+        g.beginPath(); g.moveTo(tx - 2, ty + 1); g.lineTo(tx - 3, ty - 3); g.moveTo(tx, ty + 1); g.lineTo(tx, ty - 4);
+        g.moveTo(tx + 2, ty + 1); g.lineTo(tx + 3, ty - 3); g.stroke();
+      }
+      if (hsh(x, y, 30) > 0.88) {
+        const fc = ['#ffffff', '#ffe27a', '#ff9ec0', '#c9a6ff'][Math.floor(hsh(x, y, 31) * 4)];
+        const q = proj(x + 0.5, y + 0.5);
+        for (let k = 0; k < 5; k++) {
+          g.fillStyle = fc; g.beginPath();
+          g.arc(q[0] + OX + (hsh(x, y, 40 + k) - 0.5) * 22, q[1] + (hsh(x, y, 50 + k) - 0.5) * 10, 1.5, 0, 6.3); g.fill();
+        }
+      }
+    }
+    if (t === 1) {
+      for (let k = 0; k < 3; k++) {
+        const q = proj(x + hsh(x, y, 60 + k), y + hsh(x, y, 70 + k));
+        g.fillStyle = k % 2 ? 'rgba(160,125,80,.55)' : 'rgba(255,240,200,.45)';
+        g.beginPath(); g.ellipse(q[0] + OX, q[1], 2.2, 1.2, 0, 0, 6.3); g.fill();
+      }
+      g.strokeStyle = 'rgba(110,80,40,.28)'; g.lineWidth = 1.6;
+      const edges = [[1, 0, [1, 0], [1, 1]], [0, 1, [0, 1], [1, 1]], [-1, 0, [0, 0], [0, 1]], [0, -1, [0, 0], [1, 0]]];
+      for (const e of edges) {
+        if (tAt(x + e[0], y + e[1]) !== 0) continue;
+        const a = proj(x + e[2][0], y + e[2][1]), b = proj(x + e[3][0], y + e[3][1]);
+        g.beginPath(); g.moveTo(a[0] + OX, a[1]); g.lineTo(b[0] + OX, b[1]); g.stroke();
+      }
+    }
+    if (t === 2) {
+      g.strokeStyle = 'rgba(255,255,255,.2)'; g.lineWidth = 1;
+      g.beginPath(); g.moveTo(X, Y + 4); g.lineTo(X + 26, Y + 16); g.lineTo(X, Y + 28); g.lineTo(X - 26, Y + 16); g.closePath(); g.stroke();
+      diamond(g, X, Y); g.strokeStyle = 'rgba(0,0,0,.1)'; g.stroke();
+    }
+    if (t === 4) {
+      g.strokeStyle = 'rgba(60,35,15,.45)'; g.lineWidth = 1;
+      for (const f of [0.2, 0.4, 0.6, 0.8]) {
+        const a = proj(x, y + f), b = proj(x + 1, y + f);
+        g.beginPath(); g.moveTo(a[0] + OX, a[1]); g.lineTo(b[0] + OX, b[1]); g.stroke();
+      }
+      g.strokeStyle = '#6b4527'; g.lineWidth = 2.2;
+      for (const xx of [0, 1]) {
+        const a = proj(x + xx, y), b = proj(x + xx, y + 1);
+        g.beginPath(); g.moveTo(a[0] + OX, a[1]); g.lineTo(b[0] + OX, b[1]); g.stroke();
+      }
+    }
+  }
+  // ลวดลายกลางลาน
+  const c0 = proj(20, 16), cx = c0[0] + OX, cy = c0[1];
+  const ring = (r, col, lw, dash) => {
+    g.beginPath(); g.ellipse(cx, cy, 45.25 * r, 22.63 * r, 0, 0, 6.3);
+    g.strokeStyle = col; g.lineWidth = lw; g.setLineDash(dash || []); g.stroke(); g.setLineDash([]);
+  };
+  g.beginPath(); g.ellipse(cx, cy, 45.25 * 3.7, 22.63 * 3.7, 0, 0, 6.3); g.fillStyle = 'rgba(120,100,80,.12)'; g.fill();
+  ring(3.7, 'rgba(120,110,95,.75)', 3); ring(3.2, 'rgba(150,60,45,.5)', 2, [6, 5]); ring(2.2, 'rgba(120,110,95,.55)', 2);
+  g.strokeStyle = 'rgba(120,110,95,.55)'; g.lineWidth = 2;
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI / 4;
+    const p1 = proj(20 + 2.3 * Math.cos(a), 16 + 2.3 * Math.sin(a)), p2 = proj(20 + 3.2 * Math.cos(a), 16 + 3.2 * Math.sin(a));
+    g.beginPath(); g.moveTo(p1[0] + OX, p1[1]); g.lineTo(p2[0] + OX, p2[1]); g.stroke();
+  }
+  terrain = c;
+}
+
+/* ============================================================ art helpers */
+const LP = (x, y, z) => [(x - y) * 32, (x + y) * 16 - (z || 0)];
+function poly(pts, fill, stroke, lw) {
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+}
+function line(a, b, col, lw) {
+  ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = 'round'; ctx.stroke();
+}
+function rr(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function box(x0, y0, x1, y1, z0, z1, top, left, right) {
+  poly([LP(x0, y1, z0), LP(x1, y1, z0), LP(x1, y1, z1), LP(x0, y1, z1)], left);
+  poly([LP(x1, y1, z0), LP(x1, y0, z0), LP(x1, y0, z1), LP(x1, y1, z1)], right);
+  poly([LP(x0, y0, z1), LP(x1, y0, z1), LP(x1, y1, z1), LP(x0, y1, z1)], top);
+}
+const glows = [];
+const cur = { sx: 0, sy: 0, z: 1 };
+function glowPx(dx, dy, r, rgb, a) {
+  if (LIGHTS < 0.05) return;
+  glows.push({ x: cur.sx + dx * cur.z, y: cur.sy + dy * cur.z, r: r * cur.z, c: rgb, a: a * LIGHTS });
+}
+function glowAt(lx, ly, lz, r, rgb, a) { const p = LP(lx, ly, lz); glowPx(p[0], p[1], r, rgb, a); }
+function shadowDiamond(x0, y0, x1, y1, a) {
+  poly([LP(x0, y0, 0), LP(x1, y0, 0), LP(x1, y1, 0), LP(x0, y1, 0)], 'rgba(0,0,0,' + a + ')');
+}
+
+/* ------------------------------------------------------------ roofs */
+function hipRoof(x0, y0, x1, y1, z, rh, ov, cols) {
+  const ex0 = x0 - ov, ey0 = y0 - ov, ex1 = x1 + ov, ey1 = y1 + ov, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, lift = 5;
+  const alongX = (x1 - x0) >= (y1 - y0);
+  let R1, R2;
+  if (alongX) { const m = (y1 - y0) / 2; R1 = LP(x0 + m, cy, z + rh); R2 = LP(x1 - m, cy, z + rh); }
+  else { const m = (x1 - x0) / 2; R1 = LP(cx, y0 + m, z + rh); R2 = LP(cx, y1 - m, z + rh); }
+  const A = LP(ex0, ey0, z + lift), B = LP(ex1, ey0, z + lift), C = LP(ex1, ey1, z + lift), D = LP(ex0, ey1, z + lift);
+  const lit = cols[0], shd = cols[1], dk = cols[2];
+  // ด้านหลัง
+  if (alongX) { poly([A, B, R2, R1], dk); poly([A, D, R1], dk); }
+  else { poly([A, D, R2, R1], dk); poly([A, B, R1], dk); }
+  // ด้านหน้า (มีชายคางอน)
+  const face = (E0, E1, T0, T1, fill) => {
+    ctx.beginPath(); ctx.moveTo(E0[0], E0[1]);
+    ctx.quadraticCurveTo((E0[0] + E1[0]) / 2, (E0[1] + E1[1]) / 2 + lift * 1.5, E1[0], E1[1]);
+    ctx.lineTo(T1[0], T1[1]); if (T0 !== T1) ctx.lineTo(T0[0], T0[1]); ctx.closePath();
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = 1;
+    for (const f of [0.33, 0.66]) {
+      ctx.beginPath();
+      ctx.moveTo(lerp(E0[0], T0[0], f), lerp(E0[1], T0[1], f)); ctx.lineTo(lerp(E1[0], T1[0], f), lerp(E1[1], T1[1], f)); ctx.stroke();
+    }
+  };
+  if (alongX) { face(D, C, R1, R2, lit); face(C, B, R2, R2, shd); }
+  else { face(C, B, R2, R1, shd); face(D, C, R2, R2, lit); }
+  line(R1, R2, '#c8402e', 3);
+  ctx.fillStyle = '#e8b64a'; ctx.beginPath(); ctx.arc(R1[0], R1[1], 2.4, 0, 6.3); ctx.arc(R2[0], R2[1], 2.4, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#e8b64a'; ctx.beginPath(); ctx.arc(C[0], C[1] - 1, 2, 0, 6.3); ctx.fill();
+}
+
+/* ------------------------------------------------------------ walls */
+function windowAt(fixed, c, z0, face, st) {
+  let pts;
+  if (face === 's') pts = [LP(c - .26, fixed, z0 + 11), LP(c + .26, fixed, z0 + 11), LP(c + .26, fixed, z0 + 22), LP(c - .26, fixed, z0 + 22)];
+  else pts = [LP(fixed, c - .26, z0 + 11), LP(fixed, c + .26, z0 + 11), LP(fixed, c + .26, z0 + 22), LP(fixed, c - .26, z0 + 22)];
+  poly(pts, mixc('#4a3426', '#ffd27a', LIGHTS), '#5b3a22', 1.4);
+  const m1 = [(pts[0][0] + pts[3][0]) / 2, (pts[0][1] + pts[3][1]) / 2], m2 = [(pts[1][0] + pts[2][0]) / 2, (pts[1][1] + pts[2][1]) / 2];
+  const m3 = [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2], m4 = [(pts[3][0] + pts[2][0]) / 2, (pts[3][1] + pts[2][1]) / 2];
+  line(m1, m2, '#5b3a22', 1); line(m3, m4, '#5b3a22', 1);
+  const ctr = [(pts[0][0] + pts[2][0]) / 2, (pts[0][1] + pts[2][1]) / 2];
+  glowPx(ctr[0], ctr[1], 26, [255, 190, 90], 0.55);
+}
+function doorAt(c, y1, z0, st) {
+  poly([LP(c - .5, y1, z0 + 21), LP(c + .5, y1, z0 + 21), LP(c + .5, y1, z0 + 26), LP(c - .5, y1, z0 + 26)], st.beam);
+  poly([LP(c - .38, y1, z0), LP(c + .38, y1, z0), LP(c + .38, y1, z0 + 21), LP(c - .38, y1, z0 + 21)], '#6f261c', '#3f1912', 1.4);
+  line(LP(c, y1, z0), LP(c, y1, z0 + 21), '#3f1912', 1);
+  ctx.fillStyle = '#e8b64a';
+  for (const s of [-.12, .12]) { const p = LP(c + s, y1, z0 + 10); ctx.beginPath(); ctx.arc(p[0], p[1], 1.5, 0, 6.3); ctx.fill(); }
+  poly([LP(c - .5, y1 + .22, z0), LP(c + .5, y1 + .22, z0), LP(c + .5, y1, z0), LP(c - .5, y1, z0)], '#a8a398');
+  glowAt(c, y1 + 0.2, z0 + 8, 30, [255, 170, 80], 0.35);
+}
+function facade(b, x0, y0, x1, y1, z0, z1, st, ground) {
+  poly([LP(x0, y1, z0), LP(x1, y1, z0), LP(x1, y1, z1), LP(x0, y1, z1)], st.wall);
+  poly([LP(x1, y1, z0), LP(x1, y0, z0), LP(x1, y0, z1), LP(x1, y1, z1)], shade(st.wall, 0.8));
+  const bz = z1 - 5;
+  poly([LP(x0, y1, bz), LP(x1, y1, bz), LP(x1, y1, z1), LP(x0, y1, z1)], st.beam);
+  poly([LP(x1, y1, bz), LP(x1, y0, bz), LP(x1, y0, z1), LP(x1, y1, z1)], shade(st.beam, 0.8));
+  const nx = Math.max(1, Math.round(x1 - x0)), ny = Math.max(1, Math.round(y1 - y0));
+  for (let k = 0; k < nx; k++) {
+    const c = x0 + (k + 0.5) * (x1 - x0) / nx;
+    if (ground && b.hasDoor && k === Math.floor(nx / 2)) doorAt(c, y1, z0, st); else windowAt(y1, c, z0, 's', st);
+  }
+  for (let k = 0; k < ny; k++) windowAt(x1, y0 + (k + 0.5) * (y1 - y0) / ny, z0, 'e', st);
+  for (let k = 0; k <= nx; k++) { const px = x0 + k * (x1 - x0) / nx; line(LP(px, y1, z0), LP(px, y1, z1), st.pillar, 3.5); }
+  for (let k = 0; k <= ny; k++) { const py = y0 + k * (y1 - y0) / ny; line(LP(x1, py, z0), LP(x1, py, z1), shade(st.pillar, 0.8), 3.5); }
+}
+function hangLantern(lx, ly, lz) {
+  const p = LP(lx, ly, lz);
+  line(p, [p[0], p[1] + 5], '#5b3a24', 1);
+  ctx.fillStyle = '#d0382a'; ctx.beginPath(); ctx.ellipse(p[0], p[1] + 11, 5, 6.5, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#e8b64a'; ctx.fillRect(p[0] - 2.6, p[1] + 4.4, 5.2, 1.8); ctx.fillRect(p[0] - 2.6, p[1] + 16, 5.2, 1.8);
+  ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.beginPath(); ctx.ellipse(p[0] - 1.6, p[1] + 9.5, 1.4, 2.6, 0, 0, 6.3); ctx.fill();
+  glowPx(p[0], p[1] + 11, 34, [255, 150, 60], 0.7);
+}
+function hangSign(text, lx, ly, lz) {
+  const p = LP(lx, ly, lz);
+  line([p[0] - 18, p[1]], [p[0] - 18, p[1] + 7], '#4a3020', 1.2); line([p[0] + 18, p[1]], [p[0] + 18, p[1] + 7], '#4a3020', 1.2);
+  rr(p[0] - 30, p[1] + 7, 60, 19, 3); ctx.fillStyle = '#7a3b22'; ctx.fill(); ctx.strokeStyle = '#e8b64a'; ctx.lineWidth = 1.5; ctx.stroke();
+  ctx.font = '700 11px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffe9a8'; ctx.fillText(text, p[0], p[1] + 17);
+}
+
+const STYLES = {
+  house: { hasDoor: true },
+  inn: { hasDoor: true },
+  shop: { hasDoor: true },
+  dojo: { hasDoor: true },
+  pagoda: { hasDoor: true }
+};
+function drawBuilding(o) {
+  const w = o.w, h = o.h, b = Object.assign({}, STYLES[o.kind]);
+  shadowDiamond(-0.35, -0.35, w + 0.45, h + 0.45, 0.2);
+  box(-0.1, -0.1, w + 0.1, h + 0.1, 0, 5, '#cfcabe', '#aaa59a', '#8f8a80');
+  let tiers, wallCol = '#efe3c8', beamCol = '#7e3a24', pillarCol = '#9b2d20', roofs = ROOFS[o.v | 0];
+  if (o.kind === 'house') { wallCol = ['#efe3c8', '#f0e8d2', '#e8dcc0'][o.v | 0]; tiers = [{ wh: 28, rh: 22, ov: 0.45, ins: 0 }]; }
+  else if (o.kind === 'shop') { roofs = ROOFS[1]; tiers = [{ wh: 31, rh: 22, ov: 0.5, ins: 0 }]; }
+  else if (o.kind === 'inn') { roofs = ROOFS[0]; tiers = [{ wh: 32, rh: 14, ov: 0.5, ins: 0 }, { wh: 26, rh: 24, ov: 0.5, ins: 0.9 }]; }
+  else if (o.kind === 'dojo') { roofs = ['#4d5560', '#38404a', '#292f38']; wallCol = '#f2ecdc'; beamCol = '#8f2a1f'; pillarCol = '#a8302a';
+    tiers = [{ wh: 34, rh: 14, ov: 0.55, ins: 0 }, { wh: 24, rh: 24, ov: 0.55, ins: 1.1 }]; }
+  else { roofs = ['#2f4a46', '#243a37', '#192927']; wallCol = '#d9553f'; beamCol = '#6c2a1c'; pillarCol = '#8f2b20';
+    tiers = [{ wh: 26, rh: 12, ov: 0.45, ins: 0 }, { wh: 22, rh: 12, ov: 0.4, ins: 0.4 }, { wh: 20, rh: 24, ov: 0.35, ins: 0.8 }]; }
+  const st = { wall: wallCol, beam: beamCol, pillar: pillarCol };
+  let z = 5, ins = 0, topRoofZ = 0;
+  tiers.forEach((t, i) => {
+    ins += t.ins;
+    const x0 = ins, y0 = ins, x1 = w - ins, y1 = h - ins;
+    facade(b, x0, y0, x1, y1, z, z + t.wh, st, i === 0);
+    hipRoof(x0, y0, x1, y1, z + t.wh, t.rh, t.ov, roofs);
+    topRoofZ = z + t.wh + t.rh;
+    if (o.kind === 'pagoda' && i === tiers.length - 1) {
+      const c = LP(w / 2, h / 2, topRoofZ);
+      line(c, [c[0], c[1] - 16], '#e8b64a', 2.2);
+      ctx.fillStyle = '#e8b64a'; ctx.beginPath(); ctx.arc(c[0], c[1] - 9, 3, 0, 6.3); ctx.fill();
+      ctx.beginPath(); ctx.arc(c[0], c[1] - 16, 2, 0, 6.3); ctx.fill();
+    }
+    if (i === 0 && (o.kind === 'inn' || o.kind === 'dojo' || o.kind === 'pagoda')) {
+      hangLantern(x0 - 0.05, y1 + 0.35, z + t.wh); hangLantern(x1 + 0.35, y0 - 0.05 + (y1 - y0) * 0.0, z + t.wh);
+      hangLantern(x1 + 0.35, y1 + 0.35, z + t.wh);
+    }
+    z += t.wh + t.rh * 0.45;
+  });
+  if (o.kind === 'house' && (o.v | 0) === 1) hangLantern(w + 0.3, h + 0.3, 5 + 28);
+  if (o.name && (o.kind === 'inn' || o.kind === 'shop' || o.kind === 'dojo')) {
+    hangSign(o.name, Math.floor(w / 2) + (o.kind === 'shop' ? 1.5 : -1.15), h + 0.55, 5 + (o.kind === 'shop' ? 22 : 24));
+  }
+  if (o.kind === 'dojo') { // ป้ายผ้าแดงสองข้างประตู
+    const c = Math.floor(w / 2) + 0.5;
+    for (const s of [-1.35, 1.35]) {
+      poly([LP(c + s - .22, h + .02, 28), LP(c + s + .22, h + .02, 28), LP(c + s + .22, h + .02, 5), LP(c + s - .22, h + .02, 5)], '#b8322a', '#e8b64a', 1);
+    }
+  }
+  if (o.kind === 'shop') { // กันสาดลายทาง
+    const c = Math.floor(w / 2) + 0.5;
+    for (let i = 0; i < 6; i++) {
+      const a = c - 1.2 + i * 0.4, bb = a + 0.4;
+      poly([LP(a, h + 0.02, 24), LP(bb, h + 0.02, 24), LP(bb, h + 0.55, 18), LP(a, h + 0.55, 18)], i % 2 ? '#f4e9d0' : '#3d8c5a');
+    }
+  }
+}
+
+/* ------------------------------------------------------------ small objects */
+function drawTree(v, t, seed) {
+  const sway = Math.sin(t * 1.3 + seed * 6.28) * 1.4;
+  ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0, 2, 20, 9, 0, 0, 6.3); ctx.fill();
+  if (v === 3) {
+    for (let i = 0; i < 4; i++) {
+      const bx = (i - 1.5) * 6 + (hsh((seed * 1000) | 0, i, 7) - 0.5) * 4, hgt = 62 + hsh((seed * 1000) | 0, i, 8) * 26;
+      ctx.strokeStyle = i % 2 ? '#6fae4e' : '#82c05c'; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(bx, 2); ctx.quadraticCurveTo(bx + sway * 0.3, -hgt / 2, bx + sway, -hgt); ctx.stroke();
+      ctx.strokeStyle = '#4f8a3a'; ctx.lineWidth = 1;
+      for (let k = 1; k < 5; k++) { const yy = -hgt * k / 5, xx = bx + sway * (k / 5) * (k / 5); ctx.beginPath(); ctx.moveTo(xx - 2.3, yy); ctx.lineTo(xx + 2.3, yy); ctx.stroke(); }
+      ctx.fillStyle = i % 2 ? '#5b9b45' : '#6aab50';
+      for (let j = 0; j < 3; j++) {
+        const lx = bx + sway + (j - 1) * 7, ly = -hgt + 6 + j % 2 * 6;
+        ctx.beginPath(); ctx.ellipse(lx, ly, 8, 2.6, (j - 1) * 0.5, 0, 6.3); ctx.fill();
+      }
+    }
+    return;
+  }
+  ctx.fillStyle = '#6b4a2e'; ctx.fillRect(-3.5, -26, 7, 28); ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(-3.5, -26, 2.2, 28);
+  if (v === 2) {
+    const cols = ['#2f6b4a', '#37805a', '#43925f'];
+    for (let i = 0; i < 3; i++) {
+      const by = -14 - i * 17, wd = 21 - i * 4;
+      ctx.fillStyle = cols[i]; ctx.beginPath(); ctx.moveTo(sway * (i + 1) * 0.3 - 0, by - 24); ctx.lineTo(-wd, by); ctx.lineTo(wd, by); ctx.closePath(); ctx.fill();
+    }
+    return;
+  }
+  const pal = v === 1 ? ['#ee8fb2', '#f2a7c3', '#f9c9dc'] : ['#4e8f4a', '#5a9d54', '#76b868'];
+  ctx.fillStyle = pal[0]; ctx.beginPath(); ctx.arc(sway * 0.9, -42, 19, 0, 6.3); ctx.fill();
+  ctx.fillStyle = pal[1]; ctx.beginPath(); ctx.arc(-11 + sway * 0.6, -33, 13, 0, 6.3); ctx.arc(11 + sway * 0.6, -35, 13, 0, 6.3); ctx.fill();
+  ctx.fillStyle = pal[2]; ctx.beginPath(); ctx.arc(-5 + sway, -48, 10, 0, 6.3); ctx.fill();
+  if (v === 1) {
+    ctx.fillStyle = '#ffffff'; for (let k = 0; k < 7; k++) { ctx.beginPath(); ctx.arc(-14 + hsh(k, (seed * 100) | 0, 3) * 28 + sway, -50 + hsh(k, (seed * 100) | 0, 4) * 26, 1.3, 0, 6.3); ctx.fill(); }
+    ctx.fillStyle = 'rgba(255,170,200,.7)'; for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(-12 + hsh(k, (seed * 100) | 0, 5) * 24, 4 + hsh(k, (seed * 100) | 0, 6) * 4, 1.4, 0, 6.3); ctx.fill(); }
+  }
+}
+function drawLamp(t) {
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0, 1, 9, 4, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#5b3a24'; ctx.fillRect(-2, -50, 4, 52); ctx.fillStyle = '#3f2616'; ctx.fillRect(-4, -4, 8, 6);
+  ctx.fillRect(-2, -50, 15, 3);
+  const lx = 11, ly = -36, fl = 1 + Math.sin(t * 6 + lx) * 0.02;
+  ctx.strokeStyle = '#5b3a24'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(lx, -47); ctx.lineTo(lx, ly - 8); ctx.stroke();
+  ctx.fillStyle = mixc('#c43628', '#ff7a3a', LIGHTS * 0.7); ctx.beginPath(); ctx.ellipse(lx, ly, 6.2 * fl, 8.2, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#e8b64a'; ctx.fillRect(lx - 3.2, ly - 9, 6.4, 2.2); ctx.fillRect(lx - 3.2, ly + 7, 6.4, 2.2);
+  ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.ellipse(lx - 2, ly - 2, 1.6, 3.4, 0, 0, 6.3); ctx.fill();
+  ctx.strokeStyle = '#d0382a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(lx, ly + 9); ctx.lineTo(lx, ly + 15); ctx.stroke();
+  glowPx(lx, ly, 62, [255, 150, 60], 0.85);
+  glowPx(0, 0, 38, [255, 160, 70], 0.28);
+}
+function drawWell() {
+  const cy = 32;
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0, cy + 3, 40, 18, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#8f8a80'; ctx.beginPath(); ctx.ellipse(0, cy, 28, 14, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#a8a398'; ctx.fillRect(-28, cy - 14, 56, 14);
+  ctx.fillStyle = '#c4bfb2'; ctx.beginPath(); ctx.ellipse(0, cy - 14, 28, 14, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#2d4a63'; ctx.beginPath(); ctx.ellipse(0, cy - 14, 20, 10, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = 'rgba(160,210,240,.35)'; ctx.beginPath(); ctx.ellipse(-5, cy - 16, 8, 3, 0, 0, 6.3); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.lineWidth = 1;
+  for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(k * 8, cy - 14 + 13.5 * Math.sqrt(Math.max(0, 1 - (k * 8 / 28) ** 2)) ); ctx.lineTo(k * 8, cy); ctx.stroke(); }
+  ctx.fillStyle = '#7a4a2a'; ctx.fillRect(-27, cy - 52, 4.5, 40); ctx.fillRect(22.5, cy - 52, 4.5, 40);
+  ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(-27, cy - 52, 1.6, 40); ctx.fillRect(22.5, cy - 52, 1.6, 40);
+  const ap = [0, cy - 82];
+  poly([[-40, cy - 54], [0, cy - 36], [0, ap[1]]], '#b64634'); poly([[0, cy - 36], [40, cy - 54], [0, ap[1]]], '#8f3527');
+  poly([[-40, cy - 54], [0, cy - 36], [0, cy - 32], [-40, cy - 50]], '#5e2218'); poly([[0, cy - 36], [40, cy - 54], [40, cy - 50], [0, cy - 32]], '#43180f');
+  ctx.fillStyle = '#e8b64a'; ctx.beginPath(); ctx.arc(0, ap[1], 2.6, 0, 6.3); ctx.fill();
+  ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, cy - 40); ctx.lineTo(0, cy - 20); ctx.stroke();
+  ctx.fillStyle = '#7a4a2a'; ctx.fillRect(-3, cy - 20, 6, 5);
+}
+function drawStall(v) {
+  const cols = v ? ['#2f7fb0', '#f2f2f2'] : ['#c0392b', '#f4e9d0'];
+  shadowDiamond(-0.1, 0.1, 2.15, 1.25, 0.2);
+  box(0.05, 0.4, 1.95, 0.95, 0, 14, '#c79a64', '#a97c48', '#8a6238');
+  const goods = v ? ['#f0a030', '#7cc65a', '#e86a4a', '#f0d040'] : ['#e8573d', '#f2c14e', '#8fcf5a', '#f08a3a'];
+  for (let i = 0; i < 8; i++) { const p = LP(0.25 + i * 0.22, 0.55 + (i % 2) * 0.18, 14); ctx.fillStyle = goods[i % 4]; ctx.beginPath(); ctx.arc(p[0], p[1] - 2.5, 3.2, 0, 6.3); ctx.fill(); }
+  for (const px of [0.08, 1.92]) line(LP(px, 0.12, 0), LP(px, 0.12, 48), '#7a4a2a', 3);
+  for (const px of [0.08, 1.92]) line(LP(px, 1.0, 14), LP(px, 1.0, 42), '#7a4a2a', 3);
+  for (let i = 0; i < 6; i++) {
+    const a = i / 3 + 0.0, b = a + 1 / 3;
+    poly([LP(a, 0.05, 48), LP(b, 0.05, 48), LP(b, 1.15, 40), LP(a, 1.15, 40)], i % 2 ? cols[1] : cols[0]);
+  }
+  poly([LP(0, 1.15, 40), LP(2, 1.15, 40), LP(2, 1.15, 36), LP(0, 1.15, 36)], shade(cols[0], 0.75));
+}
+function drawPillar(o) {
+  shadowDiamond(0.05, 0.05, 1.1, 1.1, 0.2);
+  box(0.18, 0.18, 0.82, 0.82, 0, 8, '#bdb8ac', '#9c978c', '#827d73');
+  box(0.3, 0.3, 0.7, 0.7, 8, 70, '#c0392b', '#a8342a', '#8c2b22');
+  for (const z of [20, 58]) box(0.26, 0.26, 0.74, 0.74, z, z + 3, '#e8b64a', '#d9a53a', '#b88a2c');
+  if (o.beam) {
+    box(0.3, 0.38, 3.7, 0.62, 60, 68, '#8e2a20', '#7e2a20', '#661f17');
+    hipRoof(-0.1, 0.18, 4.1, 0.82, 68, 11, 0.38, ['#4d5560', '#38404a', '#292f38']);
+    const a = LP(1.2, 0.74, 46), b = LP(2.8, 0.74, 46), c2 = LP(2.8, 0.74, 60), d = LP(1.2, 0.74, 60);
+    poly([a, b, c2, d], '#8e2a20', '#e8b64a', 1.4);
+    ctx.save(); const m = LP(2, 0.74, 52); ctx.translate(m[0], m[1]); ctx.transform(1, 0.5, 0, 1, 0, 0);
+    ctx.font = '700 10px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffe9a8'; ctx.fillText('ลำธารไผ่', 0, 0); ctx.restore();
+    hangLantern(1.0, 0.74, 60); hangLantern(3.0, 0.74, 60);
+  }
+}
+
+/* ------------------------------------------------------------ characters */
+function drawChar(look, dir, moving, t, off, prop) {
+  const col = OUTFIT[look.o], trim = mixc(col, '#ffffff', 0.5), dark = shade(col, 0.72), hairC = HAIRC[look.c], hs = look.h;
+  const vx = Math.cos(dir * Math.PI / 4), vy = Math.sin(dir * Math.PI / 4);
+  const sdx = vx - vy, sdy = vx + vy;
+  const front = sdy > 0.35, back = sdy < -0.35, side = !front && !back;
+  const fl = sdx >= 0 ? 1 : -1;
+  const ph = t * 11 + off, sw = moving ? Math.sin(ph) : 0;
+  const bob = moving ? Math.abs(Math.cos(ph)) * 2.4 : Math.sin(t * 2.2 + off) * 0.7;
+  ctx.fillStyle = 'rgba(0,0,0,.24)'; ctx.beginPath(); ctx.ellipse(0, 0, 13, 6, 0, 0, 6.3); ctx.fill();
+  const shoe = (x, y) => { ctx.fillStyle = '#2b2323'; rr(x - 3.6, y - 5, 7.2, 5.5, 2.2); ctx.fill(); };
+  if (side) { shoe(-3 + fl * sw * 5, -Math.max(0, -sw) * 3); shoe(3 - fl * sw * 5, -Math.max(0, sw) * 3); }
+  else { shoe(-4.2, -Math.max(0, sw) * 3); shoe(4.2, -Math.max(0, -sw) * 3); }
+  ctx.save(); ctx.translate(0, -bob);
+  const hx = side ? fl * 1.5 : 0;
+  if (hs === 1 && !back) { ctx.fillStyle = hairC; rr(-12.6, -52, 25.2, 36, 8); ctx.fill(); }
+  if (prop === 'spear') { line([fl * 15, -4], [fl * 15, -64], '#6b4a2e', 2.2); poly([[fl * 15 - 2.5, -64], [fl * 15, -73], [fl * 15 + 2.5, -64]], '#cfd6dc'); }
+  // robe
+  const bw = side ? 8.5 : 10.5;
+  ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(-bw + 1, -30); ctx.quadraticCurveTo(0, -33, bw - 1, -30);
+  ctx.lineTo(bw + 1.5, -8); ctx.quadraticCurveTo(0, -5, -bw - 1.5, -8); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = trim; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-bw - 1.3, -9.6); ctx.quadraticCurveTo(0, -6.3, bw + 1.3, -9.6); ctx.stroke();
+  ctx.fillStyle = dark; rr(-bw - 0.2, -21, bw * 2 + 0.4, 5, 1.5); ctx.fill();
+  if (front) {
+    ctx.fillStyle = '#f5eedd'; ctx.beginPath(); ctx.moveTo(-5.5, -30.5); ctx.lineTo(0, -20.5); ctx.lineTo(5.5, -30.5); ctx.lineTo(3, -31.5); ctx.lineTo(0, -26); ctx.lineTo(-3, -31.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = trim; ctx.beginPath(); ctx.arc(0, -18.5, 2.4, 0, 6.3); ctx.fill();
+  } else if (side) {
+    ctx.strokeStyle = trim; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(fl * bw * 0.55, -30); ctx.lineTo(fl * bw * 0.75, -9); ctx.stroke();
+  } else {
+    ctx.strokeStyle = shade(col, 0.82); ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(0, -9); ctx.stroke();
+  }
+  // arms
+  const arm = (x0, y0, dx, dy) => {
+    ctx.strokeStyle = shade(col, 1.1); ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + dx, y0 + dy); ctx.stroke();
+    ctx.fillStyle = SKIN; ctx.beginPath(); ctx.arc(x0 + dx, y0 + dy + 1.8, 2.4, 0, 6.3); ctx.fill();
+  };
+  if (side) { arm(0, -28, fl * sw * 6, 9); arm(0, -28, -fl * sw * 6, 9); }
+  else { arm(-bw - 0.5, -28, -1.5, 10 + sw * 2); arm(bw + 0.5, -28, 1.5, 10 - sw * 2); }
+  if (prop === 'cane') { line([fl * 13, -4], [fl * 12, -30], '#6b4a2e', 2.4); }
+  if (hs === 1 && back) { ctx.fillStyle = hairC; rr(-12.6, -50, 25.2, 38, 9); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(0, -48); ctx.lineTo(0, -16); ctx.stroke(); }
+  if (hs === 3) {
+    const bx = back ? 0 : -fl * 9 * (side ? 1 : 1), by = -46, ex = bx + (back ? sw * 3 : -fl * 4 + sw * 2), ey = -29;
+    ctx.strokeStyle = hairC; ctx.lineWidth = 6.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(bx, by); ctx.quadraticCurveTo(bx + (back ? 0 : -fl * 6), by + 12, ex, ey); ctx.stroke();
+    if (!back) { ctx.fillStyle = '#d0382a'; ctx.beginPath(); ctx.arc(bx, by, 2.4, 0, 6.3); ctx.fill(); }
+  }
+  // head
+  ctx.fillStyle = hairC; ctx.beginPath(); ctx.arc(hx, -41.5, 12.8, 0, 6.3); ctx.fill();
+  if (!back) {
+    ctx.fillStyle = SKIN; ctx.beginPath(); ctx.ellipse(hx + (side ? fl * 1.4 : 0), -38.2, 10.2, 9.8, 0, 0, 6.3); ctx.fill();
+    ctx.fillStyle = hairC; ctx.beginPath(); ctx.arc(hx, -41.5, 12.8, Math.PI, 0); ctx.lineTo(hx + 9.4, -40);
+    ctx.quadraticCurveTo(hx + 4, -47.5, hx, -46.5); ctx.quadraticCurveTo(hx - 5, -46.5, hx - 9.4, -40); ctx.closePath(); ctx.fill();
+    const eye = (x, y, r) => {
+      ctx.fillStyle = '#2a1f1f'; ctx.beginPath(); ctx.ellipse(x, y, r * 0.85, r * 1.2, 0, 0, 6.3); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x + 0.6, y - 0.9, 0.7, 0, 6.3); ctx.fill();
+    };
+    if (front) {
+      eye(hx - 4.3, -38.4, 1.9); eye(hx + 4.3, -38.4, 1.9);
+      ctx.fillStyle = 'rgba(255,120,120,.35)'; ctx.beginPath(); ctx.ellipse(hx - 7, -34.6, 2.3, 1.3, 0, 0, 6.3); ctx.ellipse(hx + 7, -34.6, 2.3, 1.3, 0, 0, 6.3); ctx.fill();
+      ctx.strokeStyle = '#a0522d'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx, -34.4, 1.6, 0.2, Math.PI - 0.2); ctx.stroke();
+    } else {
+      eye(hx + fl * 3.6, -38.4, 1.7); eye(hx + fl * 8.4, -38.4, 1.4);
+      ctx.fillStyle = 'rgba(255,120,120,.35)'; ctx.beginPath(); ctx.ellipse(hx + fl * 6.6, -34.6, 2.1, 1.2, 0, 0, 6.3); ctx.fill();
+      ctx.strokeStyle = '#a0522d'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(hx + fl * 8, -34.4, 1.2, 0.2, Math.PI - 0.2); ctx.stroke();
+    }
+    if (hs === 1) { ctx.fillStyle = hairC; if (front) { rr(hx - 12.4, -44, 3.6, 22, 2); ctx.fill(); rr(hx + 8.8, -44, 3.6, 22, 2); ctx.fill(); } else { rr(hx - fl * 12.4 - (fl > 0 ? 0 : 3.6) + (fl > 0 ? 0 : 0), -44, 3.6, 22, 2); ctx.fill(); } }
+  } else {
+    ctx.strokeStyle = 'rgba(255,255,255,.14)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(hx - 2, -43, 8, 3.6, 5.2); ctx.stroke();
+  }
+  if (hs === 0) {
+    ctx.fillStyle = hairC; ctx.beginPath(); ctx.arc(hx, -55, 5.6, 0, 6.3); ctx.fill();
+    line([hx - 5, -55], [hx + 5, -55], '#e8b64a', 1.8);
+    ctx.fillStyle = '#d0382a'; ctx.fillRect(hx - 1.5, -51.5, 3, 3);
+  } else if (hs === 2) {
+    poly([[hx - 5.5, -52.5], [hx + 0.5, -60], [hx + 5.5, -52.5]], hairC);
+  }
+  ctx.restore();
+}
+
+/* ============================================================ static objects */
+const statics = map.objs.map(o => {
+  const s = { o, x0: o.x, x1: o.x + (o.w || 1), y0: o.y, y1: o.y + (o.h || 1) };
+  if (o.type === 'tree') { s.x0 += 0.15; s.x1 -= 0.15; s.y0 += 0.15; s.y1 -= 0.15; }
+  if (o.type === 'lamp' || o.type === 'pillar') { s.x0 += 0.25; s.x1 -= 0.25; s.y0 += 0.25; s.y1 -= 0.25; }
+  s.k = (s.x0 + s.x1 + s.y0 + s.y1) / 2;
+  const c = proj((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2);
+  s.cx = c[0]; s.cy = c[1];
+  s.rad = o.type === 'building' ? 40 * (o.w + o.h) + 150 : o.type === 'well' || o.type === 'stall' || o.type === 'pillar' ? 150 : 100;
+  s.seed = hsh(o.x, o.y, 5);
+  return s;
+});
+
+/* ============================================================ entities */
+const ents = new Map();
+let myId = null, joined = false, mode = 'online', net = null;
+function makeEnt(id, name, look, x, y, dir, moving, npc, prop) {
+  return { id, name, look, x, y, tx: x, ty: y, dir, moving: !!moving, off: Math.random() * 6.28, bubble: null, npc: !!npc, prop, vis: 0, sx: 0, sy: 0 };
+}
+function resetEnts() {
+  ents.clear();
+  const props = { n4: 'spear', n1: 'cane' };
+  for (const n of map.npcs) ents.set(n.id, makeEnt(n.id, n.name, n.look, n.x + 0.5, n.y + 0.5, n.id === 'n4' ? 3 : 2, false, true, props[n.id]));
+}
+resetEnts();
+
+/* ============================================================ network */
+function setStatus() {
+  if (!joined) return;
+  let players = 0; ents.forEach(e => { if (!e.npc) players++; });
+  $('stxt').textContent = (mode === 'demo' ? 'โหมดเดโม · ' : 'ออนไลน์ · ') + players + ' คน' + (mode === 'demo' ? ' (รวมบอท)' : '');
+  $('dot').className = mode === 'demo' ? 'demo' : '';
+}
+function say(ent, text) {
+  ctx.font = '600 12.5px ' + FONT;
+  const lines = []; let curLine = '';
+  for (const ch of Array.from(text)) {
+    if (ctx.measureText(curLine + ch).width > 150 && curLine) { lines.push(curLine); curLine = ch; } else curLine += ch;
+  }
+  if (curLine) lines.push(curLine);
+  ent.bubble = { lines: lines.slice(0, 4), until: performance.now() + 5500 };
+}
+function addLog(kind, name, text) {
+  const d = document.createElement('div');
+  d.className = 'l ' + (kind || '');
+  if (name) { const b = document.createElement('b'); b.textContent = name; d.appendChild(b); }
+  d.appendChild(document.createTextNode(text));
+  const log = $('log'); log.appendChild(d);
+  while (log.children.length > 8) log.removeChild(log.firstChild);
+  setTimeout(() => d.classList.add('fade'), 18000);
+  setTimeout(() => d.remove(), 18700);
+}
+function toast(text, ms) {
+  const t = $('toast'); t.textContent = text; t.hidden = false; t.style.opacity = 1;
+  clearTimeout(toast.t); toast.t = setTimeout(() => { t.style.opacity = 0; setTimeout(() => { t.hidden = true; }, 420); }, ms || 3500);
+}
+let marker = null;
+function handle(m) {
+  switch (m.t) {
+    case 'init': {
+      phaseBase = m.phase; dayMs = m.dayMs; phaseT0 = performance.now();
+      resetEnts(); myId = m.id;
+      for (const p of m.players) ents.set(p.id, makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false));
+      const me = ents.get(myId); const c = proj(me.x, me.y); cam.x = c[0]; cam.y = c[1] - 18;
+      joined = true; setStatus();
+      $('join').hidden = true; $('hud').hidden = false;
+      addLog('sys', '', 'แตะที่พื้นเพื่อเดิน · พิมพ์ข้อความเพื่อคุยกับคนอื่น');
+      break;
+    }
+    case 'join': {
+      const p = m.p; ents.set(p.id, makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false));
+      addLog('sys', '', p.name + ' เข้าสู่หมู่บ้าน'); setStatus(); break;
+    }
+    case 'leave': {
+      const e = ents.get(m.id); if (e) { addLog('sys', '', e.name + ' ออกจากหมู่บ้าน'); ents.delete(m.id); } setStatus(); break;
+    }
+    case 'snap': {
+      for (const s of m.p) {
+        const e = ents.get(s[0]); if (!e) continue;
+        e.tx = s[1]; e.ty = s[2]; e.dir = s[3]; e.moving = !!s[4];
+      }
+      break;
+    }
+    case 'chat': {
+      const e = ents.get(m.id);
+      addLog((m.npc ? 'npc ' : '') + (m.id === myId ? 'me' : ''), m.name + ':', m.text);
+      if (e) say(e, m.text);
+      break;
+    }
+    case 'full': toast('เซิร์ฟเวอร์เต็มแล้ว ลองใหม่ภายหลังนะ', 5000); $('go').disabled = false; break;
+  }
+}
+
+function startDemo(name, look, notice) {
+  mode = 'demo';
+  const hub = new G.Hub();
+  const botDefs = [['มินตรา', 0, 1, 1], ['ลมหนาว', 1, 3, 0], ['เสี่ยวหลง', 4, 2, 0], ['ปลายฟ้า', 3, 0, 1], ['ไผ่เขียว', 2, 2, 3], ['แก้วใส', 0, 3, 2]];
+  const lines = ['สวัสดีครับ!', 'ที่นี่สวยจังเลย', 'ใครรู้ทางไปสำนักยุทธ์บ้าง', 'โคมไฟสวยมากเลย', 'หิวแล้ว ไปโรงเตี๊ยมกัน', '555', 'มีใครไปเดินเล่นริมลำธารไหม', 'อากาศดีจัง'];
+  const bots = botDefs.map(d => {
+    const c = hub.connect(() => {});
+    hub.message(c, { t: 'join', name: d[0], look: { o: d[1], h: d[2], c: d[3] } });
+    return { c, next: 1 + Math.random() * 4, talk: 12 + Math.random() * 25 };
+  });
+  const conn = hub.connect(s => handle(JSON.parse(s)));
+  const randomSpot = () => {
+    for (let i = 0; i < 40; i++) {
+      const plaza = Math.random() < 0.5;
+      const x = plaza ? 15 + Math.random() * 10 : 4 + Math.random() * 32, y = plaza ? 11 + Math.random() * 9 : 4 + Math.random() * 26;
+      if (!hub.world.map.solid[Math.floor(y) * MW + Math.floor(x)]) return [x, y];
+    }
+    return [20, 18];
+  };
+  const iv = setInterval(() => {
+    hub.tick(0.05);
+    for (const b of bots) {
+      b.next -= 0.05; b.talk -= 0.05;
+      if (b.next <= 0) { b.next = 3 + Math.random() * 8; const s = randomSpot(); hub.message(b.c, { t: 'move', x: s[0], y: s[1] }); }
+      if (b.talk <= 0) { b.talk = 20 + Math.random() * 30; hub.message(b.c, { t: 'chat', text: lines[Math.floor(Math.random() * lines.length)] }); }
+    }
+  }, 50);
+  net = {
+    send(o) {
+      hub.message(conn, o);
+      if (o.t === 'chat') {
+        const b = bots[Math.floor(Math.random() * bots.length)];
+        setTimeout(() => hub.message(b.c, { t: 'chat', text: lines[Math.floor(Math.random() * lines.length)] }), 1300 + Math.random() * 1200);
+      }
+    },
+    close() { clearInterval(iv); hub.drop(conn); }
+  };
+  hub.message(conn, { t: 'join', name, look });
+  setTimeout(() => hub.message(bots[0].c, { t: 'chat', text: 'ยินดีต้อนรับ ' + G.cleanName(name) + '!' }), 1500);
+  if (notice) toast(notice, 5000);
+}
+function startOnline(name, look) {
+  if (location.protocol === 'file:' || !location.host) { startDemo(name, look, 'เปิดจากไฟล์ตรง ๆ จึงเข้าโหมดเดโม · รัน node online-server.js เพื่อเล่นออนไลน์จริง'); return; }
+  const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws';
+  let opened = false, ws, done = false;
+  const fallback = () => { if (done) return; done = true; startDemo(name, look, 'ต่อเซิร์ฟเวอร์ไม่ได้ จึงเข้าโหมดเดโมแทน'); };
+  const to = setTimeout(() => { if (!opened) { try { ws.close(); } catch (e) {} fallback(); } }, 3500);
+  try { ws = new WebSocket(url); } catch (e) { clearTimeout(to); fallback(); return; }
+  ws.onopen = () => { opened = true; clearTimeout(to); ws.send(JSON.stringify({ t: 'join', name, look })); };
+  ws.onmessage = e => { try { handle(JSON.parse(e.data)); } catch (err) {} };
+  ws.onerror = () => {};
+  ws.onclose = () => {
+    if (!opened) { clearTimeout(to); fallback(); return; }
+    if (joined) { $('stxt').textContent = 'หลุดการเชื่อมต่อ · แตะเพื่อเข้าใหม่'; $('dot').className = 'demo'; $('status').style.pointerEvents = 'auto'; $('status').onclick = () => location.reload(); }
+  };
+  net = { send(o) { if (ws.readyState === 1) ws.send(JSON.stringify(o)); }, close() { try { ws.close(); } catch (e) {} } };
+  mode = 'online';
+}
+
+/* ============================================================ input */
+function screenToTile(px, py) {
+  const wx = (px - vw / 2) / zoom + cam.x, wy = (py - vh / 2) / zoom + cam.y;
+  return [wy / 32 + wx / 64, wy / 32 - wx / 64];
+}
+let down = null, hover = null;
+cv.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
+cv.addEventListener('pointerup', e => {
+  if (!down || !joined) { down = null; return; }
+  const d = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t;
+  down = null;
+  if (d > 10 || dt > 700) return;
+  const t = screenToTile(e.clientX, e.clientY);
+  if (t[0] < 0 || t[1] < 0 || t[0] >= MW || t[1] >= MH) return;
+  marker = { x: Math.floor(t[0]) + 0.5, y: Math.floor(t[1]) + 0.5, t0: performance.now() };
+  net.send({ t: 'move', x: t[0], y: t[1] });
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+});
+cv.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') hover = screenToTile(e.clientX, e.clientY); });
+cv.addEventListener('pointerleave', () => { hover = null; });
+cv.addEventListener('wheel', e => { e.preventDefault(); zoom = clamp(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.5, 1.8); }, { passive: false });
+$('zin').onclick = () => { zoom = clamp(zoom * 1.15, 0.5, 1.8); };
+$('zout').onclick = () => { zoom = clamp(zoom / 1.15, 0.5, 1.8); };
+$('tbtn').onclick = () => { timeMode = timeMode === 'auto' ? 'day' : timeMode === 'day' ? 'night' : 'auto'; };
+$('cform').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = $('cin').value.trim();
+  if (v && net) net.send({ t: 'chat', text: v });
+  $('cin').value = '';
+});
+window.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && joined && document.activeElement !== $('cin') && document.activeElement !== $('nm')) { e.preventDefault(); $('cin').focus(); }
+  if (e.key === 'Escape') $('cin').blur();
+});
+
+/* ============================================================ rendering */
+const items = [];
+function sortItems() {
+  items.sort((a, b) => a.k - b.k);
+  const n = items.length;
+  for (let i = 0; i < n; i++) { items[i].deps = null; items[i].mark = 0; }
+  for (let i = 0; i < n; i++) {
+    const A = items[i];
+    for (let j = i + 1; j < n; j++) {
+      const B = items[j];
+      if (B.k - A.k > 14) break;
+      const ab = A.x1 <= B.x0 + 1e-6 || A.y1 <= B.y0 + 1e-6;
+      const ba = B.x1 <= A.x0 + 1e-6 || B.y1 <= A.y0 + 1e-6;
+      if (ab && !ba) (B.deps || (B.deps = [])).push(A);
+      else if (ba && !ab) (A.deps || (A.deps = [])).push(B);
+    }
+  }
+  const out = [];
+  const visit = it => { if (it.mark) return; it.mark = 1; if (it.deps) for (const d of it.deps) visit(d); out.push(it); };
+  for (const it of items) visit(it);
+  return out;
+}
+let frame = 0;
+const waterTiles = [];
+for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (map.tiles[y * MW + x] === 3) waterTiles.push([x, y]);
+const flies = [];
+{ const r = G.rng(99); for (let i = 0; i < 30; i++) { let x, y; do { x = 3 + r() * 34; y = 3 + r() * 27; } while (map.solid[Math.floor(y) * MW + Math.floor(x)] || tAt(Math.floor(x), Math.floor(y)) === 2); flies.push({ x, y, p: r() * 6.28, s: 0.3 + r() * 0.5 }); } }
+
+const S2X = wx => (wx - cam.x) * zoom + vw / 2, S2Y = wy => (wy - cam.y) * zoom + vh / 2;
+
+function drawTerrain() {
+  const x0b = (cam.x - vw / 2 / zoom + OX) * TS, y0b = (cam.y - vh / 2 / zoom) * TS, wb = vw / zoom * TS, hb = vh / zoom * TS;
+  const cx0 = Math.max(0, x0b), cy0 = Math.max(0, y0b), cx1 = Math.min(terrain.width, x0b + wb), cy1 = Math.min(terrain.height, y0b + hb);
+  if (cx1 <= cx0 || cy1 <= cy0) return;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(terrain, cx0, cy0, cx1 - cx0, cy1 - cy0, (cx0 - x0b) / wb * vw, (cy0 - y0b) / hb * vh, (cx1 - cx0) / wb * vw, (cy1 - cy0) / hb * vh);
+}
+function drawWaterFx(now) {
+  ctx.lineWidth = 1.3 * zoom; ctx.lineCap = 'round';
+  for (const w of waterTiles) {
+    const p = proj(w[0] + 0.5, w[1] + 0.5), sx = S2X(p[0]), sy = S2Y(p[1]);
+    if (sx < -60 || sx > vw + 60 || sy < -40 || sy > vh + 40) continue;
+    for (let k = 0; k < 2; k++) {
+      const ph = now * 0.0007 + hsh(w[0], w[1], k) * 6.28;
+      const a = 0.18 + 0.2 * Math.sin(ph * 2);
+      const ox = (hsh(w[0], w[1], 3 + k) - 0.5) * 36 + Math.sin(ph) * 5, oy = (hsh(w[0], w[1], 5 + k) - 0.5) * 12;
+      ctx.strokeStyle = 'rgba(255,255,255,' + Math.max(0, a) + ')';
+      ctx.beginPath(); ctx.moveTo(sx + (ox - 7) * zoom, sy + oy * zoom); ctx.lineTo(sx + (ox + 7) * zoom, sy + oy * zoom); ctx.stroke();
+    }
+  }
+}
+function drawTileMark(tx, ty, col, a, scale) {
+  const p = proj(tx, ty), sx = S2X(p[0]), sy = S2Y(p[1]), s = zoom * (scale || 1);
+  ctx.beginPath();
+  ctx.moveTo(sx, sy + 16 * zoom * (1 - s / zoom)); ctx.lineTo(sx + 32 * s, sy + 16 * zoom); ctx.lineTo(sx, sy + 32 * zoom - 16 * zoom * (1 - s / zoom)); ctx.lineTo(sx - 32 * s, sy + 16 * zoom); ctx.closePath();
+  ctx.fillStyle = col.replace('A', a * 0.3); ctx.fill(); ctx.strokeStyle = col.replace('A', a); ctx.lineWidth = 2; ctx.stroke();
+}
+
+function render(now, dt) {
+  frame++;
+  const t = now / 1000;
+  const me = myId != null ? ents.get(myId) : null;
+  // ตามตัวละคร / กล้องวนตอนหน้าเข้าเกม
+  let tx, ty;
+  if (me) { const p = proj(me.x, me.y); tx = p[0]; ty = p[1] - 18; }
+  else { const p = proj(20 + Math.cos(t * 0.06) * 3.5, 15 + Math.sin(t * 0.06) * 2.2); tx = p[0]; ty = p[1]; }
+  const k = 1 - Math.exp(-dt * (me ? 6 : 2));
+  cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
+
+  // เวลา
+  const th = targetHour(), tt = tintAt(th), tl = lightsAt(th), ek = 1 - Math.exp(-dt * 3);
+  tintNow = tintNow.map((v, i) => lerp(v, tt[i], ek)); LIGHTS = lerp(LIGHTS, tl, ek);
+
+  // เอนทิตี
+  for (const e of ents.values()) {
+    if (e.npc) continue;
+    const dx = e.tx - e.x, dy = e.ty - e.y, d = Math.hypot(dx, dy);
+    if (d > 3) { e.x = e.tx; e.y = e.ty; }
+    else { const f = 1 - Math.exp(-dt * 14); e.x += dx * f; e.y += dy * f; }
+    e.anim = e.moving || d > 0.04;
+    if (e.bubble && now > e.bubble.until) e.bubble = null;
+  }
+  if (marker && me && !me.moving && Math.hypot(me.x - marker.x, me.y - marker.y) < 0.8 && now - marker.t0 > 400) marker = null;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#243f2c'; ctx.fillRect(0, 0, vw, vh);
+  drawTerrain();
+  drawWaterFx(now);
+  if (hover && joined) { const hx = Math.floor(hover[0]), hy = Math.floor(hover[1]); if (hx >= 0 && hy >= 0 && hx < MW && hy < MH && !map.solid[hy * MW + hx]) drawTileMark(hx, hy, 'rgba(255,255,255,A)', 0.8); }
+  if (marker) { const pulse = 0.82 + 0.18 * Math.sin((now - marker.t0) / 120); drawTileMark(Math.floor(marker.x), Math.floor(marker.y), 'rgba(255,226,122,A)', 1, pulse); }
+
+  // รวบรวมวัตถุที่มองเห็น
+  items.length = 0; glows.length = 0;
+  for (const s of statics) {
+    const sx = S2X(s.cx), sy = S2Y(s.cy), r = s.rad * zoom;
+    if (sx < -r || sx > vw + r || sy < -r || sy > vh + r) continue;
+    items.push({ k: s.k, x0: s.x0, x1: s.x1, y0: s.y0, y1: s.y1, s });
+  }
+  for (const e of ents.values()) {
+    const p = proj(e.x, e.y), sx = S2X(p[0]), sy = S2Y(p[1]);
+    if (sx < -80 || sx > vw + 80 || sy < -120 || sy > vh + 80) continue;
+    items.push({ k: e.x + e.y, x0: e.x - 0.25, x1: e.x + 0.25, y0: e.y - 0.25, y1: e.y + 0.25, e });
+  }
+  const sorted = sortItems();
+  for (const it of sorted) {
+    ctx.save();
+    if (it.s) {
+      const o = it.s.o; let p;
+      if (o.type === 'tree') p = proj(o.x + 0.5, o.y + 0.5);
+      else if (o.type === 'lamp') p = proj(o.x + 0.5, o.y + 0.5);
+      else p = proj(o.x, o.y);
+      cur.sx = S2X(p[0]); cur.sy = S2Y(p[1]); cur.z = zoom;
+      ctx.translate(cur.sx, cur.sy); ctx.scale(zoom, zoom);
+      if (o.type === 'building') drawBuilding(o);
+      else if (o.type === 'tree') drawTree(o.v, t, it.s.seed);
+      else if (o.type === 'lamp') drawLamp(t);
+      else if (o.type === 'well') drawWell();
+      else if (o.type === 'stall') drawStall(o.v);
+      else if (o.type === 'pillar') drawPillar(o);
+    } else {
+      const e = it.e, p = proj(e.x, e.y);
+      cur.sx = S2X(p[0]); cur.sy = S2Y(p[1]); cur.z = zoom;
+      e.vis = frame; e.sx = cur.sx; e.sy = cur.sy;
+      ctx.translate(cur.sx, cur.sy); ctx.scale(zoom, zoom);
+      drawChar(e.look, e.dir, e.anim, t, e.off, e.prop);
+    }
+    ctx.restore();
+  }
+
+  // แสงกลางวัน/กลางคืน
+  if (tintNow[0] < 254 || tintNow[1] < 254 || tintNow[2] < 254) {
+    ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = css(tintNow); ctx.fillRect(0, 0, vw, vh);
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  for (const f of flies) {
+    if (LIGHTS < 0.4) break;
+    const p = proj(f.x + Math.sin(t * f.s + f.p) * 0.6, f.y + Math.cos(t * f.s * 0.8 + f.p) * 0.6), sx = S2X(p[0]), sy = S2Y(p[1] - 22 - Math.sin(t * f.s * 2 + f.p) * 6);
+    if (sx < -20 || sx > vw + 20 || sy < -20 || sy > vh + 20) continue;
+    const a = (0.5 + 0.5 * Math.sin(t * 3 * f.s + f.p * 3)) * (LIGHTS - 0.3);
+    const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, 9 * zoom);
+    g.addColorStop(0, 'rgba(220,255,140,' + a + ')'); g.addColorStop(1, 'rgba(220,255,140,0)');
+    ctx.fillStyle = g; ctx.fillRect(sx - 10 * zoom, sy - 10 * zoom, 20 * zoom, 20 * zoom);
+  }
+  for (const gl of glows) {
+    if (gl.x < -gl.r || gl.x > vw + gl.r || gl.y < -gl.r || gl.y > vh + gl.r) continue;
+    const g = ctx.createRadialGradient(gl.x, gl.y, 0, gl.x, gl.y, gl.r);
+    g.addColorStop(0, 'rgba(' + gl.c[0] + ',' + gl.c[1] + ',' + gl.c[2] + ',' + Math.min(1, gl.a) + ')');
+    g.addColorStop(1, 'rgba(' + gl.c[0] + ',' + gl.c[1] + ',' + gl.c[2] + ',0)');
+    ctx.fillStyle = g; ctx.fillRect(gl.x - gl.r, gl.y - gl.r, gl.r * 2, gl.r * 2);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  const vg = ctx.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.45, vw / 2, vh / 2, Math.max(vw, vh) * 0.78);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.34)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, vw, vh);
+
+  // ชื่อและบับเบิลแชท
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  for (const e of ents.values()) {
+    if (e.vis !== frame) continue;
+    ctx.font = '700 12px ' + FONT;
+    const label = e.name;
+    ctx.lineJoin = 'round'; ctx.lineWidth = 3.4; ctx.strokeStyle = 'rgba(0,0,0,.85)';
+    ctx.strokeText(label, e.sx, e.sy + 17); ctx.fillStyle = e.id === myId ? '#ffe27a' : e.npc ? '#9be7ff' : '#ffffff'; ctx.fillText(label, e.sx, e.sy + 17);
+    if (e.bubble) {
+      const rem = e.bubble.until - now, a = rem < 700 ? rem / 700 : 1;
+      ctx.font = '600 12.5px ' + FONT;
+      const lines = e.bubble.lines; let wmax = 0; for (const l of lines) wmax = Math.max(wmax, ctx.measureText(l).width);
+      const bw = wmax + 16, bh = lines.length * 16 + 10, bx = e.sx - bw / 2, by = e.sy - 62 * zoom - bh - 6;
+      ctx.globalAlpha = a;
+      rr(bx, by, bw, bh, 9); ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(e.sx - 5, by + bh - 0.5); ctx.lineTo(e.sx, by + bh + 6); ctx.lineTo(e.sx + 5, by + bh - 0.5); ctx.closePath(); ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fill();
+      ctx.fillStyle = '#23201a';
+      lines.forEach((l, i) => ctx.fillText(l, e.sx, by + 18 + i * 16));
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+/* ============================================================ HUD updates */
+const mini = $('mini'), mctx = mini.getContext('2d');
+const miniBase = document.createElement('canvas'); miniBase.width = 120; miniBase.height = 96;
+{
+  const g = miniBase.getContext('2d'), C = ['#6f9e5a', '#cdb184', '#b5b0a5', '#4d9bcb', '#8c6238'];
+  for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { g.fillStyle = C[map.tiles[y * MW + x]]; g.fillRect(x * 3, y * 3, 3, 3); }
+  for (const o of map.objs) {
+    if (o.type === 'building') { g.fillStyle = '#8f3a2c'; g.fillRect(o.x * 3, o.y * 3, o.w * 3, o.h * 3); }
+    else if (o.type === 'tree') { g.fillStyle = '#3f7a45'; g.fillRect(o.x * 3, o.y * 3, 3, 3); }
+    else if (o.type === 'well') { g.fillStyle = '#6b7f8c'; g.fillRect(o.x * 3, o.y * 3, 6, 6); }
+  }
+}
+function updateHud() {
+  if (!joined) return;
+  mctx.drawImage(miniBase, 0, 0);
+  for (const e of ents.values()) {
+    mctx.fillStyle = e.id === myId ? '#ffe27a' : e.npc ? '#ff9a3c' : '#9be7ff';
+    const r = e.id === myId ? 2.6 : 1.8;
+    mctx.beginPath(); mctx.arc(e.x * 3, e.y * 3, r, 0, 6.3); mctx.fill();
+    if (e.id === myId) { mctx.strokeStyle = '#000'; mctx.lineWidth = 0.8; mctx.stroke(); }
+  }
+  const h = autoHour(), hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
+  const night = LIGHTS > 0.5;
+  $('ticon').textContent = night ? '☾' : '☀';
+  $('ttxt').textContent = timeMode === 'auto' ? String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0') : timeMode === 'day' ? 'กลางวัน' : 'กลางคืน';
+}
+setInterval(updateHud, 250);
+
+/* ============================================================ join screen */
+const sel = { o: Math.floor(Math.random() * 6), h: Math.floor(Math.random() * 4), c: Math.floor(Math.random() * 3) };
+try { const s = JSON.parse(localStorage.getItem('bc-look') || 'null'); if (s) { sel.o = s.o | 0; sel.h = s.h | 0; sel.c = s.c | 0; $('nm').value = String(s.n || '').slice(0, 12); } } catch (e) {}
+if (!$('nm').value) $('nm').value = ['ไผ่', 'ลม', 'เมฆ', 'ฟ้า', 'ดาว', 'หมอก'][Math.floor(Math.random() * 6)] + (10 + Math.floor(Math.random() * 90));
+function drawPreview(c, scale, dir, t, look, yBase) {
+  const g = c.getContext('2d'), prev = ctx;
+  ctx = g; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, c.width, c.height);
+  g.translate(c.width / 2, yBase); g.scale(scale, scale);
+  drawChar(look, dir, false, t, 0, null);
+  ctx = prev;
+}
+const swO = $('sw-o'), swH = $('sw-h'), swC = $('sw-c');
+const hairBtns = [];
+function buildSwatches() {
+  OUTFIT.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', 'ชุด ' + (i + 1)); b.onclick = () => { sel.o = i; refreshSel(); }; swO.appendChild(b); });
+  for (let i = 0; i < G.HAIRS; i++) { const b = document.createElement('button'); b.type = 'button'; b.className = 'hs'; b.setAttribute('aria-label', 'ทรงผม ' + (i + 1)); const c = document.createElement('canvas'); c.width = 92; c.height = 100; b.appendChild(c); b.onclick = () => { sel.h = i; refreshSel(); }; swH.appendChild(b); hairBtns.push(c); }
+  HAIRC.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', 'สีผม ' + (i + 1)); b.onclick = () => { sel.c = i; refreshSel(); }; swC.appendChild(b); });
+  refreshSel();
+}
+function refreshSel() {
+  [...swO.children].forEach((b, i) => b.classList.toggle('sel', i === sel.o));
+  [...swH.children].forEach((b, i) => b.classList.toggle('sel', i === sel.h));
+  [...swC.children].forEach((b, i) => b.classList.toggle('sel', i === sel.c));
+  hairBtns.forEach((c, i) => drawPreview(c, 1.95, 2, 0, { o: sel.o, h: i, c: sel.c }, 128));
+}
+buildSwatches();
+$('note').textContent = DEMO_ONLY
+  ? 'โหมดเดโม — คนอื่นในหมู่บ้านเป็นบอทจำลอง · ตัวเกมออนไลน์จริงรันด้วย node online-server.js'
+  : 'เชื่อมต่อเซิร์ฟเวอร์เดียวกับหน้านี้ — ทุกคนที่เปิดหน้านี้จะเห็นกัน';
+$('go').onclick = () => {
+  const name = G.cleanName($('nm').value), look = { o: sel.o, h: sel.h, c: sel.c };
+  try { localStorage.setItem('bc-look', JSON.stringify({ n: name, o: sel.o, h: sel.h, c: sel.c })); } catch (e) {}
+  $('go').disabled = true; $('go').textContent = 'กำลังเข้าหมู่บ้าน…';
+  if (DEMO_ONLY) startDemo(name, look); else startOnline(name, look);
+};
+
+/* ============================================================ main loop */
+bakeTerrain();
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!joined) drawPreview($('pv'), 2.0, 2, now / 1000, { o: sel.o, h: sel.h, c: sel.c }, 190);
+  try { render(now, dt); } catch (err) { console.error(err); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+window.__bc = {
+  ents, map, get zoom() { return zoom; }, set zoom(v) { zoom = v; },
+  setMode(m, snap) { timeMode = m; if (snap) { const h = targetHour(); tintNow = tintAt(h); LIGHTS = lightsAt(h); } },
+  cam, get me() { return ents.get(myId); }, get joined() { return joined; }, get mode() { return mode; },
+  toScreen(x, y) { const p = proj(x, y); return [S2X(p[0]), S2Y(p[1])]; }
+};
+})();
+</script>
+</body>
+</html>
