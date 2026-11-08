@@ -22,17 +22,22 @@
     jelly: { name: 'ก้อนวุ้นไผ่', sell: 5 },
     tusk: { name: 'เขี้ยวหมูป่า', sell: 14 },
     herb: { name: 'สมุนไพร', heal: 40, buy: 20, sell: 6 },
-    tonic: { name: 'ยาบำรุงกำลัง', heal: 100, buy: 70, sell: 20 }
+    tonic: { name: 'ยาบำรุงกำลัง', heal: 100, buy: 70, sell: 20 },
+    // อุปกรณ์สวมใส่: slot = weapon (เพิ่มพลังโจมตี) / armor (เพิ่มป้องกัน)
+    sword_wood: { name: 'ดาบไม้ไผ่', slot: 'weapon', atk: 4, buy: 120, sell: 40 },
+    sword_iron: { name: 'ดาบเหล็กกล้า', slot: 'weapon', atk: 10, buy: 450, sell: 150 },
+    robe_cloth: { name: 'เสื้อคลุมผ้าฝ้าย', slot: 'armor', def: 2, buy: 100, sell: 30 },
+    armor_hide: { name: 'เกราะหนังหมูป่า', slot: 'armor', def: 5, buy: 380, sell: 120 }
   };
-  const SHOP = { npc: 'n2', buy: ['herb', 'tonic'] };   // ร้านค้า: คุยกับเจ้าของร้าน (ซื้อ/ขาย ด้วยเหรียญทองแดง)
+  const SHOP = { npc: 'n2', buy: ['herb', 'tonic', 'sword_wood', 'robe_cloth', 'sword_iron', 'armor_hide'] };   // ร้านค้า: คุยกับเจ้าของร้าน (ซื้อ/ขาย ด้วยเหรียญทองแดง)
   const MON = {
     slime: {
-      name: 'วุ้นไผ่', hp: 30, atk: [3, 6], atkCd: 1.4, speed: 2.4, exp: 12, respawn: 12,
+      name: 'วุ้นไผ่', lv: 1, hp: 30, atk: [3, 6], atkCd: 1.4, speed: 2.4, exp: 12, respawn: 12,
       drops: [['coin', 1, [3, 9]], ['jelly', 0.7, [1, 1]], ['herb', 0.15, [1, 1]]]  // [ไอเท็ม, โอกาส, [น้อยสุด, มากสุด]]
     },
     boar: {
-      name: 'หมูป่าไผ่', hp: 70, atk: [6, 10], atkCd: 1.3, speed: 3.0, exp: 34, respawn: 20,
-      drops: [['coin', 1, [10, 22]], ['tusk', 0.6, [1, 1]], ['herb', 0.25, [1, 2]], ['tonic', 0.06, [1, 1]]]
+      name: 'หมูป่าไผ่', lv: 4, hp: 70, atk: [6, 10], atkCd: 1.3, speed: 3.0, exp: 34, respawn: 20,
+      drops: [['coin', 1, [10, 22]], ['tusk', 0.6, [1, 1]], ['herb', 0.25, [1, 2]], ['tonic', 0.06, [1, 1]], ['sword_iron', 0.03, [1, 1]], ['armor_hide', 0.06, [1, 1]]]
     }
   };
   // จุดเกิดมอนสเตอร์ในแต่ละแมพ: [ชนิด, x0, y0, x1, y1, จำนวน]
@@ -42,6 +47,15 @@
 
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
+
+  // ช่วงเลเวลมอนสเตอร์ของแต่ละแมพ (null = ไม่มีมอนสเตอร์)
+  function zoneLevels(name) {
+    const sp = MON_SPAWNS[name]; if (!sp) return null;
+    let lo = 99, hi = 0;
+    for (const z of sp) { lo = Math.min(lo, MON[z[0]].lv); hi = Math.max(hi, MON[z[0]].lv); }
+    return [lo, hi];
+  }
+  const ZONE_LV = {}; ZONES.forEach(z => { ZONE_LV[z] = zoneLevels(z); });
 
   function rng(seed) { // mulberry32
     let a = seed >>> 0;
@@ -372,7 +386,10 @@
       now = now || Date.now();
       return ((((now - this.epoch) % DAY_MS) + DAY_MS) % DAY_MS) / DAY_MS;
     }
-    applyLevel(p) { p.maxHp = maxHpOf(p.lv); p.atk = atkOf(p.lv); p.def = Math.floor(p.lv / 2); }
+    applyLevel(p) {
+      const w = ITEMS[p.equip.weapon], a = ITEMS[p.equip.armor];
+      p.maxHp = maxHpOf(p.lv); p.atk = atkOf(p.lv) + (w ? w.atk : 0); p.def = Math.floor(p.lv / 2) + (a ? a.def : 0);
+    }
     pickSpawn(zone) {
       const sp = this.zones[zone].map.spawn;
       return sp[Math.floor(Math.random() * sp.length)] || [20, 18];
@@ -383,7 +400,7 @@
       const p = {
         id: this.nextId++, name: cleanName(name), look: cleanLook(look), zone: 'village',
         x: sp[0] + 0.5, y: sp[1] + 0.5, dir: 2, moving: false, path: [], dirty: false,
-        lv: 1, exp: 0, hp: 60, maxHp: 60, atk: 8, def: 0, inv: {},
+        lv: 1, exp: 0, hp: 60, maxHp: 60, atk: 8, def: 0, inv: {}, equip: { weapon: null, armor: null },
         target: null, atkCd: 0, repath: 0, lastCombat: -99, regenT: 0, dead: false, respawn: 0, warpCd: 0
       };
       if (save && typeof save === 'object') {
@@ -396,12 +413,18 @@
           }
         }
       }
+      if (save && save.equip && typeof save.equip === 'object') {
+        for (const slot of ['weapon', 'armor']) {
+          const k = save.equip[slot];
+          if (typeof k === 'string' && ITEMS[k] && ITEMS[k].slot === slot) p.equip[slot] = k;
+        }
+      }
       this.applyLevel(p); p.hp = p.maxHp;
       this.players.set(p.id, p);
       return p;
     }
     removePlayer(id) { this.players.delete(id); }
-    meMsg(p) { return { t: 'me', lv: p.lv, exp: p.exp, next: nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, inv: Object.assign({}, p.inv) }; }
+    meMsg(p) { return { t: 'me', lv: p.lv, exp: p.exp, next: nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, atk: p.atk, def: p.def, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip) }; }
     tellMe(p) { this.events.push(Object.assign({ _to: p.id }, this.meMsg(p))); }
     note(p, text) { this.events.push({ _to: p.id, t: 'note', text }); }
     emit(zone, ev) { ev._z = zone; this.events.push(ev); }
@@ -449,6 +472,26 @@
       p.inv[item]--; if (p.inv[item] <= 0) delete p.inv[item];
       p.hp = Math.min(p.maxHp, p.hp + it.heal);
       this.emit(p.zone, { t: 'heal', id: p.id, amt: it.heal, hp: p.hp });
+      this.tellMe(p);
+      return true;
+    }
+    equip(id, item) {
+      const p = this.players.get(id), it = ITEMS[item];
+      if (!p || p.dead || !it || !it.slot || !(p.inv[item] > 0)) return false;
+      const old = p.equip[it.slot];
+      p.inv[item]--; if (p.inv[item] <= 0) delete p.inv[item];
+      if (old) p.inv[old] = (p.inv[old] || 0) + 1;
+      p.equip[it.slot] = item; this.applyLevel(p);
+      this.emit(p.zone, { t: 'eq', id: p.id, eq: Object.assign({}, p.equip) });
+      this.tellMe(p);
+      return true;
+    }
+    unequip(id, slot) {
+      const p = this.players.get(id);
+      if (!p || p.dead || (slot !== 'weapon' && slot !== 'armor') || !p.equip[slot]) return false;
+      const k = p.equip[slot]; p.equip[slot] = null;
+      p.inv[k] = (p.inv[k] || 0) + 1; this.applyLevel(p);
+      this.emit(p.zone, { t: 'eq', id: p.id, eq: Object.assign({}, p.equip) });
       this.tellMe(p);
       return true;
     }
@@ -676,7 +719,7 @@
     drainEvents() { const e = this.events; this.events = []; return e; }
   }
 
-  const pub = p => ({ id: p.id, name: p.name, look: p.look, x: p.x, y: p.y, dir: p.dir, m: p.moving ? 1 : 0, lv: p.lv, dead: p.dead ? 1 : 0 });
+  const pub = p => ({ id: p.id, name: p.name, look: p.look, x: p.x, y: p.y, dir: p.dir, m: p.moving ? 1 : 0, lv: p.lv, dead: p.dead ? 1 : 0, eq: Object.assign({}, p.equip) });
   const pubM = m => ({ id: m.id, type: m.type, x: m.x, y: m.y, dir: m.dir, hp: m.hp, maxHp: m.maxHp, dead: m.state === 'dead' ? 1 : 0 });
 
   /* ------------------------------------------------------------------- hub
@@ -739,6 +782,14 @@
         if (now - c.lastAct < 100) return;
         c.lastAct = now;
         w.useItem(c.player.id, String(m.item));
+      } else if (m.t === 'equip') {
+        if (now - c.lastAct < 100) return;
+        c.lastAct = now;
+        w.equip(c.player.id, String(m.item));
+      } else if (m.t === 'unequip') {
+        if (now - c.lastAct < 100) return;
+        c.lastAct = now;
+        w.unequip(c.player.id, String(m.slot));
       } else if (m.t === 'buy' || m.t === 'sell') {
         if (now - c.lastAct < 100) return;
         c.lastAct = now;
@@ -779,7 +830,7 @@
   }
 
   return {
-    W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT, ITEMS, MON, SHOP, ZONES, nextExp,
+    W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT, ITEMS, MON, SHOP, ZONES, ZONE_LV, nextExp,
     buildMap, findPath, nearestWalkable, World, Hub, cleanName, cleanText, cleanLook, rng
   };
 });

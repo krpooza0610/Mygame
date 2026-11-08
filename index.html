@@ -59,11 +59,18 @@ button{font-family:inherit}
 .bar i{display:block;height:100%;width:100%}
 .bar.hp i{background:#e0554a;transition:width .2s}
 .bar.xp i{background:#5fb4e8;transition:width .3s}
-#bag{right:max(10px,env(safe-area-inset-right));top:calc(max(10px,env(safe-area-inset-top)) + 50px);padding:9px;min-width:200px;
+#bag{right:max(10px,env(safe-area-inset-right));top:calc(max(10px,env(safe-area-inset-top)) + 50px);padding:9px;width:min(92vw,300px);
   pointer-events:auto;display:flex;flex-direction:column;gap:7px;font-size:13px}
 #bag .it{display:flex;align-items:center;gap:8px;justify-content:space-between}
 #bag .it button{height:28px;border:0;border-radius:7px;background:var(--accent);color:#fff;font:600 13px var(--font);padding:0 12px;cursor:pointer}
 #bag .em{color:var(--muted);text-align:center}
+#banner{left:0;right:0;top:32%;text-align:center;pointer-events:none;display:flex;flex-direction:column;gap:6px;opacity:0}
+#banner b{font-size:clamp(26px,8vw,38px);font-weight:800;color:var(--accent2);letter-spacing:1px;text-shadow:0 2px 0 #000,0 0 18px rgba(0,0,0,.8)}
+#banner span{font-size:15px;color:#fff;text-shadow:0 1px 3px #000,0 0 10px rgba(0,0,0,.8)}
+#banner.show{animation:bn 3.6s ease forwards}
+@keyframes bn{0%{opacity:0;transform:translateY(10px) scale(.96)}14%{opacity:1;transform:none}72%{opacity:1}100%{opacity:0}}
+#bag .sec{color:var(--muted);font-size:12px}
+#bag .it span{flex:1;min-width:0}
 #shop{left:50%;top:max(112px,calc(env(safe-area-inset-top) + 102px));transform:translateX(-50%);width:min(92vw,330px);padding:10px;
   pointer-events:auto;display:flex;flex-direction:column;gap:7px;font-size:13px;max-height:68vh;overflow:auto}
 #shop h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center}
@@ -129,6 +136,7 @@ button{font-family:inherit}
       <button class="send" type="submit">ส่ง</button>
     </form>
   </div>
+  <div id="banner"><b></b><span></span></div>
   <div id="bag" class="panel" hidden></div>
   <div id="shop" class="panel" hidden></div>
   <div id="toast" class="panel" hidden></div>
@@ -631,6 +639,10 @@ function drawChar(look, dir, moving, t, off, prop) {
   };
   if (side) { arm(0, -28, fl * sw * 6, 9); arm(0, -28, -fl * sw * 6, 9); }
   else { arm(-bw - 0.5, -28, -1.5, 10 + sw * 2); arm(bw + 0.5, -28, 1.5, 10 - sw * 2); }
+  if (prop === 'sword_wood' || prop === 'sword_iron') {
+    line([fl * 14, -8], [fl * 17, -41], prop === 'sword_iron' ? '#e3ebf2' : '#cdae6e', 3.4);
+    line([fl * 11.5, -14], [fl * 16.5, -12.5], '#6b4a2e', 2.8);
+  }
   if (prop === 'cane') { line([fl * 13, -4], [fl * 12, -30], '#6b4a2e', 2.4); }
   if (hs === 1 && back) { ctx.fillStyle = hairC; rr(-12.6, -50, 25.2, 38, 9); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(0, -48); ctx.lineTo(0, -16); ctx.stroke(); }
   if (hs === 3) {
@@ -748,12 +760,19 @@ resetEnts();
 
 /* ---- มอนสเตอร์ / สถานะ / เอฟเฟกต์ ---- */
 const mons = new Map();
-const my = { lv: 1, exp: 0, next: 20, hp: 60, maxHp: 60, inv: {} };
+const my = { lv: 1, exp: 0, next: 20, hp: 60, maxHp: 60, atk: 8, def: 0, inv: {}, equip: {} };
 const fx = [];
 let myTarget = null;
 function makeMon(m) {
   return { id: m.id, type: m.type, x: m.x, y: m.y, tx: m.x, ty: m.y, dir: m.dir, hp: m.hp, maxHp: m.maxHp, moving: false, dead: !!m.dead,
     deadT: m.dead ? -1e9 : 0, hitT: -1e9, off: Math.random() * 6.28, sx: 0, sy: 0, vis: 0 };
+}
+function setEq(e, eq) { e.eq = eq || {}; if (!e.npc) e.prop = e.eq.weapon || undefined; }
+function showBanner(zone) {
+  const b = $('banner'), lv = G.ZONE_LV[zone];
+  b.querySelector('b').textContent = ZONE_NAMES[zone];
+  b.querySelector('span').textContent = lv ? 'มอนสเตอร์ในแมพนี้ เลเวล ' + lv[0] + ' - ' + lv[1] : 'พื้นที่ปลอดภัย · ไม่มีมอนสเตอร์';
+  b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
 }
 function floatText(x, y, text, color, big) { fx.push({ k: 'txt', x, y, text, color, big, t0: performance.now() }); }
 function ring(x, y, color) { fx.push({ k: 'ring', x, y, color, t0: performance.now() }); }
@@ -762,7 +781,7 @@ function ring(x, y, color) { fx.push({ k: 'ring', x, y, color, t0: performance.n
 function setStatus() {
   if (!joined) return;
   let players = 0; ents.forEach(e => { if (!e.npc) players++; });
-  $('stxt').textContent = (curZone === 'field' ? 'ทุ่งไผ่' : 'หมู่บ้าน') + ' · ' + players + ' คน' + (mode === 'demo' ? ' · เดโม' : '');
+  $('stxt').textContent = (curZone === 'field' ? 'ทุ่งไผ่' : 'หมู่บ้าน') + ' · ' + players + ' คน';
   $('dot').className = mode === 'demo' ? 'demo' : '';
 }
 function say(ent, text) {
@@ -790,24 +809,35 @@ function toast(text, ms) {
 }
 let marker = null;
 function applyMe(m) {
-  my.lv = m.lv; my.exp = m.exp; my.next = m.next; my.hp = m.hp; my.maxHp = m.maxHp; my.inv = m.inv || {};
+  my.lv = m.lv; my.exp = m.exp; my.next = m.next; my.hp = m.hp; my.maxHp = m.maxHp; my.atk = m.atk; my.def = m.def; my.inv = m.inv || {}; my.equip = m.equip || {};
   $('slv').textContent = 'Lv ' + my.lv;
   $('shp').textContent = my.hp + '/' + my.maxHp;
   $('hpb').style.width = Math.max(0, my.hp / my.maxHp * 100) + '%';
   $('xpb').style.width = Math.min(100, my.exp / my.next * 100) + '%';
   renderBag(); renderShop();
-  if (mode === 'demo') { try { localStorage.setItem('bc-save', JSON.stringify({ lv: my.lv, exp: my.exp, inv: my.inv })); } catch (e) {} }
+  if (mode === 'demo') { try { localStorage.setItem('bc-save', JSON.stringify({ lv: my.lv, exp: my.exp, inv: my.inv, equip: my.equip })); } catch (e) {} }
 }
+function mkEl(tag, cls, text) { const d = document.createElement(tag); if (cls) d.className = cls; if (text != null) d.textContent = text; return d; }
+function statText(it) { return it.heal ? 'ฟื้น ' + it.heal : it.atk ? 'โจมตี +' + it.atk : it.def ? 'ป้องกัน +' + it.def : ''; }
 function renderBag() {
   const b = $('bag'); if (b.hidden) return;
   b.textContent = '';
+  b.appendChild(mkEl('div', 'sec', 'โจมตี ' + my.atk + ' · ป้องกัน ' + my.def));
+  for (const sl of [['weapon', 'อาวุธ'], ['armor', 'เกราะ']]) {
+    const k = my.equip[sl[0]], r = mkEl('div', 'it');
+    r.appendChild(mkEl('span', '', sl[1] + ': ' + (k ? G.ITEMS[k].name + ' (' + statText(G.ITEMS[k]) + ')' : '—')));
+    if (k) { const u = mkEl('button', '', 'ถอด'); u.type = 'button'; u.onclick = () => net && net.send({ t: 'unequip', slot: sl[0] }); r.appendChild(u); }
+    b.appendChild(r);
+  }
+  b.appendChild(mkEl('div', 'sec', 'ของในถุง'));
   const keys = Object.keys(my.inv);
-  if (!keys.length) { const d = document.createElement('div'); d.className = 'em'; d.textContent = 'ถุงว่างเปล่า — ลองล่าวุ้นไผ่ดู'; b.appendChild(d); return; }
+  if (!keys.length) b.appendChild(mkEl('div', 'em', 'ถุงว่างเปล่า — ลองล่าวุ้นไผ่ดู'));
   for (const k of keys) {
-    const def = G.ITEMS[k] || { name: k };
-    const r = document.createElement('div'); r.className = 'it';
-    const l = document.createElement('span'); l.textContent = def.name + ' ×' + my.inv[k]; r.appendChild(l);
-    if (def.heal) { const u = document.createElement('button'); u.type = 'button'; u.textContent = 'ใช้ (+' + def.heal + ')'; u.onclick = () => net && net.send({ t: 'use', item: k }); r.appendChild(u); }
+    const def = G.ITEMS[k] || { name: k }, r = mkEl('div', 'it');
+    const st = statText(def);
+    r.appendChild(mkEl('span', '', def.name + ' ×' + my.inv[k] + (st ? ' · ' + st : '')));
+    if (def.heal) { const u = mkEl('button', '', 'ใช้'); u.type = 'button'; u.onclick = () => net && net.send({ t: 'use', item: k }); r.appendChild(u); }
+    if (def.slot) { const u = mkEl('button', '', 'สวมใส่'); u.type = 'button'; u.onclick = () => net && net.send({ t: 'equip', item: k }); r.appendChild(u); }
     b.appendChild(r);
   }
 }
@@ -827,7 +857,9 @@ function renderShop() {
   b.appendChild(mk('div', 'sec', 'ซื้อ'));
   for (const k of G.SHOP.buy) {
     const it = G.ITEMS[k];
-    row(it.name + ' (ฟื้น ' + it.heal + ') · ' + it.buy + ' เหรียญ', [['ซื้อ 1', () => net && net.send({ t: 'buy', item: k, n: 1 })], ['ซื้อ 5', () => net && net.send({ t: 'buy', item: k, n: 5 })]]);
+    const btns = [['ซื้อ 1', () => net && net.send({ t: 'buy', item: k, n: 1 })]];
+    if (it.heal) btns.push(['ซื้อ 5', () => net && net.send({ t: 'buy', item: k, n: 5 })]);
+    row(it.name + ' (' + statText(it) + ') · ' + it.buy + ' เหรียญ', btns);
   }
   b.appendChild(mk('div', 'sec', 'ขาย'));
   let any = false;
@@ -842,17 +874,17 @@ function handle(m) {
     case 'init': {
       phaseBase = m.phase; dayMs = m.dayMs; phaseT0 = performance.now();
       setZone(m.zone || 'village'); myId = m.id;
-      for (const p of m.players) { const en = makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false); en.dead = !!p.dead; ents.set(p.id, en); }
+      for (const p of m.players) { const en = makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false); en.dead = !!p.dead; setEq(en, p.eq); ents.set(p.id, en); }
       mons.clear(); myTarget = null; for (const mo of (m.monsters || [])) mons.set(mo.id, makeMon(mo));
       if (m.me) applyMe(m.me);
       const me = ents.get(myId); const c = proj(me.x, me.y); cam.x = c[0]; cam.y = c[1] - 18;
       joined = true; setStatus();
-      $('join').hidden = true; $('hud').hidden = false;
+      $('join').hidden = true; $('hud').hidden = false; showBanner(curZone);
       addLog('sys', '', 'แตะพื้นเพื่อเดิน · เดินผ่านประตูวาร์ปทางเหนือเพื่อไปล่ามอนสเตอร์ที่ทุ่งไผ่เขียว · แตะเจ้าของร้านเพื่อซื้อ/ขายของ');
       break;
     }
     case 'join': {
-      const p = m.p; ents.set(p.id, makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false));
+      const p = m.p, en = makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false); setEq(en, p.eq); ents.set(p.id, en);
       addLog('sys', '', p.name + ' เข้ามาในบริเวณนี้'); setStatus(); break;
     }
     case 'leave': {
@@ -918,16 +950,17 @@ function handle(m) {
       break;
     }
     case 'me': applyMe(m); break;
+    case 'eq': { const e = ents.get(m.id); if (e) setEq(e, m.eq); break; }
     case 'note': toast(m.text, 2600); addLog('sys', '', m.text); break;
     case 'zone': {
       setZone(m.zone);
-      for (const p of m.players) { const en = makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false); en.dead = !!p.dead; ents.set(p.id, en); }
+      for (const p of m.players) { const en = makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false); en.dead = !!p.dead; setEq(en, p.eq); ents.set(p.id, en); }
       for (const mo of m.monsters) mons.set(mo.id, makeMon(mo));
       if (m.me) applyMe(m.me);
       const me = ents.get(myId);
       if (me) { me.x = me.tx = m.x; me.y = me.ty = m.y; const c = proj(me.x, me.y); cam.x = c[0]; cam.y = c[1] - 18; }
       closeShop(); setStatus();
-      toast('— ' + ZONE_NAMES[m.zone] + ' —', 2600);
+      showBanner(m.zone);
       ring(m.x, m.y, '143,216,255');
       break;
     }
@@ -1286,20 +1319,23 @@ function render(now, dt) {
     const p = proj(pt.x + pt.w / 2, pt.y + pt.h / 2), sx = S2X(p[0]), sy = S2Y(p[1]) - 30 * zoom;
     if (sx < -100 || sx > vw + 100 || sy < -40 || sy > vh + 40) continue;
     ctx.font = '700 12px ' + FONT; ctx.lineJoin = 'round'; ctx.lineWidth = 3.4; ctx.strokeStyle = 'rgba(0,0,0,.85)';
-    const lb = 'ประตูวาร์ป › ' + pt.name;
+    const lb = 'ประตูวาร์ป › ' + pt.name, lv = G.ZONE_LV[pt.to];
+    const sub = lv ? 'มอนสเตอร์เลเวล ' + lv[0] + ' - ' + lv[1] : 'พื้นที่ปลอดภัย';
     ctx.strokeText(lb, sx, sy); ctx.fillStyle = '#bfe6ff'; ctx.fillText(lb, sx, sy);
+    ctx.font = '700 11.5px ' + FONT; ctx.strokeText(sub, sx, sy + 14); ctx.fillStyle = lv ? '#ffd76a' : '#9be8a0'; ctx.fillText(sub, sx, sy + 14);
   }
   // มอนสเตอร์: ชื่อ + แถบเลือด
   for (const mo of mons.values()) {
     if (mo.vis !== frame || mo.dead) continue;
     const tgt = mo.id === myTarget, show = tgt || mo.hp < mo.maxHp;
-    if (!show) continue;
     const w = 44, x = mo.sx - w / 2, y = mo.sy - 52 * zoom;
-    ctx.fillStyle = 'rgba(0,0,0,.7)'; rr(x - 1.5, y - 1.5, w + 3, 8, 4); ctx.fill();
-    ctx.fillStyle = '#e0554a'; rr(x, y, Math.max(2, w * mo.hp / mo.maxHp), 5, 2.5); ctx.fill();
+    if (show) {
+      ctx.fillStyle = 'rgba(0,0,0,.7)'; rr(x - 1.5, y - 1.5, w + 3, 8, 4); ctx.fill();
+      ctx.fillStyle = '#e0554a'; rr(x, y, Math.max(2, w * mo.hp / mo.maxHp), 5, 2.5); ctx.fill();
+    }
     ctx.font = '700 11.5px ' + FONT; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)';
-    const nm = G.MON[mo.type].name;
-    ctx.strokeText(nm, mo.sx, y - 4); ctx.fillStyle = '#ffb3aa'; ctx.fillText(nm, mo.sx, y - 4);
+    const D = G.MON[mo.type], nm = 'Lv.' + D.lv + ' ' + D.name, dl = D.lv - my.lv;
+    ctx.strokeText(nm, mo.sx, y - 4); ctx.fillStyle = dl >= 3 ? '#ff6b5e' : dl >= -1 ? '#ffd76a' : '#9be8a0'; ctx.fillText(nm, mo.sx, y - 4);
   }
   // แถบเลือดของเราเองใต้ชื่อ
   if (me && me.vis === frame && !me.dead && my.hp < my.maxHp) {
