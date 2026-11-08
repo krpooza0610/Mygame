@@ -18,18 +18,54 @@
   const MELEE = 1.6, ATK_CD = 1.0, LEASH = 10;   // ระยะตี (ช่อง), ตีทุกกี่วินาที, ระยะที่มอนสเตอร์เลิกไล่
   const ZONES = ['village', 'field'];
   const ITEMS = {
-    coin: { name: 'เหรียญทองแดง' },
-    jelly: { name: 'ก้อนวุ้นไผ่', sell: 5 },
-    tusk: { name: 'เขี้ยวหมูป่า', sell: 14 },
-    herb: { name: 'สมุนไพร', heal: 40, buy: 20, sell: 6 },
-    tonic: { name: 'ยาบำรุงกำลัง', heal: 100, buy: 70, sell: 20 },
+    coin: { name: 'เหรียญทองแดง', desc: 'เงินที่ใช้กันทั่วทั้งลำธารไผ่' },
+    jelly: { name: 'ก้อนวุ้นไผ่', desc: 'วุ้นเหนียวหนึบจากสไลม์ไผ่ พ่อค้ารับซื้อไปทำขนม', sell: 5 },
+    tusk: { name: 'เขี้ยวหมูป่า', desc: 'เขี้ยวโค้งคมกริบของหมูป่าไผ่ ช่างตีเหล็กชอบนัก', sell: 14 },
+    herb: { name: 'สมุนไพร', desc: 'ใบไม้สดชื่นที่เคี้ยวแล้วแผลหายไว ฟื้นเลือด 40', heal: 40, buy: 20, sell: 6 },
+    tonic: { name: 'ยาบำรุงกำลัง', desc: 'ยาต้มสูตรลับของร้านยา ฟื้นเลือด 100', heal: 100, buy: 70, sell: 20 },
     // อุปกรณ์สวมใส่: slot = weapon (เพิ่มพลังโจมตี) / armor (เพิ่มป้องกัน)
-    sword_wood: { name: 'ดาบไม้ไผ่', slot: 'weapon', atk: 4, buy: 120, sell: 40 },
-    sword_iron: { name: 'ดาบเหล็กกล้า', slot: 'weapon', atk: 10, buy: 450, sell: 150 },
-    robe_cloth: { name: 'เสื้อคลุมผ้าฝ้าย', slot: 'armor', def: 2, buy: 100, sell: 30 },
-    armor_hide: { name: 'เกราะหนังหมูป่า', slot: 'armor', def: 5, buy: 380, sell: 120 }
+    sword_wood: { name: 'ดาบไม้ไผ่', desc: 'ดาบฝึกหัดเหลาจากไผ่แก่ เบาและทนกว่าที่คิด', slot: 'weapon', atk: 4, buy: 120, sell: 40 },
+    sword_iron: { name: 'ดาบเหล็กกล้า', desc: 'ดาบเหล็กพับสามชั้น คมกริบ', slot: 'weapon', atk: 10, buy: 450, sell: 150 },
+    robe_cloth: { name: 'เสื้อคลุมผ้าฝ้าย', desc: 'เสื้อคลุมเนื้อหนา กันลมกันหนาวได้ดี', slot: 'armor', def: 2, buy: 100, sell: 30 },
+    armor_hide: { name: 'เกราะหนังหมูป่า', desc: 'เกราะหนังแข็งเย็บมือ กันเขี้ยวหมูป่าได้สบาย', slot: 'armor', def: 5, buy: 380, sell: 120 }
   };
-  const SHOP = { npc: 'n2', buy: ['herb', 'tonic', 'sword_wood', 'robe_cloth', 'sword_iron', 'armor_hide'] };   // ร้านค้า: คุยกับเจ้าของร้าน (ซื้อ/ขาย ด้วยเหรียญทองแดง)
+  // ร้านค้า: ร้านยารับซื้อของทั่วไป ร้านอาวุธรับซื้ออุปกรณ์
+  const SHOPS = {
+    potion: { npc: 'n2', title: 'ร้านยา', buy: ['herb', 'tonic'], sellSlot: false },
+    smith: { npc: 'n5', title: 'ร้านอาวุธและชุดเกราะ', buy: ['sword_wood', 'robe_cloth', 'sword_iron', 'armor_hide'], sellSlot: true }
+  };
+  // เควสต์ (ต้องไปรับ/ส่งกับ NPC ในหมู่บ้าน)
+  const QUESTS = {
+    q_slime: {
+      title: 'วุ้นไผ่เกลื่อนทุ่ง', giver: 'n1', minLv: 1, kill: 'slime', n: 5, nav: 'slime',
+      goal: 'ล่าวุ้นไผ่', rewards: { exp: 40, items: { coin: 60, herb: 3 } },
+      offer: 'ทุ่งไผ่เขียวทางเหนือมีวุ้นไผ่เพิ่มขึ้นมากจนชาวบ้านไม่กล้าไปเก็บฟืน ช่วยไปกำจัดมันสัก 5 ตัวได้ไหม ข้าจะตอบแทนอย่างงาม',
+      progress: 'วุ้นไผ่ยังเยอะอยู่นะ สู้ไหวไหม ถ้าเลือดน้อยก็กินสมุนไพรเสียก่อน',
+      done: 'เก่งมาก! ชาวบ้านจะได้เก็บฟืนกันได้เสียที นี่ค่าตอบแทนของเจ้า'
+    },
+    q_boar: {
+      title: 'หมูป่าอาละวาด', giver: 'n3', minLv: 3, prereq: 'q_slime', kill: 'boar', n: 4, nav: 'boar',
+      goal: 'ล่าหมูป่าไผ่', rewards: { exp: 150, items: { coin: 200, tonic: 2 } },
+      offer: 'หมูป่าไผ่พวกนี้ไล่ขวิดพ่อค้าที่ผ่านมาพักโรงเตี๊ยมข้า หากเจ้าปราบมันได้ 4 ตัว ข้าจะให้ยาบำรุงกำลังกับเงินก้อนหนึ่ง',
+      progress: 'หมูป่าอยู่ทางเหนือของทุ่ง ระวังเขี้ยวมันด้วยนะ',
+      done: 'ดีเหลือเกิน! พ่อค้าจะได้เดินทางสบายใจ รับรางวัลไปเลย'
+    },
+    q_tusk: {
+      title: 'เขี้ยวของช่างตีเหล็ก', giver: 'n4', minLv: 5, prereq: 'q_boar', collect: 'tusk', n: 3, nav: 'boar',
+      goal: 'เก็บเขี้ยวหมูป่า', rewards: { exp: 260, items: { coin: 350, robe_cloth: 1 } },
+      offer: 'ช่างตีเหล็กอยากได้เขี้ยวหมูป่าไปทำด้ามมีด ข้าเฝ้าประตูไปไหนไม่ได้ เจ้าช่วยเก็บเขี้ยวหมูป่ามาให้ข้า 3 อันที เดี๋ยวข้าจัดการต่อเอง',
+      progress: 'เขี้ยวหมูป่าได้จากการล่าหมูป่าไผ่ แต่ไม่ได้ทุกตัวนะ ใจเย็น ๆ',
+      done: 'เขี้ยวสวยทั้งนั้น! ข้าเอาไปให้ช่างตีเหล็กเอง นี่รางวัลของเจ้า'
+    },
+    q_clear: {
+      title: 'กวาดล้างหมูป่า', giver: 'n1', minLv: 6, prereq: 'q_tusk', kill: 'boar', n: 8, nav: 'boar',
+      goal: 'ล่าหมูป่าไผ่', rewards: { exp: 500, items: { coin: 600, sword_iron: 1 } },
+      offer: 'ฝูงหมูป่ายังไม่หมดไป เจ้าฝีมือดีขึ้นมากแล้ว ปราบอีก 8 ตัวเถิด ข้ามีดาบเหล็กกล้าเก็บไว้ จะมอบให้เป็นรางวัล',
+      progress: 'เหลืออีกไม่มากแล้ว สู้ต่อไป!',
+      done: 'หมู่บ้านเราปลอดภัยเพราะเจ้าแท้ ๆ รับดาบเล่มนี้ไว้เถิด'
+    }
+  };
+
   const MON = {
     slime: {
       name: 'วุ้นไผ่', lv: 1, hp: 30, atk: [3, 6], atkCd: 1.4, speed: 2.4, exp: 12, respawn: 12,
@@ -104,7 +140,7 @@
     };
 
     B('inn', 24, 5, 5, 4, { name: 'โรงเตี๊ยม' });
-    B('shop', 10, 6, 4, 3, { name: 'ร้านค้า' });
+    B('shop', 10, 6, 4, 3, { name: 'ร้านยา' });
     B('dojo', 27, 20, 6, 4, { name: 'สำนักยุทธ์' });
     B('pagoda', 31, 6, 3, 3, { name: 'เจดีย์ไผ่' });
     [[9, 11], [4, 11], [4, 18], [11, 19], [27, 11], [34, 11], [14, 22], [23, 22]]
@@ -113,6 +149,7 @@
     // แผงตลาด, บ่อน้ำ, ซุ้มประตูหมู่บ้าน
     objs.push({ type: 'stall', x: 16, y: 12, w: 2, h: 1, v: 0 }); occupy(16, 12, 2, 1);
     objs.push({ type: 'stall', x: 22, y: 12, w: 2, h: 1, v: 1 }); occupy(22, 12, 2, 1);
+    objs.push({ type: 'stall', x: 28, y: 14, w: 2, h: 1, v: 1 }); occupy(28, 14, 2, 1);
     objs.push({ type: 'well', x: 19, y: 15, w: 2, h: 2 }); occupy(19, 15, 2, 2);
     objs.push({ type: 'pillar', x: 18, y: 3, w: 1, h: 1, beam: true }); occupy(18, 3, 1, 1);
     objs.push({ type: 'pillar', x: 21, y: 3, w: 1, h: 1, beam: false }); occupy(21, 3, 1, 1);
@@ -128,10 +165,12 @@
     const npcs = [
       { id: 'n1', name: 'ผู้ใหญ่บ้าน', x: 17, y: 17, look: { o: 5, h: 2, c: 2 },
         lines: ['ยินดีต้อนรับสู่หมู่บ้านลำธารไผ่', 'กลางคืนโคมไฟสวยที่สุดเลยนะ', 'ระวังตัวเวลาออกนอกประตูหมู่บ้านด้วย'] },
-      { id: 'n2', name: 'เจ้าของร้าน', x: 12, y: 9, look: { o: 3, h: 3, c: 1 },
-        lines: ['ของดี ราคาถูก เชิญเลือกชมก่อนครับ', 'ยาบำรุงกำลังเพิ่งมาใหม่!', 'ซื้อสามแถมหนึ่งนะ'] },
+      { id: 'n2', name: 'เจ้าของร้านยา', x: 12, y: 9, look: { o: 3, h: 3, c: 1 },
+        lines: ['ยาดี ราคาถูก เชิญเลือกชมก่อนครับ', 'ยาบำรุงกำลังเพิ่งมาใหม่!', 'ออกไปล่าสัตว์อย่าลืมพกสมุนไพรนะ'] },
       { id: 'n3', name: 'เถ้าแก่โรงเตี๊ยม', x: 26, y: 9, look: { o: 0, h: 0, c: 0 },
         lines: ['ชาร้อนกับซาลาเปาไหมจ๊ะ', 'ห้องพักว่างอยู่นะ', 'นักเดินทางมาจากไหนกันล่ะ'] },
+      { id: 'n5', name: 'ช่างตีเหล็ก', x: 30, y: 14, look: { o: 2, h: 0, c: 0 },
+        lines: ['ดาบดี เกราะแกร่ง มาดูก่อนได้นะ', 'เหล็กต้องตีตอนยังร้อน', 'ได้เขี้ยวหมูป่ามาไหม ข้าอยากได้'] },
       { id: 'n4', name: 'ทหารเฝ้าประตู', x: 21, y: 5, look: { o: 5, h: 2, c: 0 },
         lines: ['ผ่านได้ แต่อย่าก่อเรื่อง', 'ข้านั่งเฝ้าทั้งวันทั้งคืน', 'ทางเหนือเงียบสงบดี']}
     ];
@@ -400,7 +439,7 @@
       const p = {
         id: this.nextId++, name: cleanName(name), look: cleanLook(look), zone: 'village',
         x: sp[0] + 0.5, y: sp[1] + 0.5, dir: 2, moving: false, path: [], dirty: false,
-        lv: 1, exp: 0, hp: 60, maxHp: 60, atk: 8, def: 0, inv: {}, equip: { weapon: null, armor: null },
+        lv: 1, exp: 0, hp: 60, maxHp: 60, atk: 8, def: 0, inv: {}, equip: { weapon: null, armor: null }, quests: {}, qdone: {},
         target: null, atkCd: 0, repath: 0, lastCombat: -99, regenT: 0, dead: false, respawn: 0, warpCd: 0
       };
       if (save && typeof save === 'object') {
@@ -417,6 +456,14 @@
         for (const slot of ['weapon', 'armor']) {
           const k = save.equip[slot];
           if (typeof k === 'string' && ITEMS[k] && ITEMS[k].slot === slot) p.equip[slot] = k;
+        }
+      }
+      if (save && save.quests && typeof save.quests === 'object') {
+        for (const id of Array.isArray(save.quests.done) ? save.quests.done : []) if (QUESTS[id]) p.qdone[id] = 1;
+        const act = save.quests.active && typeof save.quests.active === 'object' ? save.quests.active : {};
+        for (const id of Object.keys(act)) {
+          const q = QUESTS[id], n = Math.floor(Number(act[id]));
+          if (q && !p.qdone[id]) p.quests[id] = { n: clamp(Number.isFinite(n) ? n : 0, 0, q.n) };
         }
       }
       this.applyLevel(p); p.hp = p.maxHp;
@@ -495,28 +542,28 @@
       this.tellMe(p);
       return true;
     }
-    nearShop(p) {
+    nearNpc(p, npcId, r) {
       if (p.zone !== 'village') return false;
-      const n = this.zones.village.map.npcs.find(q => q.id === SHOP.npc);
-      return !!n && Math.hypot(n.x + 0.5 - p.x, n.y + 0.5 - p.y) <= 6;
+      const n = this.zones.village.map.npcs.find(q => q.id === npcId);
+      return !!n && Math.hypot(n.x + 0.5 - p.x, n.y + 0.5 - p.y) <= (r || 6);
     }
-    buy(id, item, n) {
-      const p = this.players.get(id), it = ITEMS[item];
-      if (!p || p.dead || !it || !it.buy || SHOP.buy.indexOf(item) < 0) return false;
-      if (!this.nearShop(p)) { this.note(p, 'เดินเข้าไปใกล้ร้านค้าก่อนนะ'); return false; }
-      n = clamp(Math.floor(Number(n)) || 1, 1, 20);
+    buy(id, shop, item, n) {
+      const p = this.players.get(id), it = ITEMS[item], sh = SHOPS[shop];
+      if (!p || p.dead || !it || !sh || !it.buy || sh.buy.indexOf(item) < 0) return false;
+      if (!this.nearNpc(p, sh.npc)) { this.note(p, 'เดินเข้าไปใกล้ร้านค้าก่อนนะ'); return false; }
+      n = it.slot ? 1 : clamp(Math.floor(Number(n)) || 1, 1, 20);
       const cost = it.buy * n;
       if ((p.inv.coin || 0) < cost) { this.note(p, 'เหรียญไม่พอ (ต้องใช้ ' + cost + ')'); return false; }
       p.inv.coin -= cost; if (p.inv.coin <= 0) delete p.inv.coin;
       p.inv[item] = (p.inv[item] || 0) + n;
       this.note(p, 'ซื้อ ' + it.name + ' ×' + n + ' (-' + cost + ' เหรียญ)');
-      this.tellMe(p);
+      this.tellMe(p); this.tellQuests(p);
       return true;
     }
-    sell(id, item, n) {
-      const p = this.players.get(id), it = ITEMS[item];
-      if (!p || p.dead || !it || !it.sell) return false;
-      if (!this.nearShop(p)) { this.note(p, 'เดินเข้าไปใกล้ร้านค้าก่อนนะ'); return false; }
+    sell(id, shop, item, n) {
+      const p = this.players.get(id), it = ITEMS[item], sh = SHOPS[shop];
+      if (!p || p.dead || !it || !sh || !it.sell || !!it.slot !== sh.sellSlot) return false;
+      if (!this.nearNpc(p, sh.npc)) { this.note(p, 'เดินเข้าไปใกล้ร้านค้าก่อนนะ'); return false; }
       const have = p.inv[item] || 0;
       if (have <= 0) return false;
       n = Math.floor(Number(n));
@@ -526,8 +573,58 @@
       const gain = it.sell * n;
       p.inv.coin = Math.min(99999, (p.inv.coin || 0) + gain);
       this.note(p, 'ขาย ' + it.name + ' ×' + n + ' (+' + gain + ' เหรียญ)');
-      this.tellMe(p);
+      this.tellMe(p); this.tellQuests(p);
       return true;
+    }
+
+    /* ---- เควสต์ ---- */
+    questList(p) {
+      const out = [];
+      for (const id of Object.keys(QUESTS)) {
+        const q = QUESTS[id];
+        if (p.qdone[id]) continue;
+        const act = p.quests[id];
+        if (act) {
+          const n = q.collect ? Math.min(q.n, p.inv[q.collect] || 0) : act.n;
+          out.push({ id, st: n >= q.n ? 'ready' : 'active', n });
+        } else if (p.lv >= q.minLv && (!q.prereq || p.qdone[q.prereq])) out.push({ id, st: 'avail', n: 0 });
+      }
+      return out;
+    }
+    tellQuests(p) { this.events.push({ _to: p.id, t: 'quests', list: this.questList(p), done: Object.keys(p.qdone) }); }
+    acceptQuest(id, qid) {
+      const p = this.players.get(id), q = QUESTS[qid];
+      if (!p || p.dead || !q || p.quests[qid] || p.qdone[qid] || p.lv < q.minLv || (q.prereq && !p.qdone[q.prereq])) return false;
+      if (!this.nearNpc(p, q.giver)) { this.note(p, 'เดินเข้าไปใกล้ผู้ให้เควสต์ก่อนนะ'); return false; }
+      p.quests[qid] = { n: 0 };
+      this.note(p, 'รับเควสต์: ' + q.title);
+      this.tellQuests(p);
+      return true;
+    }
+    turnIn(id, qid) {
+      const p = this.players.get(id), q = QUESTS[qid];
+      if (!p || p.dead || !q || !p.quests[qid]) return false;
+      const cur = this.questList(p).find(x => x.id === qid);
+      if (!cur || cur.st !== 'ready') return false;
+      if (!this.nearNpc(p, q.giver)) { this.note(p, 'เดินเข้าไปใกล้ผู้ให้เควสต์ก่อนนะ'); return false; }
+      if (q.collect) { p.inv[q.collect] -= q.n; if (p.inv[q.collect] <= 0) delete p.inv[q.collect]; }
+      for (const k of Object.keys(q.rewards.items)) {
+        p.inv[k] = Math.min(99999, (p.inv[k] || 0) + q.rewards.items[k]);
+      }
+      delete p.quests[qid]; p.qdone[qid] = 1;
+      this.giveExp(p, q.rewards.exp);
+      this.note(p, 'เควสต์สำเร็จ: ' + q.title);
+      this.events.push({ _to: p.id, t: 'qdone', id: qid });
+      this.tellMe(p); this.tellQuests(p);
+      return true;
+    }
+    questKill(p, type) {
+      let changed = false;
+      for (const id of Object.keys(p.quests)) {
+        const q = QUESTS[id];
+        if (q.kill === type && p.quests[id].n < q.n) { p.quests[id].n++; changed = true; }
+      }
+      if (changed) this.tellQuests(p);
     }
 
     step(dt) {
@@ -609,7 +706,9 @@
       }
       this.events.push({ _to: p.id, t: 'loot', exp: D.exp, items: gained });
       this.giveExp(p, D.exp);
+      this.questKill(p, m.type);
       this.tellMe(p);
+      if (Object.keys(p.quests).length) this.tellQuests(p);
     }
     giveExp(p, n) {
       p.exp += n;
@@ -617,6 +716,7 @@
         p.exp -= nextExp(p.lv); p.lv++;
         this.applyLevel(p); p.hp = p.maxHp;
         this.events.push({ t: 'lvup', id: p.id, lv: p.lv, name: p.name });
+        this.tellQuests(p);
       }
     }
     stepMonster(m, dt) {
@@ -763,7 +863,8 @@
         c.send(JSON.stringify({
           t: 'init', id: p.id, zone: p.zone, phase: w.phase(now), dayMs: DAY_MS,
           players: w.playersIn(p.zone).map(pub),
-          monsters: w.monsters.filter(q => q.zone === p.zone).map(pubM), me: w.meMsg(p)
+          monsters: w.monsters.filter(q => q.zone === p.zone).map(pubM), me: w.meMsg(p),
+          quests: w.questList(p), qdone: Object.keys(p.qdone)
         }));
         this.bcast({ t: 'join', p: pub(p) }, p.zone, p.id);
       } else if (!c.player) {
@@ -782,6 +883,10 @@
         if (now - c.lastAct < 100) return;
         c.lastAct = now;
         w.useItem(c.player.id, String(m.item));
+      } else if (m.t === 'qaccept' || m.t === 'qturnin') {
+        if (now - c.lastAct < 100) return;
+        c.lastAct = now;
+        w[m.t === 'qaccept' ? 'acceptQuest' : 'turnIn'](c.player.id, String(m.id));
       } else if (m.t === 'equip') {
         if (now - c.lastAct < 100) return;
         c.lastAct = now;
@@ -793,7 +898,7 @@
       } else if (m.t === 'buy' || m.t === 'sell') {
         if (now - c.lastAct < 100) return;
         c.lastAct = now;
-        w[m.t](c.player.id, String(m.item), m.n);
+        w[m.t](c.player.id, String(m.shop), String(m.item), m.n);
       } else if (m.t === 'chat') {
         if (now - c.lastChat < 700) return;
         const text = cleanText(m.text);
@@ -830,7 +935,7 @@
   }
 
   return {
-    W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT, ITEMS, MON, SHOP, ZONES, ZONE_LV, nextExp,
+    W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT, ITEMS, MON, SHOPS, QUESTS, ZONES, ZONE_LV, nextExp,
     buildMap, findPath, nearestWalkable, World, Hub, cleanName, cleanText, cleanLook, rng
   };
 });
