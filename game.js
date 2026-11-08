@@ -29,6 +29,12 @@
     robe_cloth: { name: 'เสื้อคลุมผ้าฝ้าย', desc: 'เสื้อคลุมเนื้อหนา กันลมกันหนาวได้ดี', slot: 'armor', def: 2, buy: 100, sell: 30 },
     armor_hide: { name: 'เกราะหนังหมูป่า', desc: 'เกราะหนังแข็งเย็บมือ กันเขี้ยวหมูป่าได้สบาย', slot: 'armor', def: 5, buy: 380, sell: 120 }
   };
+  // สกิล (ใช้ MP, วางที่คีย์ลัดได้)
+  const SKILLS = {
+    strike: { name: 'ฟันแรง', lv: 2, mp: 8, cd: 3, desc: 'ฟันเป้าหมายที่เลือกไว้แรงขึ้น 2.2 เท่า (ต้องยืนใกล้เป้าหมาย)' },
+    whirl: { name: 'กวาดวงกว้าง', lv: 8, mp: 20, cd: 6, desc: 'หมุนฟันศัตรูทุกตัวรอบตัวภายใน 2.4 ช่อง ตัวละ 1.4 เท่า' },
+    mend: { name: 'ผนึกชีวิต', lv: 5, mp: 14, cd: 8, desc: 'ฟื้นเลือด 35% ของเลือดสูงสุด' }
+  };
   // ร้านค้า: ร้านยารับซื้อของทั่วไป ร้านอาวุธรับซื้ออุปกรณ์
   const SHOPS = {
     potion: { npc: 'n2', title: 'ร้านยา', buy: ['herb', 'tonic'], sellSlot: false },
@@ -44,23 +50,23 @@
       done: 'เก่งมาก! ชาวบ้านจะได้เก็บฟืนกันได้เสียที นี่ค่าตอบแทนของเจ้า'
     },
     q_boar: {
-      title: 'หมูป่าอาละวาด', giver: 'n3', minLv: 3, prereq: 'q_slime', kill: 'boar', n: 4, nav: 'boar',
-      goal: 'ล่าหมูป่าไผ่', rewards: { exp: 150, items: { coin: 200, tonic: 2 } },
-      offer: 'หมูป่าไผ่พวกนี้ไล่ขวิดพ่อค้าที่ผ่านมาพักโรงเตี๊ยมข้า หากเจ้าปราบมันได้ 4 ตัว ข้าจะให้ยาบำรุงกำลังกับเงินก้อนหนึ่ง',
+      title: 'หมูป่าอาละวาด', giver: 'n3', minLv: 4, prereq: 'q_slime', kill: 'boar', n: 5, nav: 'boar',
+      goal: 'ล่าหมูป่าไผ่', rewards: { exp: 260, items: { coin: 350, tonic: 3 } },
+      offer: 'หมูป่าไผ่พวกนี้ไล่ขวิดพ่อค้าที่ผ่านมาพักโรงเตี๊ยมข้า หากเจ้าปราบมันได้ 5 ตัว ข้าจะให้ยาบำรุงกำลังกับเงินก้อนหนึ่ง',
       progress: 'หมูป่าอยู่ทางเหนือของทุ่ง ระวังเขี้ยวมันด้วยนะ',
       done: 'ดีเหลือเกิน! พ่อค้าจะได้เดินทางสบายใจ รับรางวัลไปเลย'
     },
     q_tusk: {
-      title: 'เขี้ยวของช่างตีเหล็ก', giver: 'n4', minLv: 5, prereq: 'q_boar', collect: 'tusk', n: 3, nav: 'boar',
-      goal: 'เก็บเขี้ยวหมูป่า', rewards: { exp: 260, items: { coin: 350, robe_cloth: 1 } },
-      offer: 'ช่างตีเหล็กอยากได้เขี้ยวหมูป่าไปทำด้ามมีด ข้าเฝ้าประตูไปไหนไม่ได้ เจ้าช่วยเก็บเขี้ยวหมูป่ามาให้ข้า 3 อันที เดี๋ยวข้าจัดการต่อเอง',
+      title: 'เขี้ยวของช่างตีเหล็ก', giver: 'n4', minLv: 7, prereq: 'q_boar', collect: 'tusk', n: 5, nav: 'boar',
+      goal: 'เก็บเขี้ยวหมูป่า', rewards: { exp: 600, items: { coin: 800, armor_hide: 1, tonic: 3 } },
+      offer: 'ช่างตีเหล็กอยากได้เขี้ยวหมูป่าไปทำด้ามมีด ข้าเฝ้าประตูไปไหนไม่ได้ เจ้าช่วยเก็บเขี้ยวหมูป่ามาให้ข้า 5 อันที เดี๋ยวข้าจัดการต่อเอง',
       progress: 'เขี้ยวหมูป่าได้จากการล่าหมูป่าไผ่ แต่ไม่ได้ทุกตัวนะ ใจเย็น ๆ',
       done: 'เขี้ยวสวยทั้งนั้น! ข้าเอาไปให้ช่างตีเหล็กเอง นี่รางวัลของเจ้า'
     },
     q_clear: {
-      title: 'กวาดล้างหมูป่า', giver: 'n1', minLv: 6, prereq: 'q_tusk', kill: 'boar', n: 8, nav: 'boar',
-      goal: 'ล่าหมูป่าไผ่', rewards: { exp: 500, items: { coin: 600, sword_iron: 1 } },
-      offer: 'ฝูงหมูป่ายังไม่หมดไป เจ้าฝีมือดีขึ้นมากแล้ว ปราบอีก 8 ตัวเถิด ข้ามีดาบเหล็กกล้าเก็บไว้ จะมอบให้เป็นรางวัล',
+      title: 'กวาดล้างหมูป่า', giver: 'n1', minLv: 12, prereq: 'q_tusk', kill: 'boar', n: 15, nav: 'boar',
+      goal: 'ล่าหมูป่าไผ่', rewards: { exp: 1800, items: { coin: 2000, sword_iron: 1, tonic: 5 } },
+      offer: 'ฝูงหมูป่ายังไม่หมดไป เจ้าฝีมือดีขึ้นมากแล้ว ปราบอีก 15 ตัวเถิด ข้ามีดาบเหล็กกล้าเก็บไว้ จะมอบให้เป็นรางวัล',
       progress: 'เหลืออีกไม่มากแล้ว สู้ต่อไป!',
       done: 'หมู่บ้านเราปลอดภัยเพราะเจ้าแท้ ๆ รับดาบเล่มนี้ไว้เถิด'
     }
@@ -367,6 +373,7 @@
   const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   const nextExp = lv => Math.round(20 * Math.pow(lv, 1.6));
   const maxHpOf = lv => 60 + 15 * (lv - 1);
+  const maxMpOf = lv => 30 + 6 * (lv - 1);
   const atkOf = lv => 8 + 2 * (lv - 1);
 
   // เดินตามเส้นทาง คืนค่า true ถ้าขยับจริง
@@ -427,7 +434,7 @@
     }
     applyLevel(p) {
       const w = ITEMS[p.equip.weapon], a = ITEMS[p.equip.armor];
-      p.maxHp = maxHpOf(p.lv); p.atk = atkOf(p.lv) + (w ? w.atk : 0); p.def = Math.floor(p.lv / 2) + (a ? a.def : 0);
+      p.maxHp = maxHpOf(p.lv); p.maxMp = maxMpOf(p.lv); p.atk = atkOf(p.lv) + (w ? w.atk : 0); p.def = Math.floor(p.lv / 2) + (a ? a.def : 0);
     }
     pickSpawn(zone) {
       const sp = this.zones[zone].map.spawn;
@@ -439,7 +446,7 @@
       const p = {
         id: this.nextId++, name: cleanName(name), look: cleanLook(look), zone: 'village',
         x: sp[0] + 0.5, y: sp[1] + 0.5, dir: 2, moving: false, path: [], dirty: false,
-        lv: 1, exp: 0, hp: 60, maxHp: 60, atk: 8, def: 0, inv: {}, equip: { weapon: null, armor: null }, quests: {}, qdone: {},
+        lv: 1, exp: 0, hp: 60, maxHp: 60, mp: 30, maxMp: 30, cd: {}, mpT: 0, atk: 8, def: 0, inv: {}, equip: { weapon: null, armor: null }, quests: {}, qdone: {},
         target: null, atkCd: 0, repath: 0, lastCombat: -99, regenT: 0, dead: false, respawn: 0, warpCd: 0
       };
       if (save && typeof save === 'object') {
@@ -466,12 +473,12 @@
           if (q && !p.qdone[id]) p.quests[id] = { n: clamp(Number.isFinite(n) ? n : 0, 0, q.n) };
         }
       }
-      this.applyLevel(p); p.hp = p.maxHp;
+      this.applyLevel(p); p.hp = p.maxHp; p.mp = p.maxMp;
       this.players.set(p.id, p);
       return p;
     }
     removePlayer(id) { this.players.delete(id); }
-    meMsg(p) { return { t: 'me', lv: p.lv, exp: p.exp, next: nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, atk: p.atk, def: p.def, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip) }; }
+    meMsg(p) { return { t: 'me', lv: p.lv, exp: p.exp, next: nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp, atk: p.atk, def: p.def, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip) }; }
     tellMe(p) { this.events.push(Object.assign({ _to: p.id }, this.meMsg(p))); }
     note(p, text) { this.events.push({ _to: p.id, t: 'note', text }); }
     emit(zone, ev) { ev._z = zone; this.events.push(ev); }
@@ -539,6 +546,33 @@
       const k = p.equip[slot]; p.equip[slot] = null;
       p.inv[k] = (p.inv[k] || 0) + 1; this.applyLevel(p);
       this.emit(p.zone, { t: 'eq', id: p.id, eq: Object.assign({}, p.equip) });
+      this.tellMe(p);
+      return true;
+    }
+    useSkill(id, sid) {
+      const p = this.players.get(id), sk = SKILLS[sid];
+      if (!p || p.dead || !sk) return false;
+      if (p.lv < sk.lv) { this.note(p, 'ต้องเลเวล ' + sk.lv + ' ถึงจะใช้ ' + sk.name + ' ได้'); return false; }
+      if ((p.cd[sid] || 0) > this.time) return false;
+      if (p.mp < sk.mp) { this.note(p, 'MP ไม่พอ (ต้องใช้ ' + sk.mp + ')'); return false; }
+      if (sid === 'strike') {
+        const m = this.monById.get(p.target);
+        if (!m || m.state === 'dead' || m.zone !== p.zone || Math.hypot(m.x - p.x, m.y - p.y) > MELEE + 0.8) { this.note(p, 'ต้องเลือกเป้าหมายและยืนใกล้ ๆ ก่อน'); return false; }
+        p.dir = dirOf(m.x - p.x, m.y - p.y);
+        this.playerHit(p, m, 2.2);
+      } else if (sid === 'whirl') {
+        const hit = this.monsters.filter(m => m.zone === p.zone && m.state !== 'dead' && Math.hypot(m.x - p.x, m.y - p.y) <= 2.4);
+        if (!hit.length) { this.note(p, 'ไม่มีศัตรูอยู่รอบตัว'); return false; }
+        for (const m of hit) this.playerHit(p, m, 1.4);
+      } else if (sid === 'mend') {
+        if (p.hp >= p.maxHp) { this.note(p, 'เลือดเต็มอยู่แล้ว'); return false; }
+        const amt = Math.round(p.maxHp * 0.35);
+        p.hp = Math.min(p.maxHp, p.hp + amt);
+        this.emit(p.zone, { t: 'heal', id: p.id, amt, hp: p.hp });
+      }
+      p.mp -= sk.mp; p.cd[sid] = this.time + sk.cd;
+      this.emit(p.zone, { t: 'sk', id: p.id, s: sid });
+      this.events.push({ _to: p.id, t: 'skillcd', id: sid, cd: sk.cd });
       this.tellMe(p);
       return true;
     }
@@ -656,6 +690,10 @@
           if (p.x >= pt.x && p.x < pt.x + pt.w && p.y >= pt.y && p.y < pt.y + pt.h) { this.moveZone(p, pt.to, pt.tx, pt.ty); return; }
         }
       }
+      if (p.mp < p.maxMp) {
+        p.mpT += dt;
+        if (p.mpT >= 1) { p.mpT = 0; p.mp = Math.min(p.maxMp, p.mp + Math.max(1, Math.round(p.maxMp * 0.04))); this.tellMe(p); }
+      }
       if (p.hp < p.maxHp && this.time - p.lastCombat > 5) {
         p.regenT += dt;
         if (p.regenT >= 1) {
@@ -683,14 +721,15 @@
         }
       }
     }
-    playerHit(p, m) {
+    playerHit(p, m, mult) {
       const D = MON[m.type];
       const crit = Math.random() < 0.1;
-      let dmg = Math.round(p.atk * (0.85 + Math.random() * 0.3));
+      let dmg = Math.round(p.atk * (mult || 1) * (0.85 + Math.random() * 0.3));
       if (crit) dmg = Math.round(dmg * 1.6);
       dmg = Math.max(1, dmg);
       m.hp = Math.max(0, m.hp - dmg);
-      p.atkCd = ATK_CD; p.lastCombat = this.time;
+      if (!mult) p.atkCd = ATK_CD;
+      p.lastCombat = this.time;
       if (m.state !== 'chase') { m.state = 'chase'; m.path = []; m.repath = 0; }
       m.target = p.id; m.dirty = true;
       this.emit(m.zone, { t: 'hit', id: m.id, dmg, crit: crit ? 1 : 0, hp: m.hp, from: p.id });
@@ -714,7 +753,7 @@
       p.exp += n;
       while (p.lv < 50 && p.exp >= nextExp(p.lv)) {
         p.exp -= nextExp(p.lv); p.lv++;
-        this.applyLevel(p); p.hp = p.maxHp;
+        this.applyLevel(p); p.hp = p.maxHp; p.mp = p.maxMp;
         this.events.push({ t: 'lvup', id: p.id, lv: p.lv, name: p.name });
         this.tellQuests(p);
       }
@@ -793,7 +832,7 @@
     }
     revive(p) {
       const sp = this.pickSpawn('village');
-      p.dead = false; p.hp = p.maxHp; p.path = []; p.moving = false; p.dirty = true;
+      p.dead = false; p.hp = p.maxHp; p.mp = p.maxMp; p.path = []; p.moving = false; p.dirty = true;
       if (p.zone !== 'village') this.moveZone(p, 'village', sp[0] + 0.5, sp[1] + 0.5);
       else { p.x = sp[0] + 0.5; p.y = sp[1] + 0.5; }
       this.emit('village', { t: 'previve', id: p.id, x: p.x, y: p.y });
@@ -883,6 +922,10 @@
         if (now - c.lastAct < 100) return;
         c.lastAct = now;
         w.useItem(c.player.id, String(m.item));
+      } else if (m.t === 'skill') {
+        if (now - c.lastAct < 100) return;
+        c.lastAct = now;
+        w.useSkill(c.player.id, String(m.id));
       } else if (m.t === 'qaccept' || m.t === 'qturnin') {
         if (now - c.lastAct < 100) return;
         c.lastAct = now;
@@ -935,7 +978,7 @@
   }
 
   return {
-    W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT, ITEMS, MON, SHOPS, QUESTS, ZONES, ZONE_LV, nextExp,
+    W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT, ITEMS, MON, SHOPS, QUESTS, SKILLS, ZONES, ZONE_LV, nextExp,
     buildMap, findPath, nearestWalkable, World, Hub, cleanName, cleanText, cleanLook, rng
   };
 });
