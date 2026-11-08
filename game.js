@@ -15,6 +15,30 @@
   const START_HOUR = 10;
   const OUTFITS = 6, HAIRS = 4, HAIR_COLORS = 4;
   const MAX_NAME = 12, MAX_CHAT = 80, MAX_PLAYERS = 100;
+  const MELEE = 1.6, ATK_CD = 1.0, LEASH = 10;   // ระยะตี (ช่อง), ตีทุกกี่วินาที, ระยะที่มอนสเตอร์เลิกไล่
+  const ZONES = ['village', 'field'];
+  const ITEMS = {
+    coin: { name: 'เหรียญทองแดง' },
+    jelly: { name: 'ก้อนวุ้นไผ่', sell: 5 },
+    tusk: { name: 'เขี้ยวหมูป่า', sell: 14 },
+    herb: { name: 'สมุนไพร', heal: 40, buy: 20, sell: 6 },
+    tonic: { name: 'ยาบำรุงกำลัง', heal: 100, buy: 70, sell: 20 }
+  };
+  const SHOP = { npc: 'n2', buy: ['herb', 'tonic'] };   // ร้านค้า: คุยกับเจ้าของร้าน (ซื้อ/ขาย ด้วยเหรียญทองแดง)
+  const MON = {
+    slime: {
+      name: 'วุ้นไผ่', hp: 30, atk: [3, 6], atkCd: 1.4, speed: 2.4, exp: 12, respawn: 12,
+      drops: [['coin', 1, [3, 9]], ['jelly', 0.7, [1, 1]], ['herb', 0.15, [1, 1]]]  // [ไอเท็ม, โอกาส, [น้อยสุด, มากสุด]]
+    },
+    boar: {
+      name: 'หมูป่าไผ่', hp: 70, atk: [6, 10], atkCd: 1.3, speed: 3.0, exp: 34, respawn: 20,
+      drops: [['coin', 1, [10, 22]], ['tusk', 0.6, [1, 1]], ['herb', 0.25, [1, 2]], ['tonic', 0.06, [1, 1]]]
+    }
+  };
+  // จุดเกิดมอนสเตอร์ในแต่ละแมพ: [ชนิด, x0, y0, x1, y1, จำนวน]
+  const MON_SPAWNS = {
+    field: [['slime', 4, 18, 15, 26, 5], ['slime', 25, 19, 36, 26, 4], ['boar', 4, 3, 15, 11, 3], ['boar', 24, 3, 36, 10, 3]]
+  };
 
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
@@ -30,7 +54,9 @@
   }
 
   /* ---------------------------------------------------------------- map */
-  function buildMap() {
+  function buildMap(name) { return name === 'field' ? buildField() : buildVillage(); }
+
+  function buildVillage() {
     const tiles = new Uint8Array(W * H);
     const solid = new Uint8Array(W * H);
     const I = (x, y) => y * W + x;
@@ -134,7 +160,50 @@
     for (let y = 17; y <= 19; y++)
       for (let x = 16; x <= 23; x++) if (!solid[I(x, y)]) spawn.push([x, y]);
 
-    return { W, H, tiles, solid, objs, npcs, spawn, riverC };
+    // ประตูวาร์ปทางเหนือ (หลังซุ้มประตูหมู่บ้าน) ไปทุ่งไผ่เขียว
+    const portals = [{ x: 19, y: 5, w: 2, h: 1, to: 'field', tx: 20, ty: 25, name: 'ทุ่งไผ่เขียว' }];
+    return { name: 'village', W, H, tiles, solid, objs, npcs, spawn, riverC, portals };
+  }
+
+  /* ทุ่งไผ่เขียว: แมพล่ามอนสเตอร์ มีบ่อน้ำ ทางเดิน และต้นไม้หนาแน่นตามขอบ */
+  function buildField() {
+    const tiles = new Uint8Array(W * H), solid = new Uint8Array(W * H);
+    const I = (x, y) => y * W + x, R = rng(5309);
+    const depth = (x, y) => Math.min(x, y, W - 1 - x, H - 1 - y);
+    // บ่อน้ำ
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const dx = (x + 0.5 - 29) / 4.6, dy = (y + 0.5 - 14) / 3.2;
+      if (dx * dx + dy * dy < 1) { tiles[I(x, y)] = T.WATER; solid[I(x, y)] = 1; }
+    }
+    // ทางเดิน (กว้าง 2 ช่อง)
+    const seg = (x0, y0, x1, y1) => {
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+      for (let k = 0; k <= n; k++) {
+        const x = Math.round(x0 + (x1 - x0) * k / n), y = Math.round(y0 + (y1 - y0) * k / n);
+        for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]])
+          if (inb(x + a, y + b) && tiles[I(x + a, y + b)] !== T.WATER) tiles[I(x + a, y + b)] = T.PATH;
+      }
+    };
+    seg(19, 29, 19, 21); seg(19, 21, 12, 15); seg(12, 15, 11, 5); seg(19, 21, 30, 22); seg(30, 22, 33, 9);
+    const objs = [];
+    // โคมไฟสองข้างประตูวาร์ปทางกลับ
+    [[17, 27], [22, 27]].forEach(p => { objs.push({ type: 'lamp', x: p[0], y: p[1], w: 1, h: 1 }); solid[I(p[0], p[1])] = 1; });
+    // ต้นไม้: หนาแน่นตามขอบ กระจายเบา ๆ ด้านใน เว้นทางเดินและบริเวณประตู
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = I(x, y);
+      if (tiles[i] === T.WATER || tiles[i] === T.PATH || solid[i]) continue;
+      if (Math.abs(x - 19.5) < 4 && y > 22) continue;
+      const d = depth(x, y);
+      const p = d < 2 ? 1 : d < 3 ? 0.7 : d < 4 ? 0.35 : 0.07;
+      if (R() >= p) continue;
+      const r = R();
+      objs.push({ type: 'tree', x, y, w: 1, h: 1, v: r < 0.55 ? 1 : r < 0.8 ? 0 : 2 });
+      solid[i] = 1;
+    }
+    const spawn = [];
+    for (let y = 24; y <= 26; y++) for (let x = 18; x <= 21; x++) if (!solid[I(x, y)]) spawn.push([x, y]);
+    const portals = [{ x: 19, y: 28, w: 2, h: 1, to: 'village', tx: 20, ty: 8.5, name: 'กลับหมู่บ้านลำธารไผ่' }];
+    return { name: 'field', W, H, tiles, solid, objs, npcs: [], spawn, riverC: null, portals };
   }
 
   /* ----------------------------------------------------------- pathfinding */
@@ -242,36 +311,120 @@
 
   /* ----------------------------------------------------------------- world */
   const dirOf = (dx, dy) => (Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) + 8) % 8;
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const nextExp = lv => Math.round(20 * Math.pow(lv, 1.6));
+  const maxHpOf = lv => 60 + 15 * (lv - 1);
+  const atkOf = lv => 8 + 2 * (lv - 1);
+
+  // เดินตามเส้นทาง คืนค่า true ถ้าขยับจริง
+  function advance(e, speed, dt) {
+    let budget = speed * dt, moved = false;
+    while (budget > 1e-6 && e.path.length) {
+      const tx = e.path[0][0] + 0.5, ty = e.path[0][1] + 0.5;
+      const dx = tx - e.x, dy = ty - e.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 1e-6) { e.path.shift(); continue; }
+      e.dir = dirOf(dx, dy);
+      moved = true;
+      if (dist <= budget) { e.x = tx; e.y = ty; budget -= dist; e.path.shift(); }
+      else { e.x += dx / dist * budget; e.y += dy / dist * budget; budget = 0; }
+    }
+    return moved;
+  }
 
   class World {
     constructor() {
-      this.map = buildMap();
+      this.zones = {};
+      for (const name of ZONES) this.zones[name] = { name, map: buildMap(name) };
+      this.map = this.zones.village.map;
       this.players = new Map();
       this.nextId = 1;
       this.epoch = Date.now() - (START_HOUR / 24) * DAY_MS;
       this.events = [];
       this.npcTimer = 6;
+      this.time = 0;
+      this.monsters = [];
+      this.monById = new Map();
+      this.spawnMonsters();
+    }
+    spawnMonsters() {
+      const R = rng(31); let n = 1;
+      for (const zname of Object.keys(MON_SPAWNS)) {
+        const m = this.zones[zname].map;
+        for (const z of MON_SPAWNS[zname]) {   // [ชนิด, x0, y0, x1, y1, จำนวน]
+          const cand = [];
+          for (let y = z[2]; y <= z[4]; y++)
+            for (let x = z[1]; x <= z[3]; x++) if (!m.solid[y * W + x]) cand.push([x, y]);
+          for (let i = 0; i < z[5] && cand.length; i++) {
+            const c = cand.splice(Math.floor(R() * cand.length), 1)[0];
+            const D = MON[z[0]];
+            const mon = {
+              id: 'm' + n++, zone: zname, type: z[0], x: c[0] + 0.5, y: c[1] + 0.5, hx: c[0] + 0.5, hy: c[1] + 0.5,
+              hp: D.hp, maxHp: D.hp, dir: 2, moving: false, path: [], state: 'idle',
+              wait: 1 + R() * 4, atkCd: 0, repath: 0, target: null, respawn: 0, dirty: false
+            };
+            this.monsters.push(mon); this.monById.set(mon.id, mon);
+          }
+        }
+      }
     }
     phase(now) {
       now = now || Date.now();
       return ((((now - this.epoch) % DAY_MS) + DAY_MS) % DAY_MS) / DAY_MS;
     }
-    addPlayer(name, look) {
-      const sp = this.map.spawn[Math.floor(Math.random() * this.map.spawn.length)] || [20, 18];
+    applyLevel(p) { p.maxHp = maxHpOf(p.lv); p.atk = atkOf(p.lv); p.def = Math.floor(p.lv / 2); }
+    pickSpawn(zone) {
+      const sp = this.zones[zone].map.spawn;
+      return sp[Math.floor(Math.random() * sp.length)] || [20, 18];
+    }
+    playersIn(zone) { return Array.from(this.players.values()).filter(p => p.zone === zone); }
+    addPlayer(name, look, save) {
+      const sp = this.pickSpawn('village');
       const p = {
-        id: this.nextId++, name: cleanName(name), look: cleanLook(look),
-        x: sp[0] + 0.5, y: sp[1] + 0.5, dir: 2, moving: false, path: [], dirty: false
+        id: this.nextId++, name: cleanName(name), look: cleanLook(look), zone: 'village',
+        x: sp[0] + 0.5, y: sp[1] + 0.5, dir: 2, moving: false, path: [], dirty: false,
+        lv: 1, exp: 0, hp: 60, maxHp: 60, atk: 8, def: 0, inv: {},
+        target: null, atkCd: 0, repath: 0, lastCombat: -99, regenT: 0, dead: false, respawn: 0, warpCd: 0
       };
+      if (save && typeof save === 'object') {
+        p.lv = clamp(Math.floor(Number(save.lv)) || 1, 1, 50);
+        p.exp = clamp(Math.floor(Number(save.exp)) || 0, 0, nextExp(p.lv) - 1);
+        if (save.inv && typeof save.inv === 'object') {
+          for (const k of Object.keys(ITEMS)) {
+            const v = Math.floor(Number(save.inv[k]));
+            if (v > 0) p.inv[k] = Math.min(v, 99999);
+          }
+        }
+      }
+      this.applyLevel(p); p.hp = p.maxHp;
       this.players.set(p.id, p);
       return p;
     }
     removePlayer(id) { this.players.delete(id); }
+    meMsg(p) { return { t: 'me', lv: p.lv, exp: p.exp, next: nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, inv: Object.assign({}, p.inv) }; }
+    tellMe(p) { this.events.push(Object.assign({ _to: p.id }, this.meMsg(p))); }
+    note(p, text) { this.events.push({ _to: p.id, t: 'note', text }); }
+    emit(zone, ev) { ev._z = zone; this.events.push(ev); }
+
+    // ย้ายผู้เล่นไปอีกแมพ
+    moveZone(p, zone, x, y) {
+      const old = p.zone;
+      this.emit(old, { t: 'leave', id: p.id });
+      p.zone = zone; p.x = x; p.y = y; p.path = []; p.moving = false; p.target = null; p.dirty = true; p.warpCd = 1.5;
+      this.emit(zone, { t: 'join', p: pub(p), _x: p.id });
+      this.events.push({
+        _to: p.id, t: 'zone', zone, x, y,
+        players: this.playersIn(zone).map(pub),
+        monsters: this.monsters.filter(m => m.zone === zone).map(pubM), me: this.meMsg(p)
+      });
+    }
+
     setTarget(id, x, y) {
       const p = this.players.get(id);
-      if (!p) return false;
+      if (!p || p.dead) return false;
       let tx = Math.floor(x), ty = Math.floor(y);
       if (!inb(tx, ty)) return false;
-      const m = this.map;
+      const m = this.zones[p.zone].map;
       if (m.solid[tx + ty * W]) {
         const n = nearestWalkable(m, tx, ty, 3);
         if (!n) return false;
@@ -279,64 +432,276 @@
       }
       const path = findPath(m, clamp(Math.floor(p.x), 0, W - 1), clamp(Math.floor(p.y), 0, H - 1), tx, ty);
       if (!path) return false;
+      p.target = null;
       p.path = path.length > 1 ? path.slice(1) : [[tx, ty]];
       p.moving = true; p.dirty = true;
       return true;
     }
+    setAttack(id, mid) {
+      const p = this.players.get(id), m = this.monById.get(mid);
+      if (!p || p.dead || !m || m.state === 'dead' || m.zone !== p.zone) return false;
+      p.target = mid; p.repath = 0;
+      return true;
+    }
+    useItem(id, item) {
+      const p = this.players.get(id), it = ITEMS[item];
+      if (!p || p.dead || !it || !it.heal || !(p.inv[item] > 0) || p.hp >= p.maxHp) return false;
+      p.inv[item]--; if (p.inv[item] <= 0) delete p.inv[item];
+      p.hp = Math.min(p.maxHp, p.hp + it.heal);
+      this.emit(p.zone, { t: 'heal', id: p.id, amt: it.heal, hp: p.hp });
+      this.tellMe(p);
+      return true;
+    }
+    nearShop(p) {
+      if (p.zone !== 'village') return false;
+      const n = this.zones.village.map.npcs.find(q => q.id === SHOP.npc);
+      return !!n && Math.hypot(n.x + 0.5 - p.x, n.y + 0.5 - p.y) <= 6;
+    }
+    buy(id, item, n) {
+      const p = this.players.get(id), it = ITEMS[item];
+      if (!p || p.dead || !it || !it.buy || SHOP.buy.indexOf(item) < 0) return false;
+      if (!this.nearShop(p)) { this.note(p, 'เดินเข้าไปใกล้ร้านค้าก่อนนะ'); return false; }
+      n = clamp(Math.floor(Number(n)) || 1, 1, 20);
+      const cost = it.buy * n;
+      if ((p.inv.coin || 0) < cost) { this.note(p, 'เหรียญไม่พอ (ต้องใช้ ' + cost + ')'); return false; }
+      p.inv.coin -= cost; if (p.inv.coin <= 0) delete p.inv.coin;
+      p.inv[item] = (p.inv[item] || 0) + n;
+      this.note(p, 'ซื้อ ' + it.name + ' ×' + n + ' (-' + cost + ' เหรียญ)');
+      this.tellMe(p);
+      return true;
+    }
+    sell(id, item, n) {
+      const p = this.players.get(id), it = ITEMS[item];
+      if (!p || p.dead || !it || !it.sell) return false;
+      if (!this.nearShop(p)) { this.note(p, 'เดินเข้าไปใกล้ร้านค้าก่อนนะ'); return false; }
+      const have = p.inv[item] || 0;
+      if (have <= 0) return false;
+      n = Math.floor(Number(n));
+      if (!Number.isFinite(n) || n < 0) n = 1;
+      n = n === 0 ? have : Math.min(n, have);   // 0 = ขายทั้งหมด
+      p.inv[item] = have - n; if (p.inv[item] <= 0) delete p.inv[item];
+      const gain = it.sell * n;
+      p.inv.coin = Math.min(99999, (p.inv.coin || 0) + gain);
+      this.note(p, 'ขาย ' + it.name + ' ×' + n + ' (+' + gain + ' เหรียญ)');
+      this.tellMe(p);
+      return true;
+    }
+
     step(dt) {
-      for (const p of this.players.values()) {
-        if (!p.path.length) continue;
-        let budget = SPEED * dt;
-        while (budget > 1e-6 && p.path.length) {
-          const tx = p.path[0][0] + 0.5, ty = p.path[0][1] + 0.5;
-          const dx = tx - p.x, dy = ty - p.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < 1e-6) { p.path.shift(); continue; }
-          p.dir = dirOf(dx, dy);
-          if (dist <= budget) { p.x = tx; p.y = ty; budget -= dist; p.path.shift(); }
-          else { p.x += dx / dist * budget; p.y += dy / dist * budget; budget = 0; }
-        }
-        p.moving = p.path.length > 0;
-        p.dirty = true;
-      }
+      this.time += dt;
+      for (const p of this.players.values()) this.stepPlayer(p, dt);
+      for (const m of this.monsters) this.stepMonster(m, dt);
       this.npcTimer -= dt;
       if (this.npcTimer <= 0) {
         this.npcTimer = 9 + Math.random() * 12;
-        if (this.players.size) {
-          const n = this.map.npcs[Math.floor(Math.random() * this.map.npcs.length)];
+        if (this.playersIn('village').length) {
+          const ns = this.zones.village.map.npcs;
+          const n = ns[Math.floor(Math.random() * ns.length)];
           const text = n.lines[Math.floor(Math.random() * n.lines.length)];
-          this.events.push({ t: 'chat', id: n.id, name: n.name, text, npc: 1 });
+          this.emit('village', { t: 'chat', id: n.id, name: n.name, text, npc: 1 });
         }
       }
     }
+    stepPlayer(p, dt) {
+      p.atkCd = Math.max(0, p.atkCd - dt);
+      p.warpCd = Math.max(0, p.warpCd - dt);
+      if (p.dead) { p.respawn -= dt; if (p.respawn <= 0) this.revive(p); return; }
+      const wasMoving = p.moving, od = p.dir;
+      if (p.target) this.chase(p);
+      const moved = p.path.length ? advance(p, SPEED, dt) : false;
+      p.moving = p.path.length > 0;
+      if (moved || wasMoving !== p.moving || od !== p.dir) p.dirty = true;
+      if (p.warpCd <= 0) {
+        for (const pt of this.zones[p.zone].map.portals) {
+          if (p.x >= pt.x && p.x < pt.x + pt.w && p.y >= pt.y && p.y < pt.y + pt.h) { this.moveZone(p, pt.to, pt.tx, pt.ty); return; }
+        }
+      }
+      if (p.hp < p.maxHp && this.time - p.lastCombat > 5) {
+        p.regenT += dt;
+        if (p.regenT >= 1) {
+          p.regenT = 0;
+          p.hp = Math.min(p.maxHp, p.hp + Math.max(1, Math.round(p.maxHp * 0.03)));
+          this.tellMe(p);
+        }
+      }
+    }
+    chase(p) {
+      const m = this.monById.get(p.target);
+      if (!m || m.state === 'dead' || m.zone !== p.zone) { p.target = null; return; }
+      const d = Math.hypot(m.x - p.x, m.y - p.y);
+      if (d <= MELEE) {
+        p.path = [];
+        p.dir = dirOf(m.x - p.x, m.y - p.y);
+        if (p.atkCd <= 0) this.playerHit(p, m);
+      } else {
+        p.repath -= 1 / 20;
+        if (p.repath <= 0 || !p.path.length) {
+          p.repath = 0.35;
+          const path = findPath(this.zones[p.zone].map, Math.floor(p.x), Math.floor(p.y), Math.floor(m.x), Math.floor(m.y));
+          if (path) p.path = path.length > 1 ? path.slice(1) : [];
+          else { p.target = null; p.path = []; }
+        }
+      }
+    }
+    playerHit(p, m) {
+      const D = MON[m.type];
+      const crit = Math.random() < 0.1;
+      let dmg = Math.round(p.atk * (0.85 + Math.random() * 0.3));
+      if (crit) dmg = Math.round(dmg * 1.6);
+      dmg = Math.max(1, dmg);
+      m.hp = Math.max(0, m.hp - dmg);
+      p.atkCd = ATK_CD; p.lastCombat = this.time;
+      if (m.state !== 'chase') { m.state = 'chase'; m.path = []; m.repath = 0; }
+      m.target = p.id; m.dirty = true;
+      this.emit(m.zone, { t: 'hit', id: m.id, dmg, crit: crit ? 1 : 0, hp: m.hp, from: p.id });
+      if (m.hp <= 0) this.killMonster(m, p, D);
+    }
+    killMonster(m, p, D) {
+      m.state = 'dead'; m.hp = 0; m.path = []; m.moving = false; m.target = null; m.respawn = D.respawn; m.dirty = true;
+      p.target = null;
+      this.emit(m.zone, { t: 'mdie', id: m.id });
+      const gained = {};
+      for (const d of D.drops) {
+        if (Math.random() < d[1]) { const n = rnd(d[2][0], d[2][1]); p.inv[d[0]] = (p.inv[d[0]] || 0) + n; gained[d[0]] = n; }
+      }
+      this.events.push({ _to: p.id, t: 'loot', exp: D.exp, items: gained });
+      this.giveExp(p, D.exp);
+      this.tellMe(p);
+    }
+    giveExp(p, n) {
+      p.exp += n;
+      while (p.lv < 50 && p.exp >= nextExp(p.lv)) {
+        p.exp -= nextExp(p.lv); p.lv++;
+        this.applyLevel(p); p.hp = p.maxHp;
+        this.events.push({ t: 'lvup', id: p.id, lv: p.lv, name: p.name });
+      }
+    }
+    stepMonster(m, dt) {
+      const D = MON[m.type], map = this.zones[m.zone].map;
+      if (m.state === 'dead') {
+        m.respawn -= dt;
+        if (m.respawn <= 0) {
+          m.x = m.hx; m.y = m.hy; m.hp = m.maxHp; m.state = 'idle'; m.path = []; m.moving = false;
+          m.target = null; m.wait = 2; m.dirty = true;
+          this.emit(m.zone, { t: 'mspawn', m: pubM(m) });
+        }
+        return;
+      }
+      m.atkCd = Math.max(0, m.atkCd - dt);
+      const was = m.moving, od = m.dir;
+      let moved = false;
+      const tile = (x, y) => [Math.floor(x), Math.floor(y)];
+      if (m.state === 'chase') {
+        const p = this.players.get(m.target);
+        if (!p || p.dead || p.zone !== m.zone || Math.hypot(m.x - m.hx, m.y - m.hy) > LEASH) {
+          m.state = 'return'; m.target = null; m.path = []; m.repath = 0;
+        } else {
+          const d = Math.hypot(p.x - m.x, p.y - m.y);
+          if (d <= 1.3) {
+            m.path = []; m.dir = dirOf(p.x - m.x, p.y - m.y);
+            if (m.atkCd <= 0) this.monsterHit(m, p, D);
+          } else {
+            m.repath -= dt;
+            if (m.repath <= 0 || !m.path.length) {
+              m.repath = 0.5;
+              const a = tile(m.x, m.y), b = tile(p.x, p.y);
+              const path = findPath(map, a[0], a[1], b[0], b[1]);
+              m.path = path && path.length > 1 ? path.slice(1) : [];
+            }
+            moved = advance(m, D.speed, dt);
+          }
+        }
+      } else if (m.state === 'return') {
+        if (!m.path.length) {
+          const a = tile(m.x, m.y), b = tile(m.hx, m.hy);
+          const path = findPath(map, a[0], a[1], b[0], b[1]);
+          m.path = path && path.length > 1 ? path.slice(1) : [];
+        }
+        moved = advance(m, D.speed * 1.4, dt);
+        if (!m.path.length) { m.state = 'idle'; m.hp = m.maxHp; m.wait = 2; m.dirty = true; }
+      } else if (m.state === 'wander') {
+        moved = advance(m, D.speed * 0.5, dt);
+        if (!m.path.length) { m.state = 'idle'; m.wait = 2 + Math.random() * 5; }
+      } else {
+        m.wait -= dt;
+        if (m.wait <= 0) {
+          m.wait = 2 + Math.random() * 5;
+          const tx = Math.floor(m.hx + Math.random() * 8 - 4), ty = Math.floor(m.hy + Math.random() * 8 - 4);
+          if (inb(tx, ty) && !map.solid[ty * W + tx]) {
+            const a = tile(m.x, m.y);
+            const path = findPath(map, a[0], a[1], tx, ty);
+            if (path && path.length > 1) { m.path = path.slice(1); m.state = 'wander'; }
+          }
+        }
+      }
+      m.moving = m.path.length > 0;
+      if (moved || was !== m.moving || od !== m.dir) m.dirty = true;
+    }
+    monsterHit(m, p, D) {
+      const dmg = Math.max(1, rnd(D.atk[0], D.atk[1]) - p.def);
+      p.hp -= dmg; p.lastCombat = this.time; m.atkCd = D.atkCd;
+      this.emit(m.zone, { t: 'hit', id: p.id, dmg, hp: Math.max(0, p.hp), pl: 1, from: m.id });
+      if (p.hp <= 0) this.killPlayer(p); else this.tellMe(p);
+    }
+    killPlayer(p) {
+      p.hp = 0; p.dead = true; p.path = []; p.target = null; p.moving = false; p.respawn = 4; p.dirty = true;
+      this.emit(p.zone, { t: 'pdie', id: p.id });
+      this.tellMe(p);
+    }
+    revive(p) {
+      const sp = this.pickSpawn('village');
+      p.dead = false; p.hp = p.maxHp; p.path = []; p.moving = false; p.dirty = true;
+      if (p.zone !== 'village') this.moveZone(p, 'village', sp[0] + 0.5, sp[1] + 0.5);
+      else { p.x = sp[0] + 0.5; p.y = sp[1] + 0.5; }
+      this.emit('village', { t: 'previve', id: p.id, x: p.x, y: p.y });
+      this.tellMe(p);
+    }
+
+    // snapshot แยกตามแมพ: { village:{p,m}, field:{p,m} }
     snapshot() {
-      const out = [];
+      const out = {};
+      for (const z of ZONES) out[z] = { p: [], m: [] };
       for (const p of this.players.values()) {
         if (!p.dirty) continue;
-        out.push([p.id, Math.round(p.x * 100) / 100, Math.round(p.y * 100) / 100, p.dir, p.moving ? 1 : 0]);
+        out[p.zone].p.push([p.id, Math.round(p.x * 100) / 100, Math.round(p.y * 100) / 100, p.dir, p.moving ? 1 : 0, p.dead ? 1 : 0]);
         if (!p.moving) p.dirty = false;
+      }
+      for (const m of this.monsters) {
+        if (!m.dirty || m.state === 'dead') continue;
+        out[m.zone].m.push([m.id, Math.round(m.x * 100) / 100, Math.round(m.y * 100) / 100, m.dir, m.hp, m.moving ? 1 : 0]);
+        if (!m.moving) m.dirty = false;
       }
       return out;
     }
     drainEvents() { const e = this.events; this.events = []; return e; }
   }
 
-  const pub = p => ({ id: p.id, name: p.name, look: p.look, x: p.x, y: p.y, dir: p.dir, m: p.moving ? 1 : 0 });
+  const pub = p => ({ id: p.id, name: p.name, look: p.look, x: p.x, y: p.y, dir: p.dir, m: p.moving ? 1 : 0, lv: p.lv, dead: p.dead ? 1 : 0 });
+  const pubM = m => ({ id: m.id, type: m.type, x: m.x, y: m.y, dir: m.dir, hp: m.hp, maxHp: m.maxHp, dead: m.state === 'dead' ? 1 : 0 });
 
   /* ------------------------------------------------------------------- hub
    * ตรรกะข้อความทั้งหมดอยู่ตรงนี้ — transport (WebSocket หรือโหมดเดโมในเบราว์เซอร์)
    * แค่ส่งสตริงเข้า hub.message() และรับสตริงกลับผ่านฟังก์ชัน send
+   * trustSaves: เปิดเฉพาะโหมดออฟไลน์ (รับเลเวล/ของที่เซฟไว้ในเครื่องผู้เล่น)
    */
   class Hub {
-    constructor() { this.world = new World(); this.conns = new Set(); this.n = 0; }
+    constructor() {
+      this.world = new World(); this.conns = new Set(); this.byPlayer = new Map();
+      this.n = 0; this.trustSaves = false;
+    }
     connect(send) {
-      const c = { send, player: null, lastChat: 0, lastMove: 0 };
+      const c = { send, player: null, lastChat: 0, lastMove: 0, lastAct: 0 };
       this.conns.add(c);
       return c;
     }
-    bcast(obj, except) {
+    // zone: ส่งเฉพาะคนในแมพนั้น (undefined = ทุกคน), exceptId: ข้ามผู้เล่นคนนี้
+    bcast(obj, zone, exceptId) {
       const s = JSON.stringify(obj);
-      for (const c of this.conns) if (c.player && c !== except) c.send(s);
+      for (const c of this.conns) {
+        if (!c.player || c.player.id === exceptId) continue;
+        if (zone && c.player.zone !== zone) continue;
+        c.send(s);
+      }
     }
     message(c, raw) {
       let m = raw;
@@ -346,16 +711,18 @@
       }
       if (!m || typeof m !== 'object') return;
       const now = Date.now();
+      const w = this.world;
       if (m.t === 'join') {
         if (c.player) return;
-        if (this.world.players.size >= MAX_PLAYERS) { c.send(JSON.stringify({ t: 'full' })); return; }
-        const p = this.world.addPlayer(m.name, m.look);
-        c.player = p;
+        if (w.players.size >= MAX_PLAYERS) { c.send(JSON.stringify({ t: 'full' })); return; }
+        const p = w.addPlayer(m.name, m.look, this.trustSaves ? m.save : null);
+        c.player = p; this.byPlayer.set(p.id, c);
         c.send(JSON.stringify({
-          t: 'init', id: p.id, phase: this.world.phase(now), dayMs: DAY_MS,
-          players: Array.from(this.world.players.values()).map(pub)
+          t: 'init', id: p.id, zone: p.zone, phase: w.phase(now), dayMs: DAY_MS,
+          players: w.playersIn(p.zone).map(pub),
+          monsters: w.monsters.filter(q => q.zone === p.zone).map(pubM), me: w.meMsg(p)
         }));
-        this.bcast({ t: 'join', p: pub(p) }, c);
+        this.bcast({ t: 'join', p: pub(p) }, p.zone, p.id);
       } else if (!c.player) {
         return;
       } else if (m.t === 'move') {
@@ -363,7 +730,19 @@
         c.lastMove = now;
         const x = Number(m.x), y = Number(m.y);
         if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-        this.world.setTarget(c.player.id, x, y);
+        w.setTarget(c.player.id, x, y);
+      } else if (m.t === 'attack') {
+        if (now - c.lastAct < 100) return;
+        c.lastAct = now;
+        w.setAttack(c.player.id, String(m.id));
+      } else if (m.t === 'use') {
+        if (now - c.lastAct < 100) return;
+        c.lastAct = now;
+        w.useItem(c.player.id, String(m.item));
+      } else if (m.t === 'buy' || m.t === 'sell') {
+        if (now - c.lastAct < 100) return;
+        c.lastAct = now;
+        w[m.t](c.player.id, String(m.item), m.n);
       } else if (m.t === 'chat') {
         if (now - c.lastChat < 700) return;
         const text = cleanText(m.text);
@@ -375,24 +754,32 @@
     drop(c) {
       if (!this.conns.delete(c)) return;
       if (c.player) {
+        this.byPlayer.delete(c.player.id);
         this.world.removePlayer(c.player.id);
-        this.bcast({ t: 'leave', id: c.player.id });
+        this.bcast({ t: 'leave', id: c.player.id }, c.player.zone);
         c.player = null;
       }
     }
     tick(dt) {
       this.world.step(dt);
-      for (const ev of this.world.drainEvents()) this.bcast(ev);
+      for (const ev of this.world.drainEvents()) {
+        const to = ev._to, z = ev._z, x = ev._x;
+        const o = Object.assign({}, ev); delete o._to; delete o._z; delete o._x;
+        if (to !== undefined) {
+          const c = this.byPlayer.get(to);
+          if (c) c.send(JSON.stringify(o));
+        } else this.bcast(o, z, x);
+      }
       this.n++;
       if (this.n % 2 === 0) {
         const snap = this.world.snapshot();
-        if (snap.length) this.bcast({ t: 'snap', p: snap });
+        for (const z of ZONES) if (snap[z].p.length || snap[z].m.length) this.bcast({ t: 'snap', p: snap[z].p, m: snap[z].m }, z);
       }
     }
   }
 
   return {
-    W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT,
+    W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT, ITEMS, MON, SHOP, ZONES, nextExp,
     buildMap, findPath, nearestWalkable, World, Hub, cleanName, cleanText, cleanLook, rng
   };
 });

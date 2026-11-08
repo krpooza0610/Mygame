@@ -53,6 +53,26 @@ button{font-family:inherit}
 #cin::placeholder{color:#8f8a79}
 #cin:focus{background:rgba(255,255,255,.14)}
 .send{height:36px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:600 14px var(--font);padding:0 14px;cursor:pointer}
+#stats{padding:7px 10px;width:120px;font-size:12px;display:flex;flex-direction:column;gap:4px}
+.srow{display:flex;justify-content:space-between;gap:6px;font-variant-numeric:tabular-nums}
+.bar{height:7px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden}
+.bar i{display:block;height:100%;width:100%}
+.bar.hp i{background:#e0554a;transition:width .2s}
+.bar.xp i{background:#5fb4e8;transition:width .3s}
+#bag{right:max(10px,env(safe-area-inset-right));top:calc(max(10px,env(safe-area-inset-top)) + 50px);padding:9px;min-width:200px;
+  pointer-events:auto;display:flex;flex-direction:column;gap:7px;font-size:13px}
+#bag .it{display:flex;align-items:center;gap:8px;justify-content:space-between}
+#bag .it button{height:28px;border:0;border-radius:7px;background:var(--accent);color:#fff;font:600 13px var(--font);padding:0 12px;cursor:pointer}
+#bag .em{color:var(--muted);text-align:center}
+#shop{left:50%;top:max(112px,calc(env(safe-area-inset-top) + 102px));transform:translateX(-50%);width:min(92vw,330px);padding:10px;
+  pointer-events:auto;display:flex;flex-direction:column;gap:7px;font-size:13px;max-height:68vh;overflow:auto}
+#shop h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center}
+#shop .sec{color:var(--muted);font-size:12px;margin-top:4px}
+#shop .it{display:flex;align-items:center;gap:6px;justify-content:space-between}
+#shop .it span{flex:1;min-width:0}
+#shop .it button,#shop h4 button{height:28px;border:0;border-radius:7px;background:var(--accent);color:#fff;font:600 12.5px var(--font);padding:0 9px;cursor:pointer}
+#shop h4 button{background:rgba(255,255,255,.14)}
+#shop .em{color:var(--muted);text-align:center}
 #toast{left:50%;top:max(64px,calc(env(safe-area-inset-top) + 56px));transform:translateX(-50%);padding:8px 14px;font-size:13px;
   text-align:center;max-width:min(92vw,420px);transition:opacity .4s;pointer-events:none}
 
@@ -90,9 +110,15 @@ button{font-family:inherit}
   <div id="tl">
     <div id="status" class="panel"><i id="dot"></i><span id="stxt">กำลังเชื่อมต่อ…</span></div>
     <canvas id="mini" width="120" height="96"></canvas>
+    <div id="stats" class="panel">
+      <div class="srow"><b id="slv">Lv 1</b><span id="shp">60/60</span></div>
+      <div class="bar hp"><i id="hpb"></i></div>
+      <div class="bar xp"><i id="xpb"></i></div>
+    </div>
   </div>
   <div id="tr">
     <button id="tbtn" class="btn" type="button" aria-label="เวลาในเกม"><span id="ticon">☀</span><span id="ttxt">10:00</span></button>
+    <button id="bbtn" class="btn" type="button" aria-label="ถุงของ">ถุง</button>
     <button id="zin" class="btn" type="button" aria-label="ซูมเข้า">＋</button>
     <button id="zout" class="btn" type="button" aria-label="ซูมออก">－</button>
   </div>
@@ -103,6 +129,8 @@ button{font-family:inherit}
       <button class="send" type="submit">ส่ง</button>
     </form>
   </div>
+  <div id="bag" class="panel" hidden></div>
+  <div id="shop" class="panel" hidden></div>
   <div id="toast" class="panel" hidden></div>
 </div>
 
@@ -147,7 +175,9 @@ function hsh(x, y, n) {
 }
 
 /* ============================================================ world / projection */
-const map = G.buildMap();
+const MAPS = { village: G.buildMap('village'), field: G.buildMap('field') };
+const ZONE_NAMES = { village: 'หมู่บ้านลำธารไผ่', field: 'ทุ่งไผ่เขียว' };
+let map = MAPS.village, curZone = 'village';
 const MW = G.W, MH = G.H;
 const proj = (x, y) => [(x - y) * 32, (x + y) * 16];
 const OX = MH * 32;
@@ -270,7 +300,8 @@ function bakeTerrain() {
       }
     }
   }
-  // ลวดลายกลางลาน
+  // ลวดลายกลางลาน (เฉพาะหมู่บ้าน)
+  if (map.name === 'village') {
   const c0 = proj(20, 16), cx = c0[0] + OX, cy = c0[1];
   const ring = (r, col, lw, dash) => {
     g.beginPath(); g.ellipse(cx, cy, 45.25 * r, 22.63 * r, 0, 0, 6.3);
@@ -283,6 +314,7 @@ function bakeTerrain() {
     const a = k * Math.PI / 4;
     const p1 = proj(20 + 2.3 * Math.cos(a), 16 + 2.3 * Math.sin(a)), p2 = proj(20 + 3.2 * Math.cos(a), 16 + 3.2 * Math.sin(a));
     g.beginPath(); g.moveTo(p1[0] + OX, p1[1]); g.lineTo(p2[0] + OX, p2[1]); g.stroke();
+  }
   }
   terrain = c;
 }
@@ -639,8 +671,57 @@ function drawChar(look, dir, moving, t, off, prop) {
   ctx.restore();
 }
 
+function drawSlime(m, t, now) {
+  const age = m.dead ? Math.min(1, (now - m.deadT) / 600) : 0;
+  const moving = m.moving;
+  const bounce = moving ? Math.abs(Math.sin(t * 9 + m.off)) : (Math.sin(t * 2 + m.off) + 1) * 0.35;
+  const sq = (moving ? 0.1 : 0.05) * Math.cos(t * (moving ? 9 : 2) + m.off);
+  const hit = now - m.hitT < 160, atk = m.atkT && now - m.atkT < 220;
+  ctx.fillStyle = 'rgba(0,0,0,.24)'; ctx.beginPath(); ctx.ellipse(0, 0, 15 * (1 - age * .5), 6.5, 0, 0, 6.3); ctx.fill();
+  ctx.save();
+  ctx.globalAlpha = 1 - age;
+  ctx.translate(0, -bounce * 6 - (atk ? 5 : 0)); ctx.scale((1 + sq) * (1 + age * .4), (1 - sq) * (1 - age * .7));
+  const g = ctx.createLinearGradient(0, -30, 0, 0);
+  g.addColorStop(0, hit ? '#ffffff' : '#b9ec8e'); g.addColorStop(1, hit ? '#ffd7d2' : '#6fb85a');
+  ctx.beginPath(); ctx.moveTo(-16, -1); ctx.bezierCurveTo(-18, -31, 18, -31, 16, -1); ctx.quadraticCurveTo(0, 4, -16, -1); ctx.closePath();
+  ctx.fillStyle = g; ctx.fill(); ctx.strokeStyle = hit ? '#fff' : '#4a8a3d'; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(-6, -19, 4.2, 2.6, -0.5, 0, 6.3); ctx.fill();
+  const vx = Math.cos(m.dir * Math.PI / 4), vy = Math.sin(m.dir * Math.PI / 4), ex = (vx - vy) * 2.2;
+  ctx.fillStyle = '#23361f';
+  ctx.beginPath(); ctx.ellipse(-5 + ex, -12, 1.9, 2.5, 0, 0, 6.3); ctx.ellipse(5 + ex, -12, 1.9, 2.5, 0, 0, 6.3); ctx.fill();
+  ctx.strokeStyle = '#23361f'; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.arc(ex, -8, atk ? 2.6 : 1.6, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.fillStyle = '#3f8f45'; ctx.beginPath(); ctx.moveTo(0, -29); ctx.quadraticCurveTo(7, -38, 14, -33); ctx.quadraticCurveTo(7, -28, 0, -29); ctx.fill();
+  ctx.restore();
+}
+
+function drawBoar(m, t, now) {
+  const age = m.dead ? Math.min(1, (now - m.deadT) / 600) : 0, mv = m.moving;
+  const hit = now - m.hitT < 160, atk = m.atkT && now - m.atkT < 220;
+  const vx = Math.cos(m.dir * Math.PI / 4), vy = Math.sin(m.dir * Math.PI / 4), fl = (vx - vy) >= 0 ? 1 : -1;
+  ctx.fillStyle = 'rgba(0,0,0,.26)'; ctx.beginPath(); ctx.ellipse(0, 0, 22 * (1 - age * .4), 7.5, 0, 0, 6.3); ctx.fill();
+  ctx.save(); ctx.globalAlpha = 1 - age; ctx.scale(1 + age * .3, 1 - age * .65);
+  const ph = t * 12 + m.off, bob = mv ? Math.abs(Math.cos(ph)) * 2 : Math.sin(t * 2 + m.off) * 0.6;
+  ctx.translate(atk ? fl * 6 : 0, -bob);
+  const body = hit ? '#ffffff' : '#7a5334', dark = hit ? '#ffe3dc' : '#4f321d', snout = hit ? '#fff' : '#dba88c';
+  ctx.fillStyle = '#35220f';
+  [[-11, 0], [-4, Math.PI], [5, Math.PI], [12, 0]].forEach(l => { const lift = mv ? Math.max(0, Math.sin(ph + l[1])) * 3.5 : 0; rr(l[0] - 2.3, -9, 4.6, 9 - lift, 1.6); ctx.fill(); });
+  ctx.fillStyle = body; ctx.beginPath(); ctx.ellipse(0, -18, 20, 12.5, 0, 0, 6.3); ctx.fill();
+  ctx.strokeStyle = dark; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+  for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(k * 5 - fl * 2, -29.5 + Math.abs(k)); ctx.lineTo(k * 5 - fl * 4, -34 + Math.abs(k) * 1.4); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(-fl * 19, -21); ctx.quadraticCurveTo(-fl * 26, -25, -fl * 23, -17); ctx.stroke();
+  const hx = fl * 17;
+  ctx.fillStyle = body; ctx.beginPath(); ctx.ellipse(hx, -17, 10, 9, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = dark; ctx.beginPath(); ctx.moveTo(hx - fl * 4, -24); ctx.lineTo(hx - fl * 1, -31); ctx.lineTo(hx + fl * 3, -24); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = snout; ctx.beginPath(); ctx.ellipse(hx + fl * 8, -14, 5.6, 4.6, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#4a2a1a'; ctx.beginPath(); ctx.arc(hx + fl * 9.5, -15, 1, 0, 6.3); ctx.arc(hx + fl * 9.5, -12.4, 1, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#f7f1df'; ctx.beginPath(); ctx.moveTo(hx + fl * 4, -11); ctx.lineTo(hx + fl * 6.5, -19); ctx.lineTo(hx + fl * 8, -11); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = m.state === 'chase' || atk ? '#ff4a3c' : '#241810'; ctx.beginPath(); ctx.arc(hx + fl * 2.2, -20, 1.9, 0, 6.3); ctx.fill();
+  ctx.restore();
+}
+
 /* ============================================================ static objects */
-const statics = map.objs.map(o => {
+let statics = [];
+function buildStatics() { statics = map.objs.map(o => {
   const s = { o, x0: o.x, x1: o.x + (o.w || 1), y0: o.y, y1: o.y + (o.h || 1) };
   if (o.type === 'tree') { s.x0 += 0.15; s.x1 -= 0.15; s.y0 += 0.15; s.y1 -= 0.15; }
   if (o.type === 'lamp' || o.type === 'pillar') { s.x0 += 0.25; s.x1 -= 0.25; s.y0 += 0.25; s.y1 -= 0.25; }
@@ -650,7 +731,7 @@ const statics = map.objs.map(o => {
   s.rad = o.type === 'building' ? 40 * (o.w + o.h) + 150 : o.type === 'well' || o.type === 'stall' || o.type === 'pillar' ? 150 : 100;
   s.seed = hsh(o.x, o.y, 5);
   return s;
-});
+}); }
 
 /* ============================================================ entities */
 const ents = new Map();
@@ -665,11 +746,23 @@ function resetEnts() {
 }
 resetEnts();
 
+/* ---- มอนสเตอร์ / สถานะ / เอฟเฟกต์ ---- */
+const mons = new Map();
+const my = { lv: 1, exp: 0, next: 20, hp: 60, maxHp: 60, inv: {} };
+const fx = [];
+let myTarget = null;
+function makeMon(m) {
+  return { id: m.id, type: m.type, x: m.x, y: m.y, tx: m.x, ty: m.y, dir: m.dir, hp: m.hp, maxHp: m.maxHp, moving: false, dead: !!m.dead,
+    deadT: m.dead ? -1e9 : 0, hitT: -1e9, off: Math.random() * 6.28, sx: 0, sy: 0, vis: 0 };
+}
+function floatText(x, y, text, color, big) { fx.push({ k: 'txt', x, y, text, color, big, t0: performance.now() }); }
+function ring(x, y, color) { fx.push({ k: 'ring', x, y, color, t0: performance.now() }); }
+
 /* ============================================================ network */
 function setStatus() {
   if (!joined) return;
   let players = 0; ents.forEach(e => { if (!e.npc) players++; });
-  $('stxt').textContent = (mode === 'demo' ? 'โหมดเดโม · ' : 'ออนไลน์ · ') + players + ' คน' + (mode === 'demo' ? ' (รวมบอท)' : '');
+  $('stxt').textContent = (curZone === 'field' ? 'ทุ่งไผ่' : 'หมู่บ้าน') + ' · ' + players + ' คน' + (mode === 'demo' ? ' · เดโม' : '');
   $('dot').className = mode === 'demo' ? 'demo' : '';
 }
 function say(ent, text) {
@@ -696,29 +789,83 @@ function toast(text, ms) {
   clearTimeout(toast.t); toast.t = setTimeout(() => { t.style.opacity = 0; setTimeout(() => { t.hidden = true; }, 420); }, ms || 3500);
 }
 let marker = null;
+function applyMe(m) {
+  my.lv = m.lv; my.exp = m.exp; my.next = m.next; my.hp = m.hp; my.maxHp = m.maxHp; my.inv = m.inv || {};
+  $('slv').textContent = 'Lv ' + my.lv;
+  $('shp').textContent = my.hp + '/' + my.maxHp;
+  $('hpb').style.width = Math.max(0, my.hp / my.maxHp * 100) + '%';
+  $('xpb').style.width = Math.min(100, my.exp / my.next * 100) + '%';
+  renderBag(); renderShop();
+  if (mode === 'demo') { try { localStorage.setItem('bc-save', JSON.stringify({ lv: my.lv, exp: my.exp, inv: my.inv })); } catch (e) {} }
+}
+function renderBag() {
+  const b = $('bag'); if (b.hidden) return;
+  b.textContent = '';
+  const keys = Object.keys(my.inv);
+  if (!keys.length) { const d = document.createElement('div'); d.className = 'em'; d.textContent = 'ถุงว่างเปล่า — ลองล่าวุ้นไผ่ดู'; b.appendChild(d); return; }
+  for (const k of keys) {
+    const def = G.ITEMS[k] || { name: k };
+    const r = document.createElement('div'); r.className = 'it';
+    const l = document.createElement('span'); l.textContent = def.name + ' ×' + my.inv[k]; r.appendChild(l);
+    if (def.heal) { const u = document.createElement('button'); u.type = 'button'; u.textContent = 'ใช้ (+' + def.heal + ')'; u.onclick = () => net && net.send({ t: 'use', item: k }); r.appendChild(u); }
+    b.appendChild(r);
+  }
+}
+function openShop() { $('shop').hidden = false; $('bag').hidden = true; renderShop(); }
+function closeShop() { $('shop').hidden = true; }
+function renderShop() {
+  const b = $('shop'); if (b.hidden) return;
+  b.textContent = '';
+  const mk = (tag, cls, text) => { const d = document.createElement(tag); if (cls) d.className = cls; if (text != null) d.textContent = text; return d; };
+  const h = mk('h4'); h.appendChild(mk('span', '', 'ร้านค้า · เหรียญ ' + (my.inv.coin || 0)));
+  const x = mk('button', '', 'ปิด'); x.type = 'button'; x.onclick = closeShop; h.appendChild(x); b.appendChild(h);
+  const row = (label, btns) => {
+    const r = mk('div', 'it'); r.appendChild(mk('span', '', label));
+    for (const [t, fn] of btns) { const u = mk('button', '', t); u.type = 'button'; u.onclick = fn; r.appendChild(u); }
+    b.appendChild(r);
+  };
+  b.appendChild(mk('div', 'sec', 'ซื้อ'));
+  for (const k of G.SHOP.buy) {
+    const it = G.ITEMS[k];
+    row(it.name + ' (ฟื้น ' + it.heal + ') · ' + it.buy + ' เหรียญ', [['ซื้อ 1', () => net && net.send({ t: 'buy', item: k, n: 1 })], ['ซื้อ 5', () => net && net.send({ t: 'buy', item: k, n: 5 })]]);
+  }
+  b.appendChild(mk('div', 'sec', 'ขาย'));
+  let any = false;
+  for (const k of Object.keys(my.inv)) {
+    const it = G.ITEMS[k]; if (!it || !it.sell) continue; any = true;
+    row(it.name + ' ×' + my.inv[k] + ' · ' + it.sell + ' เหรียญ', [['ขาย 1', () => net && net.send({ t: 'sell', item: k, n: 1 })], ['ทั้งหมด', () => net && net.send({ t: 'sell', item: k, n: 0 })]]);
+  }
+  if (!any) b.appendChild(mk('div', 'em', 'ไม่มีของให้ขาย — ไปล่ามอนสเตอร์ก่อนนะ'));
+}
 function handle(m) {
   switch (m.t) {
     case 'init': {
       phaseBase = m.phase; dayMs = m.dayMs; phaseT0 = performance.now();
-      resetEnts(); myId = m.id;
-      for (const p of m.players) ents.set(p.id, makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false));
+      setZone(m.zone || 'village'); myId = m.id;
+      for (const p of m.players) { const en = makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false); en.dead = !!p.dead; ents.set(p.id, en); }
+      mons.clear(); myTarget = null; for (const mo of (m.monsters || [])) mons.set(mo.id, makeMon(mo));
+      if (m.me) applyMe(m.me);
       const me = ents.get(myId); const c = proj(me.x, me.y); cam.x = c[0]; cam.y = c[1] - 18;
       joined = true; setStatus();
       $('join').hidden = true; $('hud').hidden = false;
-      addLog('sys', '', 'แตะที่พื้นเพื่อเดิน · พิมพ์ข้อความเพื่อคุยกับคนอื่น');
+      addLog('sys', '', 'แตะพื้นเพื่อเดิน · เดินผ่านประตูวาร์ปทางเหนือเพื่อไปล่ามอนสเตอร์ที่ทุ่งไผ่เขียว · แตะเจ้าของร้านเพื่อซื้อ/ขายของ');
       break;
     }
     case 'join': {
       const p = m.p; ents.set(p.id, makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false));
-      addLog('sys', '', p.name + ' เข้าสู่หมู่บ้าน'); setStatus(); break;
+      addLog('sys', '', p.name + ' เข้ามาในบริเวณนี้'); setStatus(); break;
     }
     case 'leave': {
-      const e = ents.get(m.id); if (e) { addLog('sys', '', e.name + ' ออกจากหมู่บ้าน'); ents.delete(m.id); } setStatus(); break;
+      const e = ents.get(m.id); if (e) { addLog('sys', '', e.name + ' ออกจากบริเวณนี้'); ents.delete(m.id); } setStatus(); break;
     }
     case 'snap': {
       for (const s of m.p) {
         const e = ents.get(s[0]); if (!e) continue;
-        e.tx = s[1]; e.ty = s[2]; e.dir = s[3]; e.moving = !!s[4];
+        e.tx = s[1]; e.ty = s[2]; e.dir = s[3]; e.moving = !!s[4]; e.dead = !!s[5];
+      }
+      for (const s of (m.m || [])) {
+        const mo = mons.get(s[0]); if (!mo) continue;
+        mo.tx = s[1]; mo.ty = s[2]; mo.dir = s[3]; mo.hp = s[4]; mo.moving = !!s[5];
       }
       break;
     }
@@ -728,6 +875,62 @@ function handle(m) {
       if (e) say(e, m.text);
       break;
     }
+    case 'hit': {
+      const now = performance.now();
+      if (m.pl) {
+        const e = ents.get(m.id), mo = mons.get(m.from);
+        if (e) { e.hurtT = now; floatText(e.x, e.y, '-' + m.dmg, '#ff5a4d', false); }
+        if (mo) { mo.atkT = now; }
+      } else {
+        const mo = mons.get(m.id), e = ents.get(m.from);
+        if (mo) { mo.hp = m.hp; mo.hitT = now; floatText(mo.x, mo.y, (m.crit ? '' : '') + m.dmg + (m.crit ? '!' : ''), m.crit ? '#ffd23c' : '#ffffff', !!m.crit); }
+        if (e) { e.swingT = now; if (mo) e.dir = Math.round(Math.atan2(mo.y - e.y, mo.x - e.x) / (Math.PI / 4) + 8) % 8; }
+      }
+      break;
+    }
+    case 'mdie': {
+      const mo = mons.get(m.id); if (mo) { mo.dead = true; mo.deadT = performance.now(); mo.hp = 0; ring(mo.x, mo.y, '255,255,255'); }
+      if (myTarget === m.id) myTarget = null;
+      break;
+    }
+    case 'mspawn': { mons.set(m.m.id, makeMon(m.m)); break; }
+    case 'loot': {
+      const me = ents.get(myId), parts = [];
+      for (const k of Object.keys(m.items || {})) parts.push((G.ITEMS[k] ? G.ITEMS[k].name : k) + ' ×' + m.items[k]);
+      if (me) floatText(me.x, me.y, '+' + m.exp + ' EXP', '#7fd0ff', false);
+      addLog('sys', '', 'ได้รับ ' + m.exp + ' EXP' + (parts.length ? ' · ' + parts.join(', ') : ''));
+      break;
+    }
+    case 'lvup': {
+      const e = ents.get(m.id);
+      if (e) { floatText(e.x, e.y, 'LEVEL UP!', '#ffe27a', true); ring(e.x, e.y, '255,226,122'); }
+      addLog('sys', '', m.name + ' เลเวลขึ้นเป็น ' + m.lv + '!');
+      break;
+    }
+    case 'heal': { const e = ents.get(m.id); if (e) { floatText(e.x, e.y, '+' + m.amt, '#7be08a', false); } break; }
+    case 'pdie': {
+      const e = ents.get(m.id); if (e) { e.dead = true; e.moving = false; }
+      if (m.id === myId) { myTarget = null; toast('คุณพ่ายแพ้… จะฟื้นคืนชีพที่ลานหมู่บ้านใน 4 วินาที', 3800); }
+      break;
+    }
+    case 'previve': {
+      const e = ents.get(m.id); if (e) { e.dead = false; e.x = e.tx = m.x; e.y = e.ty = m.y; ring(m.x, m.y, '123,224,138'); }
+      break;
+    }
+    case 'me': applyMe(m); break;
+    case 'note': toast(m.text, 2600); addLog('sys', '', m.text); break;
+    case 'zone': {
+      setZone(m.zone);
+      for (const p of m.players) { const en = makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false); en.dead = !!p.dead; ents.set(p.id, en); }
+      for (const mo of m.monsters) mons.set(mo.id, makeMon(mo));
+      if (m.me) applyMe(m.me);
+      const me = ents.get(myId);
+      if (me) { me.x = me.tx = m.x; me.y = me.ty = m.y; const c = proj(me.x, me.y); cam.x = c[0]; cam.y = c[1] - 18; }
+      closeShop(); setStatus();
+      toast('— ' + ZONE_NAMES[m.zone] + ' —', 2600);
+      ring(m.x, m.y, '143,216,255');
+      break;
+    }
     case 'full': toast('เซิร์ฟเวอร์เต็มแล้ว ลองใหม่ภายหลังนะ', 5000); $('go').disabled = false; break;
   }
 }
@@ -735,6 +938,8 @@ function handle(m) {
 function startDemo(name, look, notice) {
   mode = 'demo';
   const hub = new G.Hub();
+  hub.trustSaves = true;
+  let save = null; try { save = JSON.parse(localStorage.getItem('bc-save') || 'null'); } catch (e) {}
   const botDefs = [['มินตรา', 0, 1, 1], ['ลมหนาว', 1, 3, 0], ['เสี่ยวหลง', 4, 2, 0], ['ปลายฟ้า', 3, 0, 1], ['ไผ่เขียว', 2, 2, 3], ['แก้วใส', 0, 3, 2]];
   const lines = ['สวัสดีครับ!', 'ที่นี่สวยจังเลย', 'ใครรู้ทางไปสำนักยุทธ์บ้าง', 'โคมไฟสวยมากเลย', 'หิวแล้ว ไปโรงเตี๊ยมกัน', '555', 'มีใครไปเดินเล่นริมลำธารไหม', 'อากาศดีจัง'];
   const bots = botDefs.map(d => {
@@ -769,7 +974,7 @@ function startDemo(name, look, notice) {
     },
     close() { clearInterval(iv); hub.drop(conn); }
   };
-  hub.message(conn, { t: 'join', name, look });
+  hub.message(conn, { t: 'join', name, look, save });
   setTimeout(() => hub.message(bots[0].c, { t: 'chat', text: 'ยินดีต้อนรับ ' + G.cleanName(name) + '!' }), 1500);
   if (notice) toast(notice, 5000);
 }
@@ -803,6 +1008,23 @@ cv.addEventListener('pointerup', e => {
   const d = Math.hypot(e.clientX - down.x, e.clientY - down.y), dt = performance.now() - down.t;
   down = null;
   if (d > 10 || dt > 700) return;
+  const sn = curZone === 'village' ? ents.get('n2') : null;
+  if (sn) {
+    const q = proj(sn.x, sn.y);
+    if (Math.hypot(e.clientX - S2X(q[0]), e.clientY - (S2Y(q[1]) - 26 * zoom)) < 30 * zoom) {
+      myTarget = null; net.send({ t: 'move', x: sn.x, y: sn.y + 1.2 }); openShop(); return;
+    }
+  }
+  for (const mo of mons.values()) {
+    if (mo.dead) continue;
+    const q = proj(mo.x, mo.y);
+    if (Math.hypot(e.clientX - S2X(q[0]), e.clientY - (S2Y(q[1]) - 14 * zoom)) < 28 * zoom) {
+      myTarget = mo.id; net.send({ t: 'attack', id: mo.id });
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      return;
+    }
+  }
+  myTarget = null;
   const t = screenToTile(e.clientX, e.clientY);
   if (t[0] < 0 || t[1] < 0 || t[0] >= MW || t[1] >= MH) return;
   marker = { x: Math.floor(t[0]) + 0.5, y: Math.floor(t[1]) + 0.5, t0: performance.now() };
@@ -814,6 +1036,7 @@ cv.addEventListener('pointerleave', () => { hover = null; });
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom = clamp(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.5, 1.8); }, { passive: false });
 $('zin').onclick = () => { zoom = clamp(zoom * 1.15, 0.5, 1.8); };
 $('zout').onclick = () => { zoom = clamp(zoom / 1.15, 0.5, 1.8); };
+$('bbtn').onclick = () => { const b = $('bag'); b.hidden = !b.hidden; if (!b.hidden) closeShop(); renderBag(); };
 $('tbtn').onclick = () => { timeMode = timeMode === 'auto' ? 'day' : timeMode === 'day' ? 'night' : 'auto'; };
 $('cform').addEventListener('submit', e => {
   e.preventDefault();
@@ -849,10 +1072,9 @@ function sortItems() {
   return out;
 }
 let frame = 0;
-const waterTiles = [];
-for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (map.tiles[y * MW + x] === 3) waterTiles.push([x, y]);
-const flies = [];
-{ const r = G.rng(99); for (let i = 0; i < 30; i++) { let x, y; do { x = 3 + r() * 34; y = 3 + r() * 27; } while (map.solid[Math.floor(y) * MW + Math.floor(x)] || tAt(Math.floor(x), Math.floor(y)) === 2); flies.push({ x, y, p: r() * 6.28, s: 0.3 + r() * 0.5 }); } }
+let waterTiles = [], flies = [];
+function buildWater() { waterTiles = []; for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (map.tiles[y * MW + x] === 3) waterTiles.push([x, y]); }
+function buildFlies() { flies = []; const r = G.rng(99); for (let i = 0; i < 30; i++) { let x, y; do { x = 3 + r() * 34; y = 3 + r() * 27; } while (map.solid[Math.floor(y) * MW + Math.floor(x)] || tAt(Math.floor(x), Math.floor(y)) === 2); flies.push({ x, y, p: r() * 6.28, s: 0.3 + r() * 0.5 }); } }
 
 const S2X = wx => (wx - cam.x) * zoom + vw / 2, S2Y = wy => (wy - cam.y) * zoom + vh / 2;
 
@@ -875,6 +1097,30 @@ function drawWaterFx(now) {
       ctx.strokeStyle = 'rgba(255,255,255,' + Math.max(0, a) + ')';
       ctx.beginPath(); ctx.moveTo(sx + (ox - 7) * zoom, sy + oy * zoom); ctx.lineTo(sx + (ox + 7) * zoom, sy + oy * zoom); ctx.stroke();
     }
+  }
+}
+function drawPortals(now, t) {
+  for (const pt of map.portals || []) {
+    const p = proj(pt.x + pt.w / 2, pt.y + pt.h / 2), sx = S2X(p[0]), sy = S2Y(p[1]) + 16 * zoom;
+    if (sx < -120 || sx > vw + 120 || sy < -80 || sy > vh + 80) continue;
+    const rx = 46 * zoom, ry = 23 * zoom;
+    const g = ctx.createRadialGradient(sx, sy, 0, sx, sy, rx);
+    g.addColorStop(0, 'rgba(190,235,255,.85)'); g.addColorStop(0.55, 'rgba(110,150,255,.45)'); g.addColorStop(1, 'rgba(120,90,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(sx, sy, rx, ry, 0, 0, 6.3); ctx.fill();
+    ctx.lineWidth = 2.2 * zoom; ctx.lineCap = 'round';
+    for (let k = 0; k < 3; k++) {
+      const r = 0.45 + k * 0.22;
+      ctx.strokeStyle = 'rgba(210,240,255,' + (0.85 - k * 0.2) + ')'; ctx.setLineDash([9 * zoom, 7 * zoom]); ctx.lineDashOffset = -t * (k % 2 ? -26 : 26) * zoom;
+      ctx.beginPath(); ctx.ellipse(sx, sy, rx * r, ry * r, 0, 0, 6.3); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    for (let k = 0; k < 7; k++) {
+      const ph = (t * 0.5 + k / 7) % 1, a = Math.sin(ph * Math.PI);
+      const ox = Math.sin(k * 2.7 + t) * rx * 0.55;
+      ctx.fillStyle = 'rgba(220,245,255,' + a * 0.9 + ')';
+      ctx.beginPath(); ctx.arc(sx + ox, sy - ph * 46 * zoom, (1.4 + a) * zoom, 0, 6.3); ctx.fill();
+    }
+    glows.push({ x: sx, y: sy - 8 * zoom, r: 80 * zoom, c: [150, 195, 255], a: 0.3 + 0.55 * LIGHTS });
   }
 }
 function drawTileMark(tx, ty, col, a, scale) {
@@ -905,9 +1151,15 @@ function render(now, dt) {
     const dx = e.tx - e.x, dy = e.ty - e.y, d = Math.hypot(dx, dy);
     if (d > 3) { e.x = e.tx; e.y = e.ty; }
     else { const f = 1 - Math.exp(-dt * 14); e.x += dx * f; e.y += dy * f; }
-    e.anim = e.moving || d > 0.04;
+    e.anim = !e.dead && (e.moving || d > 0.04);
     if (e.bubble && now > e.bubble.until) e.bubble = null;
   }
+  for (const mo of mons.values()) {
+    const dx = mo.tx - mo.x, dy = mo.ty - mo.y, d = Math.hypot(dx, dy);
+    if (d > 3) { mo.x = mo.tx; mo.y = mo.ty; } else { const f = 1 - Math.exp(-dt * 12); mo.x += dx * f; mo.y += dy * f; }
+    if (mo.dead && now - mo.deadT > 700) mons.delete(mo.id);
+  }
+  if (myTarget && !mons.has(myTarget)) myTarget = null;
   if (marker && me && !me.moving && Math.hypot(me.x - marker.x, me.y - marker.y) < 0.8 && now - marker.t0 > 400) marker = null;
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -920,15 +1172,25 @@ function render(now, dt) {
 
   // รวบรวมวัตถุที่มองเห็น
   items.length = 0; glows.length = 0;
+  drawPortals(now, t);
   for (const s of statics) {
     const sx = S2X(s.cx), sy = S2Y(s.cy), r = s.rad * zoom;
     if (sx < -r || sx > vw + r || sy < -r || sy > vh + r) continue;
     items.push({ k: s.k, x0: s.x0, x1: s.x1, y0: s.y0, y1: s.y1, s });
   }
+  if (myTarget && mons.has(myTarget)) {
+    const mo = mons.get(myTarget), p = proj(mo.x, mo.y), sx = S2X(p[0]), sy = S2Y(p[1]), pu = 1 + 0.08 * Math.sin(now / 130);
+    ctx.strokeStyle = 'rgba(255,90,70,.95)'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.ellipse(sx, sy, 22 * zoom * pu, 11 * zoom * pu, 0, 0, 6.3); ctx.stroke();
+  }
   for (const e of ents.values()) {
     const p = proj(e.x, e.y), sx = S2X(p[0]), sy = S2Y(p[1]);
     if (sx < -80 || sx > vw + 80 || sy < -120 || sy > vh + 80) continue;
     items.push({ k: e.x + e.y, x0: e.x - 0.25, x1: e.x + 0.25, y0: e.y - 0.25, y1: e.y + 0.25, e });
+  }
+  for (const mo of mons.values()) {
+    const p = proj(mo.x, mo.y), sx = S2X(p[0]), sy = S2Y(p[1]);
+    if (sx < -80 || sx > vw + 80 || sy < -120 || sy > vh + 80) continue;
+    items.push({ k: mo.x + mo.y, x0: mo.x - 0.3, x1: mo.x + 0.3, y0: mo.y - 0.3, y1: mo.y + 0.3, mo });
   }
   const sorted = sortItems();
   for (const it of sorted) {
@@ -946,12 +1208,28 @@ function render(now, dt) {
       else if (o.type === 'well') drawWell();
       else if (o.type === 'stall') drawStall(o.v);
       else if (o.type === 'pillar') drawPillar(o);
+    } else if (it.mo) {
+      const mo = it.mo, p = proj(mo.x, mo.y);
+      cur.sx = S2X(p[0]); cur.sy = S2Y(p[1]); cur.z = zoom;
+      mo.vis = frame; mo.sx = cur.sx; mo.sy = cur.sy;
+      ctx.translate(cur.sx, cur.sy); ctx.scale(zoom, zoom);
+      if (mo.type === 'boar') drawBoar(mo, t, now); else drawSlime(mo, t, now);
     } else {
       const e = it.e, p = proj(e.x, e.y);
       cur.sx = S2X(p[0]); cur.sy = S2Y(p[1]); cur.z = zoom;
       e.vis = frame; e.sx = cur.sx; e.sy = cur.sy;
       ctx.translate(cur.sx, cur.sy); ctx.scale(zoom, zoom);
+      const vx = Math.cos(e.dir * Math.PI / 4), vy = Math.sin(e.dir * Math.PI / 4), ddx = vx - vy, ddy = (vx + vy) * 0.5;
+      const sp = e.swingT ? (now - e.swingT) / 280 : 2, hurt = e.hurtT && now - e.hurtT < 220;
+      if (e.dead) { ctx.rotate(ddx >= 0 ? -1.45 : 1.45); ctx.globalAlpha = 0.75; }
+      else if (sp < 1) ctx.translate(ddx * Math.sin(sp * Math.PI) * 6, ddy * Math.sin(sp * Math.PI) * 4);
+      if (hurt && Math.floor(now / 60) % 2) ctx.globalAlpha = 0.45;
       drawChar(e.look, e.dir, e.anim, t, e.off, e.prop);
+      if (sp < 1 && !e.dead) {
+        const a0 = Math.atan2(ddy, ddx) - 1.1 + sp * 1.3;
+        ctx.strokeStyle = 'rgba(255,255,255,' + (1 - sp) + ')'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.arc(ddx * 12, -24 + ddy * 8, 17, a0, a0 + 1.4); ctx.stroke();
+      }
     }
     ctx.restore();
   }
@@ -1003,12 +1281,54 @@ function render(now, dt) {
       ctx.globalAlpha = 1;
     }
   }
+  // ป้ายชื่อประตูวาร์ป
+  for (const pt of map.portals || []) {
+    const p = proj(pt.x + pt.w / 2, pt.y + pt.h / 2), sx = S2X(p[0]), sy = S2Y(p[1]) - 30 * zoom;
+    if (sx < -100 || sx > vw + 100 || sy < -40 || sy > vh + 40) continue;
+    ctx.font = '700 12px ' + FONT; ctx.lineJoin = 'round'; ctx.lineWidth = 3.4; ctx.strokeStyle = 'rgba(0,0,0,.85)';
+    const lb = 'ประตูวาร์ป › ' + pt.name;
+    ctx.strokeText(lb, sx, sy); ctx.fillStyle = '#bfe6ff'; ctx.fillText(lb, sx, sy);
+  }
+  // มอนสเตอร์: ชื่อ + แถบเลือด
+  for (const mo of mons.values()) {
+    if (mo.vis !== frame || mo.dead) continue;
+    const tgt = mo.id === myTarget, show = tgt || mo.hp < mo.maxHp;
+    if (!show) continue;
+    const w = 44, x = mo.sx - w / 2, y = mo.sy - 52 * zoom;
+    ctx.fillStyle = 'rgba(0,0,0,.7)'; rr(x - 1.5, y - 1.5, w + 3, 8, 4); ctx.fill();
+    ctx.fillStyle = '#e0554a'; rr(x, y, Math.max(2, w * mo.hp / mo.maxHp), 5, 2.5); ctx.fill();
+    ctx.font = '700 11.5px ' + FONT; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)';
+    const nm = G.MON[mo.type].name;
+    ctx.strokeText(nm, mo.sx, y - 4); ctx.fillStyle = '#ffb3aa'; ctx.fillText(nm, mo.sx, y - 4);
+  }
+  // แถบเลือดของเราเองใต้ชื่อ
+  if (me && me.vis === frame && !me.dead && my.hp < my.maxHp) {
+    const w = 40, x = me.sx - w / 2, y = me.sy + 22;
+    ctx.fillStyle = 'rgba(0,0,0,.7)'; rr(x - 1.5, y - 1.5, w + 3, 7, 3.5); ctx.fill();
+    ctx.fillStyle = '#e0554a'; rr(x, y, Math.max(2, w * my.hp / my.maxHp), 4, 2); ctx.fill();
+  }
+  // เอฟเฟกต์ลอย
+  for (let i = fx.length - 1; i >= 0; i--) {
+    const f = fx[i], age = (now - f.t0) / (f.k === 'ring' ? 600 : 1000);
+    if (age >= 1) { fx.splice(i, 1); continue; }
+    const p = proj(f.x, f.y), sx = S2X(p[0]), sy = S2Y(p[1]);
+    if (f.k === 'ring') {
+      ctx.strokeStyle = 'rgba(' + f.color + ',' + (1 - age) + ')'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(sx, sy, (10 + age * 46) * zoom, (5 + age * 23) * zoom, 0, 0, 6.3); ctx.stroke();
+    } else {
+      ctx.globalAlpha = age < 0.7 ? 1 : (1 - age) / 0.3;
+      ctx.font = '800 ' + (f.big ? 20 : 15) + 'px ' + FONT; ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.85)';
+      const yy = sy - (40 + age * 36) * zoom;
+      ctx.strokeText(f.text, sx, yy); ctx.fillStyle = f.color; ctx.fillText(f.text, sx, yy);
+      ctx.globalAlpha = 1;
+    }
+  }
 }
 
 /* ============================================================ HUD updates */
 const mini = $('mini'), mctx = mini.getContext('2d');
 const miniBase = document.createElement('canvas'); miniBase.width = 120; miniBase.height = 96;
-{
+function buildMini() {
   const g = miniBase.getContext('2d'), C = ['#6f9e5a', '#cdb184', '#b5b0a5', '#4d9bcb', '#8c6238'];
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { g.fillStyle = C[map.tiles[y * MW + x]]; g.fillRect(x * 3, y * 3, 3, 3); }
   for (const o of map.objs) {
@@ -1025,6 +1345,11 @@ function updateHud() {
     const r = e.id === myId ? 2.6 : 1.8;
     mctx.beginPath(); mctx.arc(e.x * 3, e.y * 3, r, 0, 6.3); mctx.fill();
     if (e.id === myId) { mctx.strokeStyle = '#000'; mctx.lineWidth = 0.8; mctx.stroke(); }
+  }
+  for (const pt of map.portals || []) { mctx.fillStyle = '#8fd8ff'; mctx.fillRect(pt.x * 3 - 1, pt.y * 3 - 1, pt.w * 3 + 2, pt.h * 3 + 2); }
+  for (const mo of mons.values()) {
+    if (mo.dead) continue;
+    mctx.fillStyle = '#ff4a3c'; mctx.beginPath(); mctx.arc(mo.x * 3, mo.y * 3, 1.7, 0, 6.3); mctx.fill();
   }
   const h = autoHour(), hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
   const night = LIGHTS > 0.5;
@@ -1070,7 +1395,12 @@ $('go').onclick = () => {
 };
 
 /* ============================================================ main loop */
-bakeTerrain();
+function setZone(name) {
+  curZone = name; map = MAPS[name];
+  buildStatics(); buildWater(); buildFlies(); buildMini(); bakeTerrain();
+  resetEnts(); mons.clear(); fx.length = 0; marker = null; myTarget = null;
+}
+setZone('village');
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -1081,7 +1411,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 window.__bc = {
-  ents, map, get zoom() { return zoom; }, set zoom(v) { zoom = v; },
+  ents, mons, my, get map() { return map; }, get zone() { return curZone; }, get zoom() { return zoom; }, set zoom(v) { zoom = v; },
   setMode(m, snap) { timeMode = m; if (snap) { const h = targetHour(); tintNow = tintAt(h); LIGHTS = lightsAt(h); } },
   cam, get me() { return ents.get(myId); }, get joined() { return joined; }, get mode() { return mode; },
   toScreen(x, y) { const p = proj(x, y); return [S2X(p[0]), S2Y(p[1])]; }
