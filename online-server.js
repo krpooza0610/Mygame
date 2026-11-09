@@ -65,8 +65,17 @@ function newRecovery() {
 const normId = s => String(s || '').trim().toLowerCase();
 const idOk = s => /^[a-z0-9_]{3,16}$/.test(s);
 const pwOk = s => typeof s === 'string' && s.length >= 6 && s.length <= 64;
-const profile = k => { const u = db.users[k]; return { id: u.label || k, char: u.char ? { name: u.char.name, look: u.char.look, lv: (u.char.save && u.char.save.lv) || 1 } : null }; };
-const nameTaken = (name, exceptKey) => Object.keys(db.users).some(k => k !== exceptKey && db.users[k].char && db.users[k].char.name.toLowerCase() === name.toLowerCase());
+const MAX_CHARS = 5;
+const TEST_ID = 'phutest', TEST_PW = process.env.TEST_PW || 'Chathai#2026';
+const isGm = k => !process.env.GM_OFF && (k === TEST_ID || (db.users[k] && (db.users[k].gm || db.users[k].label === TEST_ID + '@chathai.online')));
+// ย้ายบัญชีเก่า (ตัวละครเดียว u.char) → รายการตัวละคร u.chars
+function chars(u) {
+  if (!u.chars) u.chars = [];
+  if (u.char) { u.chars.push({ cid: 'c' + crypto.randomBytes(5).toString('hex'), name: u.char.name, look: u.char.look, save: u.char.save }); delete u.char; dirty = true; }
+  return u.chars;
+}
+const profile = k => { const u = db.users[k]; return { id: u.label || k, gm: isGm(k) ? 1 : 0, max: MAX_CHARS, chars: chars(u).map(c => ({ cid: c.cid, name: c.name, look: c.look, lv: (c.save && c.save.lv) || 1, job: (c.save && c.save.job) || 'Adventurer' })) }; };
+const nameTaken = name => Object.keys(db.users).some(k => chars(db.users[k]).some(c => c.name.toLowerCase() === name.toLowerCase()));
 
 const hits = new Map();   // ip -> [เวลา...]
 const fails = new Map();  // id -> {n, until}
@@ -129,7 +138,7 @@ function fbUser(pl) {   // payload → key ของผู้ใช้ (สร�
   const key = 'f' + pl.sub;
   const anon = !!(pl.firebase && pl.firebase.sign_in_provider === 'anonymous');
   const label = String(pl.email || pl.name || (anon ? 'เกสต์' : 'ผู้เล่น')).slice(0, 40);
-  if (!db.users[key]) { db.users[key] = { label, char: null, made: Date.now(), anon }; dirty = true; }
+  if (!db.users[key]) { db.users[key] = { label, chars: [], made: Date.now(), anon }; dirty = true; }
   else if (db.users[key].label !== label) { db.users[key].label = label; dirty = true; }
   return key;
 }
@@ -154,7 +163,7 @@ async function api(route, b) {
       if (db.users[id]) return { err: 'ไอดีนี้มีคนใช้แล้ว' };
       if (Object.keys(db.users).length >= 20000) return { err: 'ระบบรับสมัครเต็มชั่วคราว' };
       const salt = crypto.randomBytes(16).toString('hex'), rsalt = crypto.randomBytes(16).toString('hex'), code = newRecovery();
-      db.users[id] = { salt, hash: await scrypt(b.pw, salt), rsalt, rhash: await scrypt(code, rsalt), char: null, made: Date.now() };
+      db.users[id] = { salt, hash: await scrypt(b.pw, salt), rsalt, rhash: await scrypt(code, rsalt), chars: [], made: Date.now() };
       dirty = true;
       return { ok: 1, token: signTok(id), recovery: code, me: profile(id) };
     }
@@ -183,13 +192,13 @@ async function api(route, b) {
       const g = await googleVerify(b.credential);
       if (!g) return { err: 'ล็อกอินด้วย Google ไม่สำเร็จ' };
       const key = 'g' + g.sub;
-      if (!db.users[key]) { db.users[key] = { label: String(g.name || g.email || 'Google').slice(0, 24), char: null, made: Date.now() }; dirty = true; }
+      if (!db.users[key]) { db.users[key] = { label: String(g.name || g.email || 'Google').slice(0, 24), chars: [], made: Date.now() }; dirty = true; }
       return { ok: 1, token: signTok(key), me: profile(key) };
     }
     case 'guest': {
       if (Object.keys(db.users).length >= 20000) return { err: 'ระบบรับสมัครเต็มชั่วคราว' };
       const key = 'u' + crypto.randomBytes(8).toString('hex');
-      db.users[key] = { label: 'เกสต์', char: null, made: Date.now(), anon: true }; dirty = true;
+      db.users[key] = { label: 'เกสต์', chars: [], made: Date.now(), anon: true }; dirty = true;
       return { ok: 1, token: signTok(key), me: profile(key) };
     }
     case 'me': {
@@ -199,13 +208,23 @@ async function api(route, b) {
     case 'char': {
       const k = await resolveKey(b);
       if (!k) return { err: 'หมดเวลาเข้าสู่ระบบ ล็อกอินใหม่อีกครั้ง', relogin: 1 };
-      const u = db.users[k];
-      if (u.char) return { err: 'บัญชีนี้มีตัวละครแล้ว' };
+      const u = db.users[k], cs = chars(u);
+      if (cs.length >= MAX_CHARS) return { err: 'สร้างตัวละครได้สูงสุด ' + MAX_CHARS + ' ตัว' };
       const name = Game.cleanName(b.name);
       if (name.length < 2) return { err: 'ชื่อตัวละครสั้นเกินไป (อย่างน้อย 2 ตัว)' };
-      if (nameTaken(name, k)) return { err: 'ชื่อนี้มีคนใช้แล้ว' };
-      u.char = { name, look: Game.cleanLook(b.look), save: null };
+      if (nameTaken(name)) return { err: 'ชื่อนี้มีคนใช้แล้ว' };
+      const cid = 'c' + crypto.randomBytes(5).toString('hex');
+      cs.push({ cid, name, look: Game.cleanLook(b.look), save: null });
       dirty = true;
+      return { ok: 1, cid, me: profile(k) };
+    }
+    case 'delchar': {
+      const k = await resolveKey(b);
+      if (!k) return { err: 'หมดเวลาเข้าสู่ระบบ ล็อกอินใหม่อีกครั้ง', relogin: 1 };
+      const cs = chars(db.users[k]), i = cs.findIndex(c => c.cid === b.cid);
+      if (i < 0) return { err: 'ไม่พบตัวละครนี้' };
+      for (const c of Array.from(hub.conns)) if (c.acct === k && c.cid === b.cid) hub.drop(c);
+      cs.splice(i, 1); dirty = true;
       return { ok: 1, me: profile(k) };
     }
   }
@@ -232,9 +251,13 @@ hub.auth = m => {
   let k = null;
   if (looksJwt(m.token)) { const pl = fbVerify(m.token); k = pl ? fbUser(pl) : null; } else k = verifyTok(m.token);
   const u = k && db.users[k];
-  return u && u.char ? { key: k, name: u.char.name, look: u.char.look, save: u.char.save } : null;
+  const ch = u && chars(u).find(c => c.cid === m.cid);
+  return ch ? { key: k, cid: ch.cid, name: ch.name, look: ch.look, save: ch.save, gm: isGm(k) } : null;
 };
-hub.onLeave = (c, save) => { if (c.acct && db.users[c.acct] && db.users[c.acct].char) { db.users[c.acct].char.save = save; dirty = true; } };
+hub.onLeave = (c, save) => {
+  const u = c.acct && db.users[c.acct], ch = u && chars(u).find(x => x.cid === c.cid);
+  if (ch) { ch.save = save; dirty = true; }
+};
 setInterval(() => {   // เซฟผู้เล่นที่ออนไลน์อยู่ทุก 30 วินาที กันเซิร์ฟเวอร์ดับกะทันหัน
   for (const c of hub.conns) if (c.player && c.acct) hub.onLeave(c, hub.world.saveOf(c.player));
 }, 30000).unref();
@@ -244,6 +267,8 @@ const FILES = {
   '/': ['index.html', 'text/html; charset=utf-8'],
   '/index.html': ['index.html', 'text/html; charset=utf-8'],
   '/game.js': ['game.js', 'text/javascript; charset=utf-8'],
+  '/rpg.js': ['rpg.js', 'text/javascript; charset=utf-8'],
+  '/jobart.js': ['jobart.js', 'text/javascript; charset=utf-8'],
   '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'],
   '/firebase-config.js': ['firebase-config.js', 'text/javascript; charset=utf-8'],
   '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json; charset=utf-8'],
@@ -391,6 +416,12 @@ setInterval(() => {
   hub.tick(dt);
 }, TICK_MS);
 
+(async () => {   // บัญชีทดสอบ phutest (เป็น GM) — ปิดได้ด้วย GM_OFF=1
+  if (process.env.GM_OFF || db.users[TEST_ID]) return;
+  const salt = crypto.randomBytes(16).toString('hex'), rsalt = crypto.randomBytes(16).toString('hex');
+  db.users[TEST_ID] = { salt, hash: await scrypt(TEST_PW, salt), rsalt, rhash: await scrypt(newRecovery(), rsalt), chars: [], made: Date.now(), gm: true };
+  dirty = true;
+})();
 server.listen(PORT, () => {
   console.log('Chathai Online พร้อมแล้ว  →  http://localhost:' + PORT);
 });

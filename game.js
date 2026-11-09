@@ -8,6 +8,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  const RPG = typeof require === 'function' && typeof module === 'object' ? require('./rpg.js') : (typeof self !== 'undefined' ? self : this).RPG;
   const W = 40, H = 32;
   const T = { GRASS: 0, PATH: 1, STONE: 2, WATER: 3, BRIDGE: 4 };
   const SPEED = 4.6;                 // ช่อง/วินาที
@@ -15,7 +16,7 @@
   const START_HOUR = 10;
   const OUTFITS = 6, HAIRS = 4, HAIR_COLORS = 4;
   const MAX_NAME = 12, MAX_CHAT = 80, MAX_PLAYERS = 100;
-  const MELEE = 1.6, ATK_CD = 1.0, LEASH = 10;   // ระยะตี (ช่อง), ตีทุกกี่วินาที, ระยะที่มอนสเตอร์เลิกไล่
+  const MELEE = 1.6, LEASH = 10;   // ระยะตี (ช่อง), ตีทุกกี่วินาที, ระยะที่มอนสเตอร์เลิกไล่
   const ZONES = ['village', 'field'];
   const ITEMS = {
     coin: { name: 'เหรียญทองแดง', desc: 'เงินที่ใช้กันทั่วทั้งลำธารไผ่' },
@@ -29,16 +30,12 @@
     robe_cloth: { name: 'เสื้อคลุมผ้าฝ้าย', desc: 'เสื้อคลุมเนื้อหนา กันลมกันหนาวได้ดี', slot: 'armor', def: 2, buy: 100, sell: 30 },
     armor_hide: { name: 'เกราะหนังหมูป่า', desc: 'เกราะหนังแข็งเย็บมือ กันเขี้ยวหมูป่าได้สบาย', slot: 'armor', def: 5, buy: 380, sell: 120 }
   };
-  // สกิล (ใช้ MP, วางที่คีย์ลัดได้)
-  const SKILLS = {
-    strike: { name: 'ฟันแรง', lv: 2, mp: 8, cd: 3, desc: 'ฟันเป้าหมายที่เลือกไว้แรงขึ้น 2.2 เท่า (ต้องยืนใกล้เป้าหมาย)' },
-    whirl: { name: 'กวาดวงกว้าง', lv: 8, mp: 20, cd: 6, desc: 'หมุนฟันศัตรูทุกตัวรอบตัวภายใน 2.4 ช่อง ตัวละ 1.4 เท่า' },
-    mend: { name: 'ผนึกชีวิต', lv: 5, mp: 14, cd: 8, desc: 'ฟื้นเลือด 35% ของเลือดสูงสุด' }
-  };
+  Object.assign(ITEMS, RPG.genItems(ITEMS));
+  const SKILLS = RPG.SK;   // สกิลทั้งหมดอยู่ใน rpg.js
   // ร้านค้า: ร้านยารับซื้อของทั่วไป ร้านอาวุธรับซื้ออุปกรณ์
   const SHOPS = {
     potion: { npc: 'n2', title: 'ร้านยา', buy: ['herb', 'tonic'], sellSlot: false },
-    smith: { npc: 'n5', title: 'ร้านอาวุธและชุดเกราะ', buy: ['sword_wood', 'robe_cloth', 'sword_iron', 'armor_hide'], sellSlot: true }
+    smith: { npc: 'n5', title: 'ร้านอาวุธและชุดเกราะ', buy: RPG.smithList(), sellSlot: true }
   };
   // เควสต์ (ต้องไปรับ/ส่งกับ NPC ในหมู่บ้าน)
   const QUESTS = {
@@ -365,16 +362,14 @@
   function cleanLook(l) {
     l = l && typeof l === 'object' ? l : {};
     const f = (v, n) => { v = Number(v); return Number.isInteger(v) && v >= 0 && v < n ? v : 0; };
-    return { o: f(l.o, OUTFITS), h: f(l.h, HAIRS), c: f(l.c, HAIR_COLORS) };
+    return { o: f(l.o, OUTFITS), h: f(l.h, HAIRS), c: f(l.c, HAIR_COLORS), g: l.g === 1 || l.g === '1' ? 1 : 0 };
   }
 
   /* ----------------------------------------------------------------- world */
   const dirOf = (dx, dy) => (Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) + 8) % 8;
   const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   const nextExp = lv => Math.round(20 * Math.pow(lv, 1.6));
-  const maxHpOf = lv => 60 + 15 * (lv - 1);
-  const maxMpOf = lv => 30 + 6 * (lv - 1);
-  const atkOf = lv => 8 + 2 * (lv - 1);
+  const LVCAP = RPG.MAX_LV;
 
   // เดินตามเส้นทาง คืนค่า true ถ้าขยับจริง
   function advance(e, speed, dt) {
@@ -433,8 +428,8 @@
       return ((((now - this.epoch) % DAY_MS) + DAY_MS) % DAY_MS) / DAY_MS;
     }
     applyLevel(p) {
-      const w = ITEMS[p.equip.weapon], a = ITEMS[p.equip.armor];
-      p.maxHp = maxHpOf(p.lv); p.maxMp = maxMpOf(p.lv); p.atk = atkOf(p.lv) + (w ? w.atk : 0); p.def = Math.floor(p.lv / 2) + (a ? a.def : 0);
+      RPG.derive(p, ITEMS, this.time);
+      p.hp = Math.min(p.hp, p.maxHp); p.mp = Math.min(p.mp, p.maxMp);
     }
     pickSpawn(zone) {
       const sp = this.zones[zone].map.spawn;
@@ -446,12 +441,12 @@
       const p = {
         id: this.nextId++, name: cleanName(name), look: cleanLook(look), zone: 'village',
         x: sp[0] + 0.5, y: sp[1] + 0.5, dir: 2, moving: false, path: [], dirty: false,
-        lv: 1, exp: 0, hp: 60, maxHp: 60, mp: 30, maxMp: 30, cd: {}, mpT: 0, atk: 8, def: 0, inv: {}, equip: { weapon: null, armor: null }, quests: {}, qdone: {},
-        target: null, atkCd: 0, repath: 0, lastCombat: -99, regenT: 0, dead: false, respawn: 0, warpCd: 0
+        lv: 1, exp: 0, hp: 60, maxHp: 60, mp: 30, maxMp: 30, cd: {}, mpT: 0, atk: 8, def: 0, inv: {}, equip: { weapon: null, off: null, armor: null, ammo: null }, quests: {}, qdone: {},
+        target: null, atkCd: 0, repath: 0, lastCombat: -99, regenT: 0, dead: false, respawn: 0, warpCd: 0, pend: null, buffT: 0, ammoWarn: 0, gm: false
       };
       if (save && typeof save === 'object') {
-        p.lv = clamp(Math.floor(Number(save.lv)) || 1, 1, 50);
-        p.exp = clamp(Math.floor(Number(save.exp)) || 0, 0, nextExp(p.lv) - 1);
+        p.lv = clamp(Math.floor(Number(save.lv)) || 1, 1, LVCAP);
+        p.exp = p.lv >= LVCAP ? 0 : clamp(Math.floor(Number(save.exp)) || 0, 0, nextExp(p.lv) - 1);
         if (save.inv && typeof save.inv === 'object') {
           for (const k of Object.keys(ITEMS)) {
             const v = Math.floor(Number(save.inv[k]));
@@ -459,12 +454,14 @@
           }
         }
       }
+      RPG.fromSave(p, save, ITEMS);
       if (save && save.equip && typeof save.equip === 'object') {
-        for (const slot of ['weapon', 'armor']) {
+        for (const slot of ['weapon', 'off', 'armor', 'ammo']) {
           const k = save.equip[slot];
           if (typeof k === 'string' && ITEMS[k] && ITEMS[k].slot === slot) p.equip[slot] = k;
         }
       }
+      this.dropIllegalGear(p, true);
       if (save && save.quests && typeof save.quests === 'object') {
         for (const id of Array.isArray(save.quests.done) ? save.quests.done : []) if (QUESTS[id]) p.qdone[id] = 1;
         const act = save.quests.active && typeof save.quests.active === 'object' ? save.quests.active : {};
@@ -478,12 +475,29 @@
       return p;
     }
     removePlayer(id) { this.players.delete(id); }
+    // ถอดอุปกรณ์ที่ใช้ไม่ได้ (เปลี่ยนอาชีพ/รีเซ็ตสเตตัส) กลับเข้ากระเป๋า
+    dropIllegalGear(p, quiet) {
+      const bad = RPG.illegalGear(p, ITEMS);
+      for (const slot of bad) { const k = p.equip[slot]; if (k) { p.inv[k] = (p.inv[k] || 0) + 1; p.equip[slot] = null; } }
+      if (bad.length && !quiet) this.note(p, 'ถอดอุปกรณ์ที่ใช้ไม่ได้แล้วเก็บเข้ากระเป๋า');
+      return bad.length > 0;
+    }
     saveOf(p) {
       const active = {};
       for (const id of Object.keys(p.quests)) active[id] = p.quests[id].n | 0;
-      return { lv: p.lv, exp: p.exp, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip), quests: { done: Object.keys(p.qdone), active } };
+      return Object.assign({ lv: p.lv, exp: p.exp, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip), quests: { done: Object.keys(p.qdone), active } }, RPG.toSave(p));
     }
-    meMsg(p) { return { t: 'me', lv: p.lv, exp: p.exp, next: nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp, atk: p.atk, def: p.def, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip) }; }
+    meMsg(p) {
+      const buffs = {};
+      for (const id of Object.keys(p.buffs)) buffs[id] = Math.max(0, Math.round(p.buffs[id].until - this.time));
+      return {
+        t: 'me', lv: p.lv, exp: p.exp, next: p.lv >= LVCAP ? 0 : nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp, atk: p.atk, def: p.def,
+        inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip),
+        job: p.job, fac: p.fac, c4: p.c4 ? 1 : 0, rb: p.rb, orig: p.orig, st: Object.assign({}, p.st), sp: p.sp, skp: p.skp,
+        skills: Object.assign({}, p.skills), borrow: p.borrow.slice(), bsl: RPG.bslots(p), buffs,
+        atkS: p.atkS, atkD: p.atkD, atkI: p.atkI, crit: Math.round(p.crit * 1000) / 10, dodge: Math.round(p.dodge * 1000) / 10, cdA: Math.round(p.acd * 100) / 100, rng: p.rng, gm: p.gm ? 1 : 0
+      };
+    }
     tellMe(p) { this.events.push(Object.assign({ _to: p.id }, this.meMsg(p))); }
     note(p, text) { this.events.push({ _to: p.id, t: 'note', text }); }
     emit(zone, ev) { ev._z = zone; this.events.push(ev); }
@@ -537,48 +551,238 @@
     equip(id, item) {
       const p = this.players.get(id), it = ITEMS[item];
       if (!p || p.dead || !it || !it.slot || !(p.inv[item] > 0)) return false;
-      const old = p.equip[it.slot];
-      p.inv[item]--; if (p.inv[item] <= 0) delete p.inv[item];
-      if (old) p.inv[old] = (p.inv[old] || 0) + 1;
-      p.equip[it.slot] = item; this.applyLevel(p);
+      const why = RPG.reqCheck(p, it);
+      if (why) { this.note(p, 'ใส่ ' + it.name + ' ไม่ได้: ' + why); return false; }
+      const slot = it.slot;
+      if (slot === 'ammo') {
+        p.equip.ammo = p.equip.ammo === item ? null : item;
+      } else {
+        const wpn = ITEMS[p.equip.weapon];
+        if (slot === 'off' && wpn && wpn.two) { this.note(p, 'ถืออาวุธสองมืออยู่ ใส่ของมืออีกข้างไม่ได้'); return false; }
+        const old = p.equip[slot];
+        p.inv[item]--; if (p.inv[item] <= 0) delete p.inv[item];
+        if (old) p.inv[old] = (p.inv[old] || 0) + 1;
+        p.equip[slot] = item;
+        if (slot === 'weapon' && it.two && p.equip.off) { const o = p.equip.off; p.inv[o] = (p.inv[o] || 0) + 1; p.equip.off = null; this.note(p, 'ถอด ' + ITEMS[o].name + ' เพราะอาวุธนี้ถือสองมือ'); }
+      }
+      this.applyLevel(p);
       this.emit(p.zone, { t: 'eq', id: p.id, eq: Object.assign({}, p.equip) });
       this.tellMe(p);
       return true;
     }
     unequip(id, slot) {
       const p = this.players.get(id);
-      if (!p || p.dead || (slot !== 'weapon' && slot !== 'armor') || !p.equip[slot]) return false;
+      if (!p || p.dead || ['weapon', 'off', 'armor', 'ammo'].indexOf(slot) < 0 || !p.equip[slot]) return false;
       const k = p.equip[slot]; p.equip[slot] = null;
-      p.inv[k] = (p.inv[k] || 0) + 1; this.applyLevel(p);
+      if (slot !== 'ammo') p.inv[k] = (p.inv[k] || 0) + 1;
+      this.applyLevel(p);
       this.emit(p.zone, { t: 'eq', id: p.id, eq: Object.assign({}, p.equip) });
       this.tellMe(p);
       return true;
     }
+
+    /* ---- สกิล ---- */
+    resolveSkill(p, sid) {   // → { sk, lvl } | null (แจ้งเหตุผลให้ผู้เล่น)
+      let sk, lvl;
+      if (/^b[0-3]$/.test(sid)) {
+        const i = +sid[1], bid = p.borrow[i];
+        if (i >= RPG.bslots(p) || !bid) { this.note(p, 'ช่องยืมสกิลนี้ยังว่างอยู่'); return null; }
+        sk = SKILLS[bid]; lvl = RPG.borrowLv(p);
+      } else {
+        sk = SKILLS[sid];
+        if (!sk) return null;
+        lvl = RPG.skillLevel(p, sid);
+        if (!lvl) { this.note(p, 'ยังไม่ได้เรียนสกิล ' + sk.name); return null; }
+        const lock = RPG.skillLock(p, sk);
+        if (lock) { this.note(p, sk.name + ': ' + lock); return null; }
+      }
+      return { sk, lvl };
+    }
+    nearestMonster(p, r) {
+      let best = null, bd = r;
+      for (const m of this.monsters) {
+        if (m.zone !== p.zone || m.state === 'dead') continue;
+        const d = Math.hypot(m.x - p.x, m.y - p.y);
+        if (d < bd) { bd = d; best = m; }
+      }
+      return best;
+    }
+    ammoOk(p, quiet) {   // อาวุธที่ต้องใช้กระสุน/ลูกธนู
+      if (!p.ammoKind) return true;
+      const a = ITEMS[p.equip.ammo];
+      if (a && a.kind === p.ammoKind && (p.inv[p.equip.ammo] | 0) > 0) return true;
+      if (!quiet || this.time - p.ammoWarn > 4) { p.ammoWarn = this.time; this.note(p, p.ammoKind === 'arrow' ? 'ไม่มีลูกธนู — ซื้อที่ร้านอาวุธแล้วสวมใส่ในช่องกระสุน' : 'ไม่มีกระสุน — ซื้อที่ร้านอาวุธแล้วสวมใส่ในช่องกระสุน'); }
+      return false;
+    }
+    useAmmo(p) {
+      if (!p.ammoKind) return;
+      const k = p.equip.ammo;
+      p.inv[k] = (p.inv[k] | 0) - 1;
+      if (p.inv[k] <= 0) { delete p.inv[k]; p.equip.ammo = null; this.note(p, 'ลูกธนู/กระสุนหมดแล้ว'); this.applyLevel(p); this.emit(p.zone, { t: 'eq', id: p.id, eq: Object.assign({}, p.equip) }); }
+    }
+    skillRange(sk) { return sk.rng > 0 ? sk.rng : MELEE + 0.4; }
     useSkill(id, sid) {
+      const p = this.players.get(id);
+      if (!p || p.dead) return false;
+      const r = this.resolveSkill(p, sid);
+      if (!r) return false;
+      const sk = r.sk, e = RPG.skillEff(sk, r.lvl, p.rb, p.fac);
+      if (sk.k === 'P') { this.note(p, sk.name + ' เป็นสกิลติดตัว ไม่ต้องกดใช้'); return false; }
+      if ((p.cd[sid] || 0) > this.time) return false;
+      if (p.mp < e.mp) { this.note(p, 'MP ไม่พอ (ต้องใช้ ' + e.mp + ')'); return false; }
+      const needT = sk.k === 'A' || sk.k === 'R' || sk.k === 'Z' || sk.k === 'T' || sk.k === 'Y';
+      if (needT) {
+        let m = this.monById.get(p.target);
+        if (!m || m.state === 'dead' || m.zone !== p.zone) { m = this.nearestMonster(p, 14); if (!m) { this.note(p, 'ไม่มีมอนสเตอร์ใกล้ ๆ'); return false; } p.target = m.id; }
+        const d = Math.hypot(m.x - p.x, m.y - p.y);
+        if (d > this.skillRange(sk) + 0.3) { p.pend = sid; p.repath = 0; return true; }   // วิ่งเข้าไปก่อน แล้วค่อยร่าย (chase เป็นคนเรียกซ้ำ)
+        return this.castSkill(p, sid, sk, r.lvl, e, m);
+      }
+      return this.castSkill(p, sid, sk, r.lvl, e, null);
+    }
+    castSkill(p, sid, sk, lvl, e, m) {
+      const k = sk.k, hitList = [];
+      if (sk.k === 'R' || sk.k === 'T' || sk.k === 'Y') { if (!this.ammoOk(p)) return false; }
+      if (k === 'A' || k === 'R' || k === 'Z') {
+        p.dir = dirOf(m.x - p.x, m.y - p.y); hitList.push(m);
+      } else if (k === 'B' || k === 'X') {
+        for (const q of this.monsters) if (q.zone === p.zone && q.state !== 'dead' && Math.hypot(q.x - p.x, q.y - p.y) <= e.radius) hitList.push(q);
+        if (!hitList.length) { this.note(p, 'ไม่มีศัตรูอยู่รอบตัว'); p.pend = null; return false; }
+      } else if (k === 'T' || k === 'Y') {
+        for (const q of this.monsters) if (q.zone === p.zone && q.state !== 'dead' && Math.hypot(q.x - m.x, q.y - m.y) <= e.radius) hitList.push(q);
+        p.dir = dirOf(m.x - p.x, m.y - p.y);
+      } else if (k === 'U' || k === 'D') {
+        p.buffs[sid] = Object.assign({ until: this.time + e.dur }, e.buff);
+      } else if (k === 'H') {
+        const who = [];
+        for (const q of this.players.values()) if (q.zone === p.zone && !q.dead && Math.hypot(q.x - p.x, q.y - p.y) <= e.radius && q.hp < q.maxHp) who.push(q);
+        if (!who.length) { this.note(p, 'เลือดเต็มอยู่แล้ว'); p.pend = null; return false; }
+        for (const q of who) {
+          const amt = Math.round(q.maxHp * e.heal * p.healMul);
+          q.hp = Math.min(q.maxHp, q.hp + amt);
+          this.emit(p.zone, { t: 'heal', id: q.id, amt, hp: q.hp });
+          if (q !== p) this.tellMe(q);
+        }
+      }
+      p.mp -= e.mp; p.cd[sid] = this.time + e.cd; p.pend = null;
+      if (sk.k === 'R' || sk.k === 'T' || sk.k === 'Y') this.useAmmo(p);
+      this.emit(p.zone, { t: 'sk', id: p.id, s: sid, k, job: sk.job, tx: m ? m.x : p.x, ty: m ? m.y : p.y, r: e.radius || 0 });
+      for (const q of hitList) this.playerHit(p, q, e.mult, sk.sty);
+      this.events.push({ _to: p.id, t: 'skillcd', id: sid, cd: e.cd });
+      if (k === 'U' || k === 'D') this.applyLevel(p);
+      this.tellMe(p);
+      return true;
+    }
+
+    /* ---- สเตตัส / สกิล / อาชีพ ---- */
+    statUp(id, k, n) {
+      const p = this.players.get(id);
+      if (!p || p.dead || RPG.STATS.indexOf(k) < 0) return false;
+      n = clamp(Math.floor(Number(n)) || 1, 1, 10);
+      let done = 0;
+      for (let i = 0; i < n; i++) {
+        const v = p.st[k], c = RPG.statCost(v);
+        if (v >= RPG.MAX_STAT || p.sp < c) break;
+        p.st[k]++; p.sp -= c; done++;
+      }
+      if (!done) { this.note(p, p.st[k] >= RPG.MAX_STAT ? 'สเตตัสนี้เต็มแล้ว' : 'แต้มสเตตัสไม่พอ'); return false; }
+      this.applyLevel(p); this.tellMe(p);
+      return true;
+    }
+    skillUp(id, sid) {
       const p = this.players.get(id), sk = SKILLS[sid];
       if (!p || p.dead || !sk) return false;
-      if (p.lv < sk.lv) { this.note(p, 'ต้องเลเวล ' + sk.lv + ' ถึงจะใช้ ' + sk.name + ' ได้'); return false; }
-      if ((p.cd[sid] || 0) > this.time) return false;
-      if (p.mp < sk.mp) { this.note(p, 'MP ไม่พอ (ต้องใช้ ' + sk.mp + ')'); return false; }
-      if (sid === 'strike') {
-        const m = this.monById.get(p.target);
-        if (!m || m.state === 'dead' || m.zone !== p.zone || Math.hypot(m.x - p.x, m.y - p.y) > MELEE + 0.8) { this.note(p, 'ต้องเลือกเป้าหมายและยืนใกล้ ๆ ก่อน'); return false; }
-        p.dir = dirOf(m.x - p.x, m.y - p.y);
-        this.playerHit(p, m, 2.2);
-      } else if (sid === 'whirl') {
-        const hit = this.monsters.filter(m => m.zone === p.zone && m.state !== 'dead' && Math.hypot(m.x - p.x, m.y - p.y) <= 2.4);
-        if (!hit.length) { this.note(p, 'ไม่มีศัตรูอยู่รอบตัว'); return false; }
-        for (const m of hit) this.playerHit(p, m, 1.4);
-      } else if (sid === 'mend') {
-        if (p.hp >= p.maxHp) { this.note(p, 'เลือดเต็มอยู่แล้ว'); return false; }
-        const amt = Math.round(p.maxHp * 0.35);
-        p.hp = Math.min(p.maxHp, p.hp + amt);
-        this.emit(p.zone, { t: 'heal', id: p.id, amt, hp: p.hp });
-      }
-      p.mp -= sk.mp; p.cd[sid] = this.time + sk.cd;
-      this.emit(p.zone, { t: 'sk', id: p.id, s: sid });
-      this.events.push({ _to: p.id, t: 'skillcd', id: sid, cd: sk.cd });
+      const why = RPG.skillCanUp(p, sk);
+      if (why) { this.note(p, why); return false; }
+      p.skills[sid] = (p.skills[sid] | 0) + 1; p.skp -= sk.cost;
+      this.applyLevel(p); this.tellMe(p);
+      this.note(p, sk.name + ' → Lv ' + p.skills[sid]);
+      return true;
+    }
+    changeJob(p, job) {
+      p.job = job; p.c4 = false;
+      this.dropIllegalGear(p);
+      this.applyLevel(p);
+      this.emit(p.zone, { t: 'job', id: p.id, job: p.job, fac: p.fac });
       this.tellMe(p);
+    }
+    advance(id, what, arg) {
+      const p = this.players.get(id);
+      if (!p || p.dead) return false;
+      const a = RPG.advInfo(p);
+      if (!a.ok) { this.note(p, 'ยังเลื่อนขั้นไม่ได้: ' + (a.need || 'ไม่มีขั้นถัดไป')); return false; }
+      if (what === 'job' && a.kind === 'job' && a.jobs.indexOf(arg) >= 0) {
+        this.changeJob(p, arg); this.note(p, 'เลื่อนอาชีพเป็น ' + arg + '!');
+        this.events.push({ t: 'advd', id: p.id, name: p.name, job: arg });
+        return true;
+      }
+      if (what === 'fac' && a.kind === 'fac' && (arg === 'd' || arg === 'a')) {
+        p.fac = arg; this.applyLevel(p);
+        this.emit(p.zone, { t: 'job', id: p.id, job: p.job, fac: p.fac });
+        this.note(p, arg === 'd' ? 'เลือกฝ่าย Dharma แล้ว' : 'เลือกฝ่าย Adharma แล้ว'); this.tellMe(p);
+        return true;
+      }
+      if (what === 'c4' && a.kind === 'c4') {
+        p.c4 = true; this.applyLevel(p); this.tellMe(p);
+        this.events.push({ t: 'advd', id: p.id, name: p.name, job: p.job, c4: 1 });
+        this.note(p, 'เลื่อนเป็นคลาส 4! ปลดล็อกสกิลไม้ตายแล้ว');
+        return true;
+      }
+      if (what === 'rebirth' && a.kind === 'rebirth') return this.rebirth(p, arg !== 'new');
+      return false;
+    }
+    rebirth(p, keep) {
+      const C = RPG.REBIRTH_COST;
+      for (const k of Object.keys(C)) if ((p.inv[k] || 0) < C[k]) { this.note(p, 'เควสต์เกิดใหม่ต้องใช้: ก้อนวุ้นไผ่ ×' + C.jelly + ' เขี้ยวหมูป่า ×' + C.tusk + ' เหรียญ ' + C.coin); return false; }
+      for (const k of Object.keys(C)) { p.inv[k] -= C[k]; if (p.inv[k] <= 0) delete p.inv[k]; }
+      p.orig = p.orig || (p.job !== 'Adventurer' ? p.job : null);
+      p.rb = Math.min(9, p.rb + 1);
+      p.lv = 1; p.exp = 0; p.st = RPG.newStats(); p.skills = {}; p.borrow = [null, null, null, null]; p.buffs = {}; p.c4 = false; p.pend = null;
+      if (!keep) { p.job = 'Adventurer'; p.fac = null; }
+      RPG.recalcPoints(p); this.dropIllegalGear(p, true); this.applyLevel(p); p.hp = p.maxHp; p.mp = p.maxMp;
+      this.emit(p.zone, { t: 'job', id: p.id, job: p.job, fac: p.fac });
+      this.events.push({ t: 'advd', id: p.id, name: p.name, job: p.job, rb: p.rb });
+      this.note(p, 'เกิดใหม่ครั้งที่ ' + p.rb + '! กลับเป็น Lv 1 แต่สกิลแรงขึ้น');
+      this.tellMe(p); this.tellQuests(p);
+      return true;
+    }
+    resetPoints(id, what) {
+      const p = this.players.get(id);
+      if (!p || p.dead) return false;
+      const cost = RPG.resetCost(p);
+      if ((p.inv.coin || 0) < cost) { this.note(p, 'ต้องใช้ ' + cost + ' เหรียญในการรีเซ็ต'); return false; }
+      if (cost) { p.inv.coin -= cost; if (p.inv.coin <= 0) delete p.inv.coin; }
+      if (what === 'stats') p.st = RPG.newStats(); else { p.skills = {}; p.borrow = [null, null, null, null]; p.buffs = {}; }
+      RPG.recalcPoints(p); this.dropIllegalGear(p); this.applyLevel(p);
+      this.note(p, 'รีเซ็ต' + (what === 'stats' ? 'สเตตัส' : 'สกิล') + 'แล้ว' + (cost ? ' (-' + cost + ' เหรียญ)' : ' (ฟรี จนกว่าจะเปลี่ยนคลาส 2)'));
+      this.tellMe(p);
+      return true;
+    }
+    setBorrow(id, slot, sid) {
+      const p = this.players.get(id);
+      slot = Math.floor(Number(slot));
+      if (!p || p.dead || !(slot >= 0 && slot < RPG.bslots(p))) return false;
+      if (sid && RPG.ACTIVE_IDS().indexOf(sid) < 0) return false;
+      p.borrow[slot] = sid || null; this.tellMe(p);
+      return true;
+    }
+    gm(id, cmd, v) {
+      const p = this.players.get(id);
+      if (!p || !p.gm) return false;
+      if (cmd === 'lv') { p.lv = clamp(Math.floor(Number(v)) || 1, 1, LVCAP); p.exp = 0; }
+      else if (cmd === 'job' && RPG.JOBS[v]) { p.job = v; p.c4 = false; if (RPG.JOBS[v].tier >= 1 && !p.fac) p.fac = 'd'; if (RPG.JOBS[v].tier < 1) p.fac = null; }
+      else if (cmd === 'fac' && (v === 'd' || v === 'a')) p.fac = v;
+      else if (cmd === 'c4') { if (p.job !== 'Adventurer') p.c4 = true; }
+      else if (cmd === 'rb') { p.rb = clamp(Math.floor(Number(v)) || 0, 0, 9); p.orig = p.job; }
+      else if (cmd === 'give' && v && ITEMS[v.item]) { p.inv[v.item] = Math.min(99999, (p.inv[v.item] || 0) + clamp(Math.floor(Number(v.n)) || 1, 1, 9999)); }
+      else if (cmd === 'coin') p.inv.coin = Math.min(99999, (p.inv.coin || 0) + 20000);
+      else if (cmd === 'heal') { p.hp = p.maxHp; p.mp = p.maxMp; }
+      else return false;
+      RPG.recalcPoints(p); this.dropIllegalGear(p, true); this.applyLevel(p);
+      if (cmd === 'heal' || cmd === 'lv' || cmd === 'job') { p.hp = p.maxHp; p.mp = p.maxMp; }
+      this.emit(p.zone, { t: 'job', id: p.id, job: p.job, fac: p.fac });
+      this.emit(p.zone, { t: 'eq', id: p.id, eq: Object.assign({}, p.equip) });
+      this.tellMe(p); this.tellQuests(p);
       return true;
     }
     nearNpc(p, npcId, r) {
@@ -590,7 +794,7 @@
       const p = this.players.get(id), it = ITEMS[item], sh = SHOPS[shop];
       if (!p || p.dead || !it || !sh || !it.buy || sh.buy.indexOf(item) < 0) return false;
       if (!this.nearNpc(p, sh.npc)) { this.note(p, 'เดินเข้าไปใกล้ร้านค้าก่อนนะ'); return false; }
-      n = it.slot ? 1 : clamp(Math.floor(Number(n)) || 1, 1, 20);
+      n = it.slot && it.slot !== 'ammo' ? 1 : clamp(Math.floor(Number(n)) || 1, 1, it.slot === 'ammo' ? 99 : 20);
       const cost = it.buy * n;
       if ((p.inv.coin || 0) < cost) { this.note(p, 'เหรียญไม่พอ (ต้องใช้ ' + cost + ')'); return false; }
       p.inv.coin -= cost; if (p.inv.coin <= 0) delete p.inv.coin;
@@ -685,9 +889,16 @@
       p.atkCd = Math.max(0, p.atkCd - dt);
       p.warpCd = Math.max(0, p.warpCd - dt);
       if (p.dead) { p.respawn -= dt; if (p.respawn <= 0) this.revive(p); return; }
+      p.buffT += dt;
+      if (p.buffT >= 1) {
+        p.buffT = 0;
+        let ex = false;
+        for (const id of Object.keys(p.buffs)) if (p.buffs[id].until <= this.time) { delete p.buffs[id]; ex = true; }
+        if (ex) { this.applyLevel(p); this.tellMe(p); }
+      }
       const wasMoving = p.moving, od = p.dir;
-      if (p.target) this.chase(p);
-      const moved = p.path.length ? advance(p, SPEED, dt) : false;
+      if (p.target) this.chase(p); else p.pend = null;
+      const moved = p.path.length ? advance(p, SPEED * (p.spdMul || 1), dt) : false;
       p.moving = p.path.length > 0;
       if (moved || wasMoving !== p.moving || od !== p.dir) p.dirty = true;
       if (p.warpCd <= 0) {
@@ -710,30 +921,42 @@
     }
     chase(p) {
       const m = this.monById.get(p.target);
-      if (!m || m.state === 'dead' || m.zone !== p.zone) { p.target = null; return; }
+      if (!m || m.state === 'dead' || m.zone !== p.zone) { p.target = null; p.pend = null; return; }
       const d = Math.hypot(m.x - p.x, m.y - p.y);
-      if (d <= MELEE) {
+      let range = p.rng;
+      const pk = p.pend && SKILLS[p.pend] ? SKILLS[p.pend] : (p.pend && /^b[0-3]$/.test(p.pend) && SKILLS[p.borrow[+p.pend[1]]]) || null;
+      if (p.pend && pk) range = this.skillRange(pk);
+      if (d <= range) {
         p.path = [];
         p.dir = dirOf(m.x - p.x, m.y - p.y);
-        if (p.atkCd <= 0) this.playerHit(p, m);
+        if (p.pend) { const sid = p.pend; p.pend = null; this.useSkill(p.id, sid); }
+        else if (p.atkCd <= 0) {
+          if (!this.ammoOk(p, true)) { p.target = null; return; }
+          this.playerHit(p, m);
+        }
       } else {
         p.repath -= 1 / 20;
         if (p.repath <= 0 || !p.path.length) {
           p.repath = 0.35;
           const path = findPath(this.zones[p.zone].map, Math.floor(p.x), Math.floor(p.y), Math.floor(m.x), Math.floor(m.y));
           if (path) p.path = path.length > 1 ? path.slice(1) : [];
-          else { p.target = null; p.path = []; }
+          else { p.target = null; p.pend = null; p.path = []; }
         }
       }
     }
-    playerHit(p, m, mult) {
+    playerHit(p, m, mult, sty) {
       const D = MON[m.type];
-      const crit = Math.random() < 0.1;
-      let dmg = Math.round(p.atk * (mult || 1) * (0.85 + Math.random() * 0.3));
+      const crit = Math.random() < p.crit;
+      const basic = !mult;
+      const base = (sty || p.sty) === 'd' ? p.atkD : (sty || p.sty) === 'i' ? p.atkI : p.atkS;
+      let dmg = Math.round(base * (mult || 1) * (0.85 + Math.random() * 0.3));
       if (crit) dmg = Math.round(dmg * 1.6);
       dmg = Math.max(1, dmg);
       m.hp = Math.max(0, m.hp - dmg);
-      if (!mult) p.atkCd = ATK_CD;
+      if (basic) {
+        p.atkCd = p.acd;
+        if (p.rng > 2.5) { this.emit(m.zone, { t: 'shot', id: p.id, to: m.id, w: (ITEMS[p.equip.weapon] || {}).wt || '' }); this.useAmmo(p); }
+      }
       p.lastCombat = this.time;
       if (m.state !== 'chase') { m.state = 'chase'; m.path = []; m.repath = 0; }
       m.target = p.id; m.dirty = true;
@@ -755,12 +978,18 @@
       if (Object.keys(p.quests).length) this.tellQuests(p);
     }
     giveExp(p, n) {
+      if (p.lv >= LVCAP) return;
       p.exp += n;
-      while (p.lv < 50 && p.exp >= nextExp(p.lv)) {
-        p.exp -= nextExp(p.lv); p.lv++;
-        this.applyLevel(p); p.hp = p.maxHp; p.mp = p.maxMp;
+      let up = false;
+      while (p.lv < LVCAP && p.exp >= nextExp(p.lv)) {
+        p.exp -= nextExp(p.lv); p.lv++; up = true;
         this.events.push({ t: 'lvup', id: p.id, lv: p.lv, name: p.name });
+      }
+      if (p.lv >= LVCAP) p.exp = 0;
+      if (up) {
+        RPG.recalcPoints(p); this.applyLevel(p); p.hp = p.maxHp; p.mp = p.maxMp;
         this.tellQuests(p);
+        if (p.sp > 0) this.note(p, 'มีแต้มสเตตัสที่ยังไม่ได้ใช้ ' + p.sp + ' แต้ม');
       }
     }
     stepMonster(m, dt) {
@@ -825,8 +1054,10 @@
       if (moved || was !== m.moving || od !== m.dir) m.dirty = true;
     }
     monsterHit(m, p, D) {
+      m.atkCd = D.atkCd;
+      if (Math.random() < p.dodge) { this.emit(m.zone, { t: 'hit', id: p.id, dmg: 0, miss: 1, hp: p.hp, pl: 1, from: m.id }); return; }
       const dmg = Math.max(1, rnd(D.atk[0], D.atk[1]) - p.def);
-      p.hp -= dmg; p.lastCombat = this.time; m.atkCd = D.atkCd;
+      p.hp -= dmg; p.lastCombat = this.time;
       this.emit(m.zone, { t: 'hit', id: p.id, dmg, hp: Math.max(0, p.hp), pl: 1, from: m.id });
       if (p.hp <= 0) this.killPlayer(p); else this.tellMe(p);
     }
@@ -863,7 +1094,7 @@
     drainEvents() { const e = this.events; this.events = []; return e; }
   }
 
-  const pub = p => ({ id: p.id, name: p.name, look: p.look, x: p.x, y: p.y, dir: p.dir, m: p.moving ? 1 : 0, lv: p.lv, dead: p.dead ? 1 : 0, eq: Object.assign({}, p.equip) });
+  const pub = p => ({ id: p.id, name: p.name, look: p.look, x: p.x, y: p.y, dir: p.dir, m: p.moving ? 1 : 0, lv: p.lv, dead: p.dead ? 1 : 0, eq: Object.assign({}, p.equip), job: p.job, fac: p.fac });
   const pubM = m => ({ id: m.id, type: m.type, x: m.x, y: m.y, dir: m.dir, hp: m.hp, maxHp: m.maxHp, dead: m.state === 'dead' ? 1 : 0 });
 
   /* ------------------------------------------------------------------- hub
@@ -909,9 +1140,10 @@
           const a = this.auth(m);
           if (!a) { c.send(JSON.stringify({ t: 'authfail' })); return; }
           for (const o of Array.from(this.conns)) if (o !== c && o.acct === a.key) { try { o.send(JSON.stringify({ t: 'kicked' })); } catch (e) {} if (o.kick) o.kick(); else this.drop(o); }
-          c.acct = a.key; jn = a.name; jl = a.look; js = a.save;
-        }
+          c.acct = a.key; c.cid = a.cid; jn = a.name; jl = a.look; js = a.save; c.gm = !!a.gm;
+        } else if (this.trustSaves && m.gm) c.gm = true;
         const p = w.addPlayer(jn, jl, js);
+        p.gm = !!c.gm;
         c.player = p; this.byPlayer.set(p.id, c);
         c.send(JSON.stringify({
           t: 'init', id: p.id, zone: p.zone, phase: w.phase(now), dayMs: DAY_MS,
@@ -940,6 +1172,16 @@
         if (now - c.lastAct < 100) return;
         c.lastAct = now;
         w.useSkill(c.player.id, String(m.id));
+      } else if (m.t === 'stat' || m.t === 'skillup' || m.t === 'adv' || m.t === 'reset' || m.t === 'borrow' || m.t === 'gm') {
+        if (now - c.lastAct < 80) return;
+        c.lastAct = now;
+        const id = c.player.id;
+        if (m.t === 'stat') w.statUp(id, String(m.k), m.n);
+        else if (m.t === 'skillup') w.skillUp(id, String(m.id));
+        else if (m.t === 'adv') w.advance(id, String(m.w), m.a == null ? '' : String(m.a));
+        else if (m.t === 'reset') w.resetPoints(id, m.w === 'stats' ? 'stats' : 'skills');
+        else if (m.t === 'borrow') w.setBorrow(id, m.slot, m.id ? String(m.id) : null);
+        else if (m.t === 'gm') w.gm(id, String(m.cmd), m.v);
       } else if (m.t === 'qaccept' || m.t === 'qturnin') {
         if (now - c.lastAct < 100) return;
         c.lastAct = now;
@@ -994,6 +1236,6 @@
 
   return {
     W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT, ITEMS, MON, SHOPS, QUESTS, SKILLS, ZONES, ZONE_LV, nextExp,
-    buildMap, findPath, nearestWalkable, World, Hub, cleanName, cleanText, cleanLook, rng
+    buildMap, findPath, nearestWalkable, World, Hub, cleanName, cleanText, cleanLook, rng, RPG, LVCAP
   };
 });
