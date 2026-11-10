@@ -246,7 +246,7 @@
     ['ล็อกอินด้วย Google ใช้ได้เมื่อรันเซิร์ฟเวอร์ออนไลน์จริงและตั้งค่า Google ไว้', 'Google sign-in works when running the real online server with Google configured', 'Đăng nhập Google dùng được khi chạy máy chủ online thật và đã cấu hình Google', 'Google 로그인은 실제 온라인 서버에서 Google 설정을 했을 때 사용할 수 있습니다'],
     ['ล็อกอินด้วย Google ใช้ได้เมื่อตั้งค่า Firebase ไว้ — โหมดนี้ใช้ไอดี/รหัสผ่านหรือเกสต์ไปก่อนนะ', 'Google sign-in needs Firebase to be configured — use ID/password or guest for now', 'Đăng nhập Google cần cấu hình Firebase — tạm thời dùng ID/mật khẩu hoặc khách', 'Google 로그인은 Firebase 설정이 필요합니다 — 지금은 아이디/비밀번호나 게스트를 이용하세요'],
     ['ผู้ดูแลยังไม่ได้เปิดใช้ล็อกอินด้วย Google (ตั้งค่า Firebase หรือ GOOGLE_CLIENT_ID)', 'The admin has not enabled Google sign-in (set up Firebase or GOOGLE_CLIENT_ID)', 'Quản trị viên chưa bật đăng nhập Google (cấu hình Firebase hoặc GOOGLE_CLIENT_ID)', '관리자가 Google 로그인을 아직 켜지 않았습니다 (Firebase 또는 GOOGLE_CLIENT_ID 설정)'],
-    ['หมดเวลาเข้าสู่ระบบ', 'Sign-in timed out', 'Hết thời gian đăng nhập', '로그인 시간이 초과되었습니다'], ['สร้างตัวละครได้สูงสุด', 'You can create up to', 'Tạo tối đa', '캐릭터는 최대'], ['re:(\\d)\\s*ตัว(?!ละคร)', '$1 characters', '$1 nhân vật', '$1개까지'],
+    ['หมดเวลาเข้าสู่ระบบ', 'Sign-in timed out', 'Hết thời gian đăng nhập', '로그인 시간이 초과되었습니다'], ['re:สร้างตัวละครได้สูงสุด\\s*(\\d+)\\s*ตัว', 'You can create up to $1 characters', 'Tạo tối đa $1 nhân vật', '캐릭터는 최대 $1개까지'],
     ['ชื่อตัวละครสั้นเกินไป (อย่างน้อย 2 ตัว)', 'Character name is too short (min 2 characters)', 'Tên nhân vật quá ngắn (tối thiểu 2 ký tự)', '캐릭터 이름이 너무 짧습니다 (2자 이상)'], ['ชื่อนี้มีคนใช้แล้ว', 'This name is taken', 'Tên này đã có người dùng', '이미 사용 중인 이름입니다'],
     ['ไม่พบตัวละครนี้', 'Character not found', 'Không tìm thấy nhân vật này', '캐릭터를 찾을 수 없습니다'], ['ไม่รู้จักคำสั่งนี้', 'Unknown command', 'Lệnh không xác định', '알 수 없는 명령입니다'], ['เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง', 'Cannot reach the server, try again', 'Không kết nối được máy chủ, hãy thử lại', '서버에 연결할 수 없습니다. 다시 시도하세요'],
     ['บัญชี:', 'Account:', 'Tài khoản:', '계정:'], ['ออกจากระบบ (เกสต์จะเสียตัวละคร)', 'Log out (guests lose their characters)', 'Đăng xuất (khách sẽ mất nhân vật)', '로그아웃 (게스트는 캐릭터가 사라집니다)'], ['x:ออกจากระบบ', 'Log out', 'Đăng xuất', '로그아웃'],
@@ -272,6 +272,45 @@
     ['x:ตั้งค่า', 'Settings', 'Cài đặt', '설정'], ['x:ภาษา', 'Language', 'Ngôn ngữ', '언어'], ['เปลี่ยนภาษาแล้ว', 'Language changed', 'Đã đổi ngôn ngữ', '언어가 변경되었습니다'],
     ['ภาษาจะถูกจำไว้ในเครื่องนี้', 'Your language is remembered on this device', 'Ngôn ngữ được ghi nhớ trên thiết bị này', '선택한 언어는 이 기기에 저장됩니다'],
     ['ชื่อตัวละคร ชื่ออาชีพ และชื่อสกิลเป็นภาษาอังกฤษในทุกภาษา', 'Job and skill names stay in English in every language', 'Tên nghề và kỹ năng giữ nguyên tiếng Anh ở mọi ngôn ngữ', '직업과 스킬 이름은 모든 언어에서 영어로 표시됩니다'],
+    // ---- โลกใหม่ (เมือง/แผนที่/เควสต์เปลี่ยนอาชีพ)
+    ['◉ คุณอยู่ที่นี่', '◉ You are here', '◉ Bạn đang ở đây', '◉ 현재 위치'], ['· ถึงแล้ว', '· Arrived', '· Đã đến', '· 도착'],
+    ['x:แผนที่', 'Map', 'Bản đồ', '지도'],
+    ['x:แผนที่โลก', 'World Map', 'Bản đồ thế giới', '월드 맵'],
+    ['เมือง · ปลอดภัย ไม่มีมอนสเตอร์', 'Town · safe, no monsters', 'Thị trấn · an toàn, không có quái', '마을 · 안전, 몬스터 없음'],
+    ['แมพล่ามอนสเตอร์', 'Hunting map', 'Bản đồ săn quái', '사냥 맵'],
+    ['· เลเวล', '· Lv', '· Lv', '· Lv'],
+    ['· ยังไม่เคยไป', '· not visited yet', '· chưa từng đến', '· 아직 가 본 적 없음'],
+    ['เดินไปที่นี่ ›', 'Walk here ›', 'Đi bộ tới đây ›', '걸어서 가기 ›'],
+    ['เดินทางด่วน (', 'Fast travel (', 'Di chuyển nhanh (', '빠른 이동 ('],
+    ['เหรียญ)', 'coins)', 'xu)', '코인)'],
+    ['x:NPC ในเมือง', 'Town NPCs', 'NPC trong thị trấn', '마을 NPC'],
+    ['x:ไปหา ›', 'Go ›', 'Đến ›', '가기 ›'],
+    ['x:มอนสเตอร์ในแมพนี้', 'Monsters on this map', 'Quái trong bản đồ này', '이 맵의 몬스터'],
+    ['x:ไปล่า ›', 'Hunt ›', 'Săn ›', '사냥 ›'],
+    ['x:ไปหาครู ›', 'Go to master ›', 'Đến gặp thầy ›', '스승에게 가기 ›'],
+    ['re:^เลือด (\\d+)', 'HP $1', 'Máu $1', 'HP $1'],
+    ['· ยิงไกล', '· ranged', '· tầm xa', '· 원거리'],
+    ['· บิน', '· flying', '· bay', '· 비행'],
+    ['· ดรอป:', '· drops:', '· rơi:', '· 드롭:'],
+    ['ผู้ปกครองเมือง', 'Town ruler', 'Người đứng đầu thị trấn', '마을 지도자'],
+    ['x:โรงเตี๊ยม', 'Inn', 'Quán trọ', '여관'],
+    ['x:ร้านยา', 'Potion shop', 'Tiệm thuốc', '포션 상점'],
+    ['x:ช่างตีเหล็ก', 'Blacksmith', 'Thợ rèn', '대장장이'],
+    ['x:นักปราชญ์', 'Scholar', 'Học giả', '학자'],
+    ['x:ชาวเมือง', 'Townsfolk', 'Dân thị trấn', '마을 주민'],
+    ['x:ทหารยาม', 'Guard', 'Lính canh', '경비병'],
+    ['x:ครูเปลี่ยนอาชีพ', 'Job master', 'Thầy chuyển nghề', '전직 스승'],
+    ['x:พ่อค้า', 'Merchant', 'Thương nhân', '상인'],
+    ['ผ่านเควสต์เปลี่ยนอาชีพแล้ว', 'Job-change quest completed', 'Đã hoàn thành nhiệm vụ chuyển nghề', '전직 퀘스트 완료'],
+    ['ต้องทำเควสต์:', 'Quest required:', 'Cần làm nhiệm vụ:', '필요한 퀘스트:'],
+    ['บททดสอบเปลี่ยนอาชีพ:', 'Job Trial:', 'Thử thách chuyển nghề:', '전직 시험:'],
+    ['x:วาร์ปไปแมพ', 'Warp to map', 'Dịch chuyển tới bản đồ', '맵으로 워프'],
+    ['ในเมืองไม่มีมอนสเตอร์ — ออกไปแมพล่ามอนก่อนนะ', 'No monsters in town — head to a hunting map first', 'Trong thị trấn không có quái — hãy ra bản đồ săn quái', '마을에는 몬스터가 없어요 — 사냥 맵으로 가세요'],
+    ['ฟื้น MP', 'Restores MP', 'Hồi MP', 'MP 회복'],
+    ['MP เต็มอยู่แล้ว', 'MP is already full', 'MP đã đầy', 'MP가 가득 찼어요'],
+    ['เป้าหมาย:', 'Goal:', 'Mục tiêu:', '목표:'],
+    ['re:^ล่า', 'Hunt ', 'Săn ', '사냥: '],
+    ['re:^เก็บ', 'Collect ', 'Thu thập ', '수집: '],
     ['Black Swordsman', 'Black Swordsman', 'Black Swordsman', 'Black Swordsman']
   ];
   // ---- ชื่ออาวุธ/เกราะที่ประกอบจาก ชนิด + ระดับ (ลำดับคำต่างกันตามภาษา)
@@ -370,7 +409,11 @@
     applyAll();
     window.dispatchEvent(new CustomEvent('langchange', { detail: l }));
   }
-  const api = { tr, set, get: () => lang, LANGS, start, applyAll };
+  function addRows(rows) {   // เพิ่มคำแปลทีหลัง (ชื่อเมือง/มอนสเตอร์ของโลกใหม่)
+    for (const r of rows) { if (r && r[0] && !hasTh(r[0]) === false) { const k = r[0]; if (!SUB.some(x => x[0] === k)) SUB.push([k, [r[1], r[2] || r[1], r[3] || r[1]]]); } }
+    SUB.sort((a, b) => b[0].length - a[0].length); cache.clear();
+  }
+  const api = { tr, set, get: () => lang, LANGS, start, applyAll, addRows };
   window.I18N = api;
   window.T = s => tr(s);
   const boot = () => { document.documentElement.lang = lang; applyAll(); start(); };

@@ -9,6 +9,7 @@
   'use strict';
 
   const RPG = typeof require === 'function' && typeof module === 'object' ? require('./rpg.js') : (typeof self !== 'undefined' ? self : this).RPG;
+  const WORLD = typeof require === 'function' && typeof module === 'object' ? require('./world.js') : (typeof self !== 'undefined' ? self : this).World;
   const W = 40, H = 32;
   const T = { GRASS: 0, PATH: 1, STONE: 2, WATER: 3, BRIDGE: 4 };
   const SPEED = 4.6;                 // ช่อง/วินาที
@@ -17,7 +18,7 @@
   const OUTFITS = 6, HAIRS = 4, HAIR_COLORS = 4;
   const MAX_NAME = 12, MAX_CHAT = 80, MAX_PLAYERS = 100;
   const MELEE = 1.6, LEASH = 10;   // ระยะตี (ช่อง), ตีทุกกี่วินาที, ระยะที่มอนสเตอร์เลิกไล่
-  const ZONES = ['village', 'field'];
+  const ZONES = WORLD.ZONES, TOWNS = WORLD.TOWNS;
   const ITEMS = {
     coin: { name: 'เหรียญทองแดง', desc: 'เงินที่ใช้กันทั่วทั้งลำธารไผ่' },
     jelly: { name: 'ก้อนวุ้นไผ่', desc: 'วุ้นเหนียวหนึบจากสไลม์ไผ่ พ่อค้ารับซื้อไปทำขนม', sell: 5 },
@@ -31,7 +32,12 @@
     armor_hide: { name: 'เกราะหนังหมูป่า', desc: 'เกราะหนังแข็งเย็บมือ กันเขี้ยวหมูป่าได้สบาย', slot: 'armor', def: 5, buy: 380, sell: 120 }
   };
   Object.assign(ITEMS, RPG.genItems(ITEMS));
+  Object.assign(ITEMS, WORLD.ITEMS_X);
+  // อุปกรณ์สุ่มดรอปตามขั้น (0-4)
+  const GEAR = [[], [], [], [], []];
+  for (const id of Object.keys(ITEMS)) { const it = ITEMS[id]; if (it.wt && /[0-4]$/.test(id) && (it.slot === 'weapon' || it.slot === 'armor' || it.slot === 'off')) GEAR[+id.slice(-1)].push(id); }
   const SKILLS = RPG.SK;   // สกิลทั้งหมดอยู่ใน rpg.js
+  const ACT_SK = RPG.ACTIVE_IDS();
   // ร้านค้า: ร้านยารับซื้อของทั่วไป ร้านอาวุธรับซื้ออุปกรณ์
   const SHOPS = {
     potion: { npc: 'n2', title: 'ร้านยา', buy: ['herb', 'tonic'], sellSlot: false },
@@ -84,6 +90,12 @@
     field: [['slime', 4, 18, 15, 26, 5], ['slime', 25, 19, 36, 26, 4], ['boar', 4, 3, 15, 11, 3], ['boar', 24, 3, 36, 10, 3]]
   };
 
+  // ---- ขยายโลก: มอนสเตอร์ ร้านค้า เควสต์ และจุดเกิดจาก world.js
+  Object.assign(MON, WORLD.MONX);
+  { const WI = WORLD.init(RPG); Object.assign(SHOPS, WI.shops); Object.assign(QUESTS, WI.quests); }
+  MON_SPAWNS.field = MON_SPAWNS.field.concat(WORLD.FIELD_SPAWN_X);
+  for (const z of ZONES) if (z !== 'village' && z !== 'field') MON_SPAWNS[z] = WORLD.build(z).spawns;
+
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const inb = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
 
@@ -91,8 +103,8 @@
   function zoneLevels(name) {
     const sp = MON_SPAWNS[name]; if (!sp) return null;
     let lo = 99, hi = 0;
-    for (const z of sp) { lo = Math.min(lo, MON[z[0]].lv); hi = Math.max(hi, MON[z[0]].lv); }
-    return [lo, hi];
+    for (const z of sp) { if (MON[z[0]].boss) continue; lo = Math.min(lo, MON[z[0]].lv); hi = Math.max(hi, MON[z[0]].lv); }
+    return hi ? [lo, hi] : null;
   }
   const ZONE_LV = {}; ZONES.forEach(z => { ZONE_LV[z] = zoneLevels(z); });
 
@@ -107,7 +119,11 @@
   }
 
   /* ---------------------------------------------------------------- map */
-  function buildMap(name) { return name === 'field' ? buildField() : buildVillage(); }
+  function buildMap(name) {
+    if (name === 'village') return buildVillage();
+    if (name === 'field') { const m = buildField(); WORLD.fieldExtra(m); return m; }
+    return WORLD.build(name);
+  }
 
   function buildVillage() {
     const tiles = new Uint8Array(W * H);
@@ -218,7 +234,7 @@
 
     // ประตูวาร์ปทางเหนือ (หลังซุ้มประตูหมู่บ้าน) ไปทุ่งไผ่เขียว
     const portals = [{ x: 19, y: 5, w: 2, h: 1, to: 'field', tx: 20, ty: 25, name: 'ทุ่งไผ่เขียว' }];
-    return { name: 'village', W, H, tiles, solid, objs, npcs, spawn, riverC, portals };
+    return { name: 'village', theme: 'bamboo', W, H, tiles, solid, objs, npcs, spawn, riverC, portals, fixedHour: null };
   }
 
   /* ทุ่งไผ่เขียว: แมพล่ามอนสเตอร์ มีบ่อน้ำ ทางเดิน และต้นไม้หนาแน่นตามขอบ */
@@ -259,7 +275,7 @@
     const spawn = [];
     for (let y = 24; y <= 26; y++) for (let x = 18; x <= 21; x++) if (!solid[I(x, y)]) spawn.push([x, y]);
     const portals = [{ x: 19, y: 28, w: 2, h: 1, to: 'village', tx: 20, ty: 8.5, name: 'กลับหมู่บ้านลำธารไผ่' }];
-    return { name: 'field', W, H, tiles, solid, objs, npcs: [], spawn, riverC: null, portals };
+    return { name: 'field', theme: 'bamboo', W, H, tiles, solid, objs, npcs: [], spawn, riverC: null, portals, fixedHour: null };
   }
 
   /* ----------------------------------------------------------- pathfinding */
@@ -409,14 +425,14 @@
         for (const z of MON_SPAWNS[zname]) {   // [ชนิด, x0, y0, x1, y1, จำนวน]
           const cand = [];
           for (let y = z[2]; y <= z[4]; y++)
-            for (let x = z[1]; x <= z[3]; x++) if (!m.solid[y * W + x]) cand.push([x, y]);
+            for (let x = z[1]; x <= z[3]; x++) if (!m.solid[y * W + x] && m.tiles[y * W + x] !== T.WATER && m.tiles[y * W + x] !== T.VOID && !m.portals.some(pt => Math.hypot(x + 0.5 - pt.x - pt.w / 2, y + 0.5 - pt.y - pt.h / 2) < 8)) cand.push([x, y]);
           for (let i = 0; i < z[5] && cand.length; i++) {
             const c = cand.splice(Math.floor(R() * cand.length), 1)[0];
             const D = MON[z[0]];
             const mon = {
               id: 'm' + n++, zone: zname, type: z[0], x: c[0] + 0.5, y: c[1] + 0.5, hx: c[0] + 0.5, hy: c[1] + 0.5,
               hp: D.hp, maxHp: D.hp, dir: 2, moving: false, path: [], state: 'idle',
-              wait: 1 + R() * 4, atkCd: 0, repath: 0, target: null, respawn: 0, dirty: false
+              wait: 1 + R() * 4, atkCd: 0, repath: 0, target: null, respawn: 0, dirty: false, wp: Math.floor(R() * 5)
             };
             this.monsters.push(mon); this.monById.set(mon.id, mon);
           }
@@ -437,9 +453,10 @@
     }
     playersIn(zone) { return Array.from(this.players.values()).filter(p => p.zone === zone); }
     addPlayer(name, look, save) {
-      const sp = this.pickSpawn('village');
+      const home = save && TOWNS.indexOf(save.home) >= 0 ? save.home : 'village';
+      const sp = this.pickSpawn(home);
       const p = {
-        id: this.nextId++, name: cleanName(name), look: cleanLook(look), zone: 'village',
+        id: this.nextId++, name: cleanName(name), look: cleanLook(look), zone: home, home, seen: { village: 1 },
         x: sp[0] + 0.5, y: sp[1] + 0.5, dir: 2, moving: false, path: [], dirty: false,
         lv: 1, exp: 0, hp: 60, maxHp: 60, mp: 30, maxMp: 30, cd: {}, mpT: 0, atk: 8, def: 0, inv: {}, equip: { weapon: null, off: null, armor: null, ammo: null }, quests: {}, qdone: {},
         target: null, atkCd: 0, repath: 0, lastCombat: -99, regenT: 0, dead: false, respawn: 0, warpCd: 0, pend: null, buffT: 0, ammoWarn: 0, gm: false
@@ -454,6 +471,8 @@
           }
         }
       }
+      if (save && Array.isArray(save.seen)) for (const z of save.seen) if (ZONES.indexOf(z) >= 0) p.seen[z] = 1;
+      p.seen[home] = 1;
       RPG.fromSave(p, save, ITEMS);
       if (save && save.equip && typeof save.equip === 'object') {
         for (const slot of ['weapon', 'off', 'armor', 'ammo']) {
@@ -485,7 +504,7 @@
     saveOf(p) {
       const active = {};
       for (const id of Object.keys(p.quests)) active[id] = p.quests[id].n | 0;
-      return Object.assign({ lv: p.lv, exp: p.exp, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip), quests: { done: Object.keys(p.qdone), active } }, RPG.toSave(p));
+      return Object.assign({ lv: p.lv, exp: p.exp, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip), quests: { done: Object.keys(p.qdone), active }, home: p.home, seen: Object.keys(p.seen) }, RPG.toSave(p));
     }
     meMsg(p) {
       const buffs = {};
@@ -493,7 +512,7 @@
       return {
         t: 'me', lv: p.lv, exp: p.exp, next: p.lv >= LVCAP ? 0 : nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp, atk: p.atk, def: p.def,
         inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip),
-        job: p.job, via: p.via || null, fac: p.fac, c4: p.c4 ? 1 : 0, rb: p.rb, orig: p.orig, st: Object.assign({}, p.st), sp: p.sp, skp: p.skp,
+        home: p.home, job: p.job, via: p.via || null, fac: p.fac, c4: p.c4 ? 1 : 0, rb: p.rb, orig: p.orig, st: Object.assign({}, p.st), sp: p.sp, skp: p.skp,
         skills: Object.assign({}, p.skills), borrow: p.borrow.slice(), bsl: RPG.bslots(p), buffs,
         atkS: p.atkS, atkD: p.atkD, atkI: p.atkI, crit: Math.round(p.crit * 1000) / 10, dodge: Math.round(p.dodge * 1000) / 10, cdA: Math.round(p.acd * 100) / 100, rng: p.rng, gm: p.gm ? 1 : 0
       };
@@ -507,11 +526,12 @@
       const old = p.zone;
       this.emit(old, { t: 'leave', id: p.id });
       p.zone = zone; p.x = x; p.y = y; p.path = []; p.moving = false; p.target = null; p.dirty = true; p.warpCd = 1.5;
+      p.seen[zone] = 1; if (TOWNS.indexOf(zone) >= 0) p.home = zone;
       this.emit(zone, { t: 'join', p: pub(p), _x: p.id });
       this.events.push({
         _to: p.id, t: 'zone', zone, x, y,
         players: this.playersIn(zone).map(pub),
-        monsters: this.monsters.filter(m => m.zone === zone).map(pubM), me: this.meMsg(p)
+        monsters: this.monsters.filter(m => m.zone === zone).map(pubM), me: this.meMsg(p), seen: Object.keys(p.seen)
       });
     }
 
@@ -541,10 +561,11 @@
     }
     useItem(id, item) {
       const p = this.players.get(id), it = ITEMS[item];
-      if (!p || p.dead || !it || !it.heal || !(p.inv[item] > 0) || p.hp >= p.maxHp) return false;
+      if (!p || p.dead || !it || !(it.heal || it.mp) || !(p.inv[item] > 0)) return false;
+      if (it.heal ? p.hp >= p.maxHp : p.mp >= p.maxMp) return false;
       p.inv[item]--; if (p.inv[item] <= 0) delete p.inv[item];
-      p.hp = Math.min(p.maxHp, p.hp + it.heal);
-      this.emit(p.zone, { t: 'heal', id: p.id, amt: it.heal, hp: p.hp });
+      if (it.heal) { p.hp = Math.min(p.maxHp, p.hp + it.heal); this.emit(p.zone, { t: 'heal', id: p.id, amt: it.heal, hp: p.hp }); }
+      else { p.mp = Math.min(p.maxMp, p.mp + it.mp); this.emit(p.zone, { t: 'heal', id: p.id, amt: it.mp, hp: p.hp, mp: 1 }); }
       this.tellMe(p);
       return true;
     }
@@ -728,6 +749,7 @@
       const a = RPG.advInfo(p);
       if (!a.ok) { this.note(p, 'ยังเลื่อนขั้นไม่ได้: ' + (a.need || 'ไม่มีขั้นถัดไป')); return false; }
       if (what === 'job' && a.kind === 'job' && a.jobs.indexOf(arg) >= 0) {
+        if (arg !== 'Solo Player' && !p.gm && !p.qdone[WORLD.jobQuestId(arg, 0)]) { this.note(p, 'ต้องทำเควสต์เปลี่ยนอาชีพของ ' + arg + ' ให้สำเร็จก่อน — ดูในจดหมายนกพิราบ'); return false; }
         this.changeJob(p, arg, p.job); this.note(p, 'เลื่อนอาชีพเป็น ' + arg + '!');
         this.events.push({ t: 'advd', id: p.id, name: p.name, job: arg });
         return true;
@@ -739,6 +761,7 @@
         return true;
       }
       if (what === 'c4' && a.kind === 'c4') {
+        if (!p.gm && !p.qdone[WORLD.jobQuestId(p.job, 1)]) { this.note(p, 'ต้องทำเควสต์คลาส 4 ของ ' + p.job + ' ให้สำเร็จก่อน — ดูในจดหมายนกพิราบ'); return false; }
         p.c4 = true; this.applyLevel(p); this.tellMe(p);
         this.events.push({ t: 'advd', id: p.id, name: p.name, job: p.job, c4: 1 });
         this.note(p, 'เลื่อนเป็นคลาส 4! ปลดล็อกสกิลไม้ตายแล้ว');
@@ -753,6 +776,8 @@
       for (const k of Object.keys(C)) { p.inv[k] -= C[k]; if (p.inv[k] <= 0) delete p.inv[k]; }
       p.orig = p.orig || (p.job !== 'Adventurer' ? p.job : null);
       p.rb = Math.min(9, p.rb + 1);
+      for (const k of Object.keys(p.qdone)) if (k.indexOf('jq') === 0) delete p.qdone[k];
+      for (const k of Object.keys(p.quests)) if (k.indexOf('jq') === 0) delete p.quests[k];
       p.lv = 1; p.exp = 0; p.st = RPG.newStats(); p.skills = {}; p.borrow = RPG.emptyBorrow(); p.buffs = {}; p.c4 = false; p.pend = null;
       if (!keep) { p.job = 'Adventurer'; p.fac = null; }
       RPG.recalcPoints(p); this.dropIllegalGear(p, true); this.applyLevel(p); p.hp = p.maxHp; p.mp = p.maxMp;
@@ -792,6 +817,7 @@
       else if (cmd === 'c4') { if (p.job !== 'Adventurer') p.c4 = true; }
       else if (cmd === 'rb') { p.rb = clamp(Math.floor(Number(v)) || 0, 0, 9); p.orig = p.job; }
       else if (cmd === 'give' && v && ITEMS[v.item]) { p.inv[v.item] = Math.min(99999, (p.inv[v.item] || 0) + clamp(Math.floor(Number(v.n)) || 1, 1, 9999)); }
+      else if (cmd === 'zone' && ZONES.indexOf(v) >= 0) { const f = this.arrival(v); this.moveZone(p, v, f[0], f[1]); }
       else if (cmd === 'coin') p.inv.coin = Math.min(99999, (p.inv.coin || 0) + 20000);
       else if (cmd === 'heal') { p.hp = p.maxHp; p.mp = p.maxMp; }
       else return false;
@@ -802,9 +828,23 @@
       this.tellMe(p); this.tellQuests(p);
       return true;
     }
+    arrival(zone) {   // จุดลงของโซน: เมือง = จุดเกิด, แมพล่ามอน = หน้าประตูแรก
+      if (TOWNS.indexOf(zone) >= 0) { const s = this.pickSpawn(zone); return [s[0] + 0.5, s[1] + 0.5]; }
+      return WORLD.frontOf(zone, WORLD.EXITS[zone][0].side);
+    }
+    travel(id, to) {   // เดินทางด่วนระหว่างเมืองที่เคยไปแล้ว (เสียเหรียญ)
+      const p = this.players.get(id);
+      if (!p || p.dead || TOWNS.indexOf(p.zone) < 0 || TOWNS.indexOf(to) < 0 || to === p.zone) return false;
+      if (!p.seen[to]) { this.note(p, 'ยังไม่เคยไปเมืองนี้ — ต้องเดินไปให้ถึงก่อนครั้งหนึ่ง'); return false; }
+      const cost = WORLD.travelCost(p.lv);
+      if ((p.inv.coin || 0) < cost) { this.note(p, 'ค่าเดินทางด่วน ' + cost + ' เหรียญ — เหรียญไม่พอ'); return false; }
+      p.inv.coin -= cost; if (p.inv.coin <= 0) delete p.inv.coin;
+      const f = this.arrival(to); this.moveZone(p, to, f[0], f[1]);
+      this.note(p, 'เดินทางไป ' + WORLD.ZD[to].n + ' (-' + cost + ' เหรียญ)');
+      return true;
+    }
     nearNpc(p, npcId, r) {
-      if (p.zone !== 'village') return false;
-      const n = this.zones.village.map.npcs.find(q => q.id === npcId);
+      const n = this.zones[p.zone].map.npcs.find(q => q.id === npcId);
       return !!n && Math.hypot(n.x + 0.5 - p.x, n.y + 0.5 - p.y) <= (r || 6);
     }
     buy(id, shop, item, n) {
@@ -847,14 +887,20 @@
         if (act) {
           const n = q.collect ? Math.min(q.n, p.inv[q.collect] || 0) : act.n;
           out.push({ id, st: n >= q.n ? 'ready' : 'active', n });
-        } else if (p.lv >= q.minLv && (!q.prereq || p.qdone[q.prereq])) out.push({ id, st: 'avail', n: 0 });
+        } else if (p.lv >= q.minLv && (!q.prereq || p.qdone[q.prereq]) && this.jqOk(p, q)) out.push({ id, st: 'avail', n: 0 });
       }
       return out;
+    }
+    jqOk(p, q) {   // เควสต์เปลี่ยนอาชีพ: เห็นเฉพาะคนที่อยู่ในขั้นที่ถูกต้อง
+      if (!q.job) return true;
+      if (q.job.c4) return p.job === q.job.to && !p.c4;
+      if (q.from.indexOf(p.job) < 0) return false;
+      return !q.fac || !!p.fac;
     }
     tellQuests(p) { this.events.push({ _to: p.id, t: 'quests', list: this.questList(p), done: Object.keys(p.qdone) }); }
     acceptQuest(id, qid) {
       const p = this.players.get(id), q = QUESTS[qid];
-      if (!p || p.dead || !q || p.quests[qid] || p.qdone[qid] || p.lv < q.minLv || (q.prereq && !p.qdone[q.prereq])) return false;
+      if (!p || p.dead || !q || p.quests[qid] || p.qdone[qid] || p.lv < q.minLv || (q.prereq && !p.qdone[q.prereq]) || !this.jqOk(p, q)) return false;
       if (!this.nearNpc(p, q.giver)) { this.note(p, 'เดินเข้าไปใกล้ผู้ให้เควสต์ก่อนนะ'); return false; }
       p.quests[qid] = { n: 0 };
       this.note(p, 'รับเควสต์: ' + q.title);
@@ -894,11 +940,12 @@
       this.npcTimer -= dt;
       if (this.npcTimer <= 0) {
         this.npcTimer = 9 + Math.random() * 12;
-        if (this.playersIn('village').length) {
-          const ns = this.zones.village.map.npcs;
+        for (const zn of ZONES) {
+          const ns = this.zones[zn].map.npcs;
+          if (!ns.length || !this.playersIn(zn).length || Math.random() < 0.4) continue;
           const n = ns[Math.floor(Math.random() * ns.length)];
           const text = n.lines[Math.floor(Math.random() * n.lines.length)];
-          this.emit('village', { t: 'chat', id: n.id, name: n.name, text, npc: 1 });
+          this.emit(zn, { t: 'chat', id: n.id, name: n.name, text, npc: 1 });
         }
       }
     }
@@ -986,7 +1033,12 @@
       this.emit(m.zone, { t: 'mdie', id: m.id });
       const gained = {};
       for (const d of D.drops) {
-        if (Math.random() < d[1]) { const n = rnd(d[2][0], d[2][1]); p.inv[d[0]] = (p.inv[d[0]] || 0) + n; gained[d[0]] = n; }
+        if (Math.random() >= d[1]) continue;
+        if (d[0] === '@gear') {
+          const list = GEAR[Math.min(4, d[2][0])]; if (!list || !list.length) continue;
+          const gid = list[Math.floor(Math.random() * list.length)]; p.inv[gid] = (p.inv[gid] || 0) + 1; gained[gid] = 1; continue;
+        }
+        const n = rnd(d[2][0], d[2][1]); p.inv[d[0]] = Math.min(99999, (p.inv[d[0]] || 0) + n); gained[d[0]] = n;
       }
       this.events.push({ _to: p.id, t: 'loot', exp: D.exp, items: gained });
       this.giveExp(p, D.exp);
@@ -1016,7 +1068,7 @@
         m.respawn -= dt;
         if (m.respawn <= 0) {
           m.x = m.hx; m.y = m.hy; m.hp = m.maxHp; m.state = 'idle'; m.path = []; m.moving = false;
-          m.target = null; m.wait = 2; m.dirty = true;
+          m.target = null; m.wait = 2; m.dirty = true; m.wp = Math.floor(Math.random() * 5);
           this.emit(m.zone, { t: 'mspawn', m: pubM(m) });
         }
         return;
@@ -1031,7 +1083,7 @@
           m.state = 'return'; m.target = null; m.path = []; m.repath = 0;
         } else {
           const d = Math.hypot(p.x - m.x, p.y - m.y);
-          if (d <= 1.3) {
+          if (d <= (D.rg || 1.3)) {
             m.path = []; m.dir = dirOf(p.x - m.x, p.y - m.y);
             if (m.atkCd <= 0) this.monsterHit(m, p, D);
           } else {
@@ -1074,7 +1126,13 @@
     monsterHit(m, p, D) {
       m.atkCd = D.atkCd;
       if (Math.random() < p.dodge) { this.emit(m.zone, { t: 'hit', id: p.id, dmg: 0, miss: 1, hp: p.hp, pl: 1, from: m.id }); return; }
-      const dmg = Math.max(1, rnd(D.atk[0], D.atk[1]) - p.def);
+      let mul = 1;
+      if (D.sk === 'rs') {   // วิญญาณใช้สกิลของผู้เล่นแบบสุ่ม: ตะโกนชื่อสกิล
+        const sk = SKILLS[ACT_SK[Math.floor(Math.random() * ACT_SK.length)]];
+        if (sk) { mul = 1.35; this.emit(m.zone, { t: 'mshout', id: m.id, text: sk.name + '!' }); }
+      }
+      if (D.rg > 2) this.emit(m.zone, { t: 'mshot', id: m.id, to: p.id });
+      const dmg = Math.max(1, Math.round(rnd(D.atk[0], D.atk[1]) * mul) - p.def);
       p.hp -= dmg; p.lastCombat = this.time;
       this.emit(m.zone, { t: 'hit', id: p.id, dmg, hp: Math.max(0, p.hp), pl: 1, from: m.id });
       if (p.hp <= 0) this.killPlayer(p); else this.tellMe(p);
@@ -1085,11 +1143,11 @@
       this.tellMe(p);
     }
     revive(p) {
-      const sp = this.pickSpawn('village');
+      const home = p.home || 'village', sp = this.pickSpawn(home);
       p.dead = false; p.hp = p.maxHp; p.mp = p.maxMp; p.path = []; p.moving = false; p.dirty = true;
-      if (p.zone !== 'village') this.moveZone(p, 'village', sp[0] + 0.5, sp[1] + 0.5);
+      if (p.zone !== home) this.moveZone(p, home, sp[0] + 0.5, sp[1] + 0.5);
       else { p.x = sp[0] + 0.5; p.y = sp[1] + 0.5; }
-      this.emit('village', { t: 'previve', id: p.id, x: p.x, y: p.y });
+      this.emit(home, { t: 'previve', id: p.id, x: p.x, y: p.y });
       this.tellMe(p);
     }
 
@@ -1113,7 +1171,7 @@
   }
 
   const pub = p => ({ id: p.id, name: p.name, look: p.look, x: p.x, y: p.y, dir: p.dir, m: p.moving ? 1 : 0, lv: p.lv, dead: p.dead ? 1 : 0, eq: Object.assign({}, p.equip), job: p.job, fac: p.fac });
-  const pubM = m => ({ id: m.id, type: m.type, x: m.x, y: m.y, dir: m.dir, hp: m.hp, maxHp: m.maxHp, dead: m.state === 'dead' ? 1 : 0 });
+  const pubM = m => ({ id: m.id, type: m.type, wp: m.wp | 0, x: m.x, y: m.y, dir: m.dir, hp: m.hp, maxHp: m.maxHp, dead: m.state === 'dead' ? 1 : 0 });
 
   /* ------------------------------------------------------------------- hub
    * ตรรกะข้อความทั้งหมดอยู่ตรงนี้ — transport (WebSocket หรือโหมดเดโมในเบราว์เซอร์)
@@ -1167,7 +1225,7 @@
           t: 'init', id: p.id, zone: p.zone, phase: w.phase(now), dayMs: DAY_MS,
           players: w.playersIn(p.zone).map(pub),
           monsters: w.monsters.filter(q => q.zone === p.zone).map(pubM), me: w.meMsg(p),
-          quests: w.questList(p), qdone: Object.keys(p.qdone)
+          quests: w.questList(p), qdone: Object.keys(p.qdone), seen: Object.keys(p.seen)
         }));
         this.bcast({ t: 'join', p: pub(p) }, p.zone, p.id);
       } else if (!c.player) {
@@ -1200,6 +1258,10 @@
         else if (m.t === 'reset') w.resetPoints(id, m.w === 'stats' ? 'stats' : 'skills');
         else if (m.t === 'borrow') w.setBorrow(id, m.slot, m.id ? String(m.id) : null);
         else if (m.t === 'gm') w.gm(id, String(m.cmd), m.v);
+      } else if (m.t === 'travel') {
+        if (now - c.lastAct < 300) return;
+        c.lastAct = now;
+        w.travel(c.player.id, String(m.to));
       } else if (m.t === 'qaccept' || m.t === 'qturnin') {
         if (now - c.lastAct < 100) return;
         c.lastAct = now;
@@ -1253,7 +1315,7 @@
   }
 
   return {
-    W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT, ITEMS, MON, SHOPS, QUESTS, SKILLS, ZONES, ZONE_LV, nextExp,
+    W, H, T, SPEED, DAY_MS, START_HOUR, OUTFITS, HAIRS, HAIR_COLORS, MAX_NAME, MAX_CHAT, ITEMS, MON, SHOPS, QUESTS, SKILLS, ZONES, TOWNS, ZONE_LV, WORLD, nextExp,
     buildMap, findPath, nearestWalkable, World, Hub, cleanName, cleanText, cleanLook, rng, RPG, LVCAP
   };
 });

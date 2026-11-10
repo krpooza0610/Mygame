@@ -190,6 +190,24 @@ button{font-family:inherit}
 .links button{height:30px;border:0;border-radius:8px;font:600 13px var(--font);padding:0 12px;cursor:pointer;color:#fff;background:rgba(255,255,255,.14)}
 .links .go2{background:var(--accent)}
 .links .lnk{color:#bfe6ff}
+#wmap{left:50%;top:max(66px,calc(env(safe-area-inset-top) + 56px));transform:translateX(-50%);width:min(94vw,410px);padding:10px;pointer-events:auto;display:flex;flex-direction:column;gap:7px;max-height:80vh;overflow:auto;font-size:13px;z-index:22}
+#wmap h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center;gap:8px}
+#wmap h4 button{height:26px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;font:600 12.5px var(--font);padding:0 10px;cursor:pointer}
+#wmap .wsvg{width:100%;height:auto;background:rgba(0,0,0,.28);border-radius:10px;flex:none;touch-action:manipulation}
+#wmap .wsvg g{cursor:pointer}
+#wmap .wsvg text{font-family:var(--font);fill:#fff;paint-order:stroke;stroke:rgba(0,0,0,.75);stroke-width:.7px;pointer-events:none}
+#wmap .zt{display:flex;flex-direction:column;gap:3px}
+#wmap .zt b{font-size:15px;color:#ffe9a8}
+#wmap .zt span,#wmap .desc{color:var(--muted);font-size:12px;line-height:1.4}
+#wmap .wrow{display:flex;align-items:center;gap:7px;padding:6px 0;border-top:1px solid rgba(255,255,255,.09)}
+#wmap .wrow>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+#wmap .wrow b{font-size:13px}
+#wmap .wrow small{color:var(--muted);font-size:11.5px;line-height:1.35}
+#wmap .wrow button,#wmap .wbtns button{height:28px;border:0;border-radius:8px;background:rgba(255,255,255,.16);color:#fff;font:600 12px var(--font);padding:0 10px;cursor:pointer;flex:none}
+#wmap .wbtns{display:flex;gap:6px;flex-wrap:wrap}
+#wmap .wbtns button.go2{background:var(--accent);color:#1a1208}
+#wmap .boss{color:#ff9a6a}
+#wmap .sec{color:var(--muted);font-size:12px;margin-top:2px}
 #qwin{left:50%;top:max(66px,calc(env(safe-area-inset-top) + 56px));transform:translateX(-50%);width:min(92vw,360px);padding:10px;pointer-events:auto;display:flex;flex-direction:column;gap:8px;max-height:72vh;overflow:auto;font-size:13px}
 #qwin .em,#bag .em{color:var(--muted);text-align:center}
 #dialog{left:50%;bottom:calc(max(10px,env(safe-area-inset-bottom)) + 130px);transform:translateX(-50%);width:min(92vw,360px);padding:12px;pointer-events:auto;display:flex;flex-direction:column;gap:8px;font-size:13px}
@@ -311,6 +329,7 @@ button{font-family:inherit}
     <button id="stbtn" class="btn" type="button" aria-label="สถานะ">สถานะ</button>
     <button id="sbtn" class="btn" type="button" aria-label="สกิล">สกิล</button>
     <button id="bbtn" class="btn" type="button" aria-label="ถุงของ">ถุง</button>
+    <button id="mapbtn" class="btn" type="button" aria-label="แผนที่โลก">แผนที่</button>
     <button id="setbtn" class="btn" type="button" aria-label="ตั้งค่า">⚙</button>
     <button id="zin" class="btn" type="button" aria-label="ซูมเข้า">＋</button>
     <button id="zout" class="btn" type="button" aria-label="ซูมออก">－</button>
@@ -331,6 +350,7 @@ button{font-family:inherit}
   <div id="gmwin" class="panel" hidden></div>
   <div id="setwin" class="panel" hidden></div>
   <div id="qwin" class="panel" hidden></div>
+  <div id="wmap" class="panel" hidden></div>
   <div id="dialog" class="panel" hidden></div>
   <div id="joy" aria-label="จอยสติ๊ก"><i id="knob"></i></div>
   <div id="ghost" hidden></div>
@@ -423,7 +443,9 @@ button{font-family:inherit}
 <script src="i18n.js"></script>
 <script src="rpg.js"></script>
 <script src="jobart.js"></script>
+<script src="world.js"></script>
 <script src="game.js"></script>
+<script src="themeart.js"></script>
 <script>
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
@@ -451,9 +473,13 @@ function hsh(x, y, n) {
 }
 
 /* ============================================================ world / projection */
-const MAPS = { village: G.buildMap('village'), field: G.buildMap('field') };
-const ZONE_NAMES = { village: 'หมู่บ้านลำธารไผ่', field: 'ทุ่งไผ่เขียว' };
-let map = MAPS.village, curZone = 'village';
+const WD = G.WORLD, ZD = WD.ZD;
+const MAPS = {};
+const mapOf = z => MAPS[z] || (MAPS[z] = G.buildMap(z));
+const zoneName = z => (ZD[z] ? ZD[z].n : z);
+const isTown = z => WD.TOWNS.indexOf(z) >= 0;
+let map = mapOf('village'), curZone = 'village';
+const seenZ = new Set(['village']);
 const MW = G.W, MH = G.H;
 const proj = (x, y) => [(x - y) * 32, (x + y) * 16];
 const OX = MH * 32;
@@ -498,7 +524,7 @@ function lightsAt(h) {
 let phaseBase = G.START_HOUR / 24, phaseT0 = performance.now(), dayMs = G.DAY_MS;
 let timeMode = 'auto';
 const autoHour = () => (((phaseBase + (performance.now() - phaseT0) / dayMs) % 1) + 1) % 1 * 24;
-const targetHour = () => (timeMode === 'day' ? 12 : timeMode === 'night' ? 23 : autoHour());
+const targetHour = () => (timeMode === 'day' ? 12 : timeMode === 'night' ? 23 : map.fixedHour != null ? map.fixedHour : autoHour());
 let tintNow = tintAt(targetHour()), LIGHTS = lightsAt(targetHour());
 
 /* ============================================================ terrain bake */
@@ -510,11 +536,13 @@ function bakeTerrain() {
   c.width = Math.ceil(BW * TS); c.height = Math.ceil(BH * TS);
   const g = c.getContext('2d'); g.scale(TS, TS);
   const GR = ['#88bb6c', '#82b668', '#8ec071', '#7db063'];
+  const P = map.theme && map.theme !== 'bamboo' ? TA.pal(map.theme) : null;
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
     const t = map.tiles[y * MW + x];
     const p = proj(x, y), X = p[0] + OX, Y = p[1];
     const n = (Math.sin(x * 0.35) + Math.sin(y * 0.31 + 1.3) + Math.sin((x + y) * 0.17)) / 3;
     const r = hsh(x, y, 1);
+    if (P) { TA.bakeTile(g, P, t, x, y, X, Y, r, n, tAt); continue; }
     let col, shore = false;
     if (t === 0) {
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (tAt(x + dx, y + dy) === 3) shore = true;
@@ -576,6 +604,7 @@ function bakeTerrain() {
       }
     }
   }
+  if (P) TA.bakeVoids(g, P, (x, y) => tAt(x, y));
   // ลวดลายกลางลาน (เฉพาะหมู่บ้าน)
   if (map.name === 'village') {
   const c0 = proj(20, 16), cx = c0[0] + OX, cy = c0[1];
@@ -1026,7 +1055,7 @@ function buildStatics() { statics = map.objs.map(o => {
   s.k = (s.x0 + s.x1 + s.y0 + s.y1) / 2;
   const c = proj((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2);
   s.cx = c[0]; s.cy = c[1];
-  s.rad = o.type === 'building' ? 40 * (o.w + o.h) + 150 : o.type === 'well' || o.type === 'stall' || o.type === 'pillar' ? 150 : 100;
+  s.rad = o.type === 'building' || o.type === 'prop' ? 40 * ((o.w || 1) + (o.h || 1)) + 150 : o.type === 'well' || o.type === 'stall' || o.type === 'pillar' ? 150 : 100;
   s.seed = hsh(o.x, o.y, 5);
   return s;
 }); }
@@ -1052,12 +1081,12 @@ const fx = [];
 let myTarget = null;
 function makeMon(m) {
   return { id: m.id, type: m.type, x: m.x, y: m.y, tx: m.x, ty: m.y, dir: m.dir, hp: m.hp, maxHp: m.maxHp, moving: false, dead: !!m.dead,
-    deadT: m.dead ? -1e9 : 0, hitT: -1e9, off: Math.random() * 6.28, sx: 0, sy: 0, vis: 0 };
+    deadT: m.dead ? -1e9 : 0, hitT: -1e9, off: Math.random() * 6.28, sx: 0, sy: 0, vis: 0, wp: m.wp | 0 };
 }
 function setEq(e, eq, p) { e.eq = eq || {}; if (!e.npc) e.prop = e.eq.weapon || undefined; if (p) { e.job = p.job; e.fac = p.fac; } }
 function showBanner(zone) {
   const b = $('banner'), lv = G.ZONE_LV[zone];
-  b.querySelector('b').textContent = ZONE_NAMES[zone];
+  b.querySelector('b').textContent = zoneName(zone);
   b.querySelector('span').textContent = lv ? 'มอนสเตอร์ในแมพนี้ เลเวล ' + lv[0] + ' - ' + lv[1] : 'พื้นที่ปลอดภัย · ไม่มีมอนสเตอร์';
   b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
 }
@@ -1068,7 +1097,7 @@ function ring(x, y, color, sc) { fx.push({ k: 'ring', x, y, color, sc: sc || 1, 
 function setStatus() {
   if (!joined) return;
   let players = 0; ents.forEach(e => { if (!e.npc) players++; });
-  $('stxt').textContent = (curZone === 'field' ? 'ทุ่งไผ่' : 'หมู่บ้าน') + ' · ' + players + ' คน';
+  $('stxt').textContent = zoneName(curZone) + ' · ' + players + ' คน';
   $('dot').className = mode === 'demo' ? 'demo' : '';
 }
 function say(ent, text) {
@@ -1286,8 +1315,8 @@ let bagSel = null, floating = null, curShop = null, nav = null, lastPtr = [200, 
 const hb = new Array(12).fill(null);
 let hbSize = 12; try { const z = +localStorage.getItem('bc-hbsize'); if (z === 3 || z === 6 || z === 12) hbSize = z; } catch (e) {}
 const skCd = {}; let skSel = null;
-try { const s = JSON.parse(localStorage.getItem('bc-hotbar') || 'null'); if (Array.isArray(s)) s.slice(0, 12).forEach((k, i) => { if ((G.ITEMS[k] && G.ITEMS[k].heal) || (typeof k === 'string' && k.indexOf('skill:') === 0 && (G.SKILLS[k.slice(6)] || /^b[0-3]$/.test(k.slice(6))))) hb[i] = k; }); } catch (e) {}
-const PANELS = ['bag', 'shop', 'qwin', 'dialog', 'skills', 'stwin', 'adwin', 'gmwin', 'setwin'];
+try { const s = JSON.parse(localStorage.getItem('bc-hotbar') || 'null'); if (Array.isArray(s)) s.slice(0, 12).forEach((k, i) => { if ((G.ITEMS[k] && (G.ITEMS[k].heal || G.ITEMS[k].mp)) || (typeof k === 'string' && k.indexOf('skill:') === 0 && (G.SKILLS[k.slice(6)] || /^b[0-3]$/.test(k.slice(6))))) hb[i] = k; }); } catch (e) {}
+const PANELS = ['bag', 'shop', 'qwin', 'dialog', 'skills', 'stwin', 'adwin', 'gmwin', 'setwin', 'wmap'];
 function showPanel(name) { for (const p of PANELS) $(p).hidden = p !== name; }
 function closePanels() { for (const p of PANELS) $(p).hidden = true; }
 function mkEl(tag, cls, text) { const d = document.createElement(tag); if (cls) d.className = cls; if (text != null) d.textContent = text; return d; }
@@ -1295,12 +1324,14 @@ function btnEl(text, fn, cls) { const u = mkEl('button', cls || '', text); u.typ
 function statText(it) {
   const a = [];
   if (it.heal) a.push('ฟื้นเลือด ' + it.heal);
+  if (it.mp) a.push('ฟื้น MP ' + it.mp);
   if (it.atk) a.push('โจมตี +' + it.atk);
   if (it.matk) a.push('เวท +' + it.matk);
   if (it.def) a.push('ป้องกัน +' + it.def);
   return a.join(' · ');
 }
-const npcName = id => { const n = MAPS.village.npcs.find(q => q.id === id); return n ? n.name : id; };
+const npcName = id => { const i = WD.NPCINFO[id]; if (i) return i.name; const n = mapOf('village').npcs.find(q => q.id === id); return n ? n.name : id; };
+const npcZone = id => (WD.NPCINFO[id] ? WD.NPCINFO[id].zone : 'village');
 
 let demoSave = null;
 function saveLocal() {
@@ -1355,7 +1386,7 @@ function tapCell(sel) {
   if (sel.startsWith('eq:')) { if (my.equip[sel.slice(3)]) net && net.send({ t: 'unequip', slot: sel.slice(3) }); return; }
   const key = sel.slice(5), it = G.ITEMS[key];
   if (it.slot) net && net.send({ t: 'equip', item: key });
-  else if (it.heal) startFloat(key);
+  else if (it.heal || it.mp) startFloat(key);
   else toast('ไอเท็มนี้ใช้งานไม่ได้ · เอาไปขายหรือส่งเควสต์', 2600);
 }
 
@@ -1371,7 +1402,8 @@ window.addEventListener('pointerdown', e => { lastPtr = [e.clientX, e.clientY]; 
 function useItemKey(key) {
   const it = G.ITEMS[key];
   if (!(my.inv[key] > 0)) { toast('ไม่มี' + it.name + 'แล้ว', 1800); return; }
-  if (it.heal && my.hp >= my.maxHp) { toast('เลือดเต็มอยู่แล้ว', 1500); return; }
+  if (it.heal && !it.mp && my.hp >= my.maxHp) { toast('เลือดเต็มอยู่แล้ว', 1500); return; }
+  if (it.mp && !it.heal && my.mp >= my.maxMp) { toast('MP เต็มอยู่แล้ว', 1500); return; }
   net && net.send({ t: 'use', item: key });
 }
 function hotbarTap(i) {
@@ -1401,7 +1433,7 @@ function skillReady(id, quiet) {
 function useSkillKey(id) {
   if (!skillReady(id)) return;
   const r = skillOf(id);
-  if (['A', 'R', 'Z', 'T', 'Y', 'B', 'X'].indexOf(r.sk.k) >= 0 && curZone === 'village') { toast('ในหมู่บ้านไม่มีมอนสเตอร์ — ไปทุ่งไผ่เขียวก่อนนะ', 2200); return; }
+  if (['A', 'R', 'Z', 'T', 'Y', 'B', 'X'].indexOf(r.sk.k) >= 0 && isTown(curZone)) { toast('ในเมืองไม่มีมอนสเตอร์ — ออกไปแมพล่ามอนก่อนนะ', 2200); return; }
   nav = null; pendingSkill = null;
   net && net.send({ t: 'skill', id });
 }
@@ -1541,7 +1573,7 @@ function renderShop() {
       if (shopCat === 'ok' ? (it.slot === 'ammo' || why) : shopCat !== 'all' && it.slot !== shopCat) continue;
     }
     const btns = [['ซื้อ', () => net && net.send({ t: 'buy', shop: curShop, item: k, n: it.slot === 'ammo' ? 20 : 1 })]];
-    if (it.heal) btns.push(['×5', () => net && net.send({ t: 'buy', shop: curShop, item: k, n: 5 })]);
+    if (it.heal || it.mp) btns.push(['×5', () => net && net.send({ t: 'buy', shop: curShop, item: k, n: 5 })]);
     if (it.slot === 'ammo') btns[0][0] = 'ซื้อ ×20';
     const st = statText(it);
     row(k, it.name + (st ? ' (' + st + ')' : '') + ' · ' + (it.slot === 'ammo' ? it.buy + '/ชิ้น' : it.buy + ' เหรียญ'), btns, why);
@@ -1556,7 +1588,7 @@ function renderShop() {
 }
 
 /* ---- เควสต์ ---- */
-const MON_ZONE = { slime: 'field', boar: 'field' };
+const MON_ZONE = Object.assign({ slime: 'field', boar: 'field' }, WD.MON_ZONE);
 function qDef(id) { return G.QUESTS[id]; }
 function rewardRow(q) {
   const r = mkEl('div', 'rew'); r.appendChild(mkEl('span', '', 'รางวัล: EXP ' + q.rewards.exp));
@@ -1604,7 +1636,7 @@ function renderQwin() {
 let dlgNpc = null;
 function openDialog(npcId) {
   const rel = qs.list.filter(x => qDef(x.id).giver === npcId);
-  if (!rel.length) { const e = ents.get(npcId), n = MAPS.village.npcs.find(q => q.id === npcId); if (e && n) say(e, n.lines[Math.floor(Math.random() * n.lines.length)]); return; }
+  if (!rel.length) { const e = ents.get(npcId), n = map.npcs.find(q => q.id === npcId); if (e && n) say(e, n.lines[Math.floor(Math.random() * n.lines.length)]); return; }
   dlgNpc = npcId; showPanel('dialog'); renderDialog();
 }
 function renderDialog() {
@@ -1632,17 +1664,27 @@ function goPortal(to) {
   if (!pt || !me || me.moving) return;
   net.send({ t: 'move', x: pt.x + pt.w / 2, y: pt.y + 0.5 });
 }
+function goToZone(z) {   // เดินข้ามแมพไปทีละประตู
+  if (curZone === z) return false;
+  const r = WD.route(curZone, z); if (!r || r.length < 2) return false;
+  goPortal(r[1]); return true;
+}
+function navZone(z) { closePanels(); nav = { k: 'zone', z }; navTick(); }
 let navMsgT = 0;
 function navTick() {
   if (!nav || !joined) return;
   const me = ents.get(myId); if (!me || me.dead) return;
+  if (nav.k === 'zone') {
+    if (curZone === nav.z) { nav = null; toast(zoneName(curZone) + ' · ถึงแล้ว', 1800); return; }
+    goToZone(nav.z); return;
+  }
   if (nav.k === 'npc') {
-    if (curZone !== 'village') { goPortal('village'); return; }
+    if (curZone !== npcZone(nav.id)) { goToZone(npcZone(nav.id)); return; }
     const e = ents.get(nav.id); if (!e) return;
     if (Math.hypot(e.x - me.x, e.y - me.y) < 2.8) { const id = nav.id; nav = null; openDialog(id); return; }
     if (!me.moving) net.send({ t: 'move', x: e.x, y: e.y + 1.2 });
   } else {
-    if (curZone !== MON_ZONE[nav.type]) { goPortal(MON_ZONE[nav.type]); return; }
+    if (curZone !== MON_ZONE[nav.type]) { goToZone(MON_ZONE[nav.type]); return; }
     let best = null, bd = 1e9;
     for (const m of mons.values()) { if (m.dead || m.type !== nav.type) continue; const d = Math.hypot(m.x - me.x, m.y - me.y); if (d < bd) { bd = d; best = m; } }
     if (!best) { if (performance.now() - navMsgT > 4000) { navMsgT = performance.now(); toast('ยังไม่เจอเป้าหมายใกล้ ๆ รอสักครู่นะ', 1800); } return; }
@@ -1650,6 +1692,69 @@ function navTick() {
   }
 }
 setInterval(navTick, 350);
+
+/* ---- แผนที่โลก: กราฟเมือง/แมพ + ข้อมูลเมือง NPC มอนสเตอร์ ---- */
+let wmSel = null;
+const ROLE_TH = { mayor: 'ผู้ปกครองเมือง', inn: 'โรงเตี๊ยม', potion: 'ร้านยา', smith: 'ช่างตีเหล็ก', scholar: 'นักปราชญ์', villager: 'ชาวเมือง', guard: 'ทหารยาม', master: 'ครูเปลี่ยนอาชีพ', merchant: 'พ่อค้า' };
+function shortZ(z) { const n = T(zoneName(z)); return n.length > 10 ? n.slice(0, 9) + '…' : n; }
+function zoneNpcs(z) {
+  if (z === 'village') return mapOf('village').npcs.map(n => ({ id: n.id, name: n.name, role: n.id === 'n2' ? 'potion' : n.id === 'n5' ? 'smith' : 'villager' }));
+  return Object.keys(WD.NPCINFO).filter(id => WD.NPCINFO[id].zone === z).map(id => ({ id, name: WD.NPCINFO[id].name, role: WD.NPCINFO[id].role }));
+}
+function dropText(D) {
+  const out = [];
+  for (const d of D.drops) { const k = d[0]; if (k === 'coin' || k === '@gear' || k.indexOf('bm_') === 0) continue; const it = G.ITEMS[k]; if (it) out.push(it.name); if (out.length >= 3) break; }
+  return out.join(', ');
+}
+function renderWmap() {
+  const b = $('wmap'); if (b.hidden) return; b.textContent = '';
+  const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'แผนที่โลก')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
+  if (!wmSel || !ZD[wmSel]) wmSel = curZone;
+  const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 100 88'); svg.setAttribute('class', 'wsvg');
+  const el = (n, a, par) => { const e = document.createElementNS(NS, n); for (const k in a) e.setAttribute(k, a[k]); (par || svg).appendChild(e); return e; };
+  for (const [a, , c] of WD.LINKS) el('line', { x1: ZD[a].pos[0], y1: ZD[a].pos[1], x2: ZD[c].pos[0], y2: ZD[c].pos[1], stroke: 'rgba(255,230,160,.45)', 'stroke-width': 0.9, 'stroke-dasharray': '2 1.4' });
+  for (const z of WD.ZONES) {
+    const d = ZD[z], town = d.kind === 'town', seen = seenZ.has(z) || !town, g = el('g', {}), x = d.pos[0], y = d.pos[1];
+    if (z === curZone) { const r = el('circle', { cx: x, cy: y, r: 6.4, fill: 'none', stroke: '#ffe27a', 'stroke-width': 0.9 }, g); r.innerHTML = '<animate attributeName="r" values="5;7.6;5" dur="1.6s" repeatCount="indefinite"/>'; }
+    if (z === wmSel) el('circle', { cx: x, cy: y, r: 5.6, fill: 'none', stroke: '#fff', 'stroke-width': 0.7 }, g);
+    el('circle', { cx: x, cy: y, r: town ? 4 : 3, fill: town ? (seen ? '#e8b64a' : '#7a7a82') : '#c0584a', stroke: 'rgba(0,0,0,.6)', 'stroke-width': 0.6 }, g);
+    const ic = el('text', { x, y: y + 1.5, 'text-anchor': 'middle', 'font-size': 4.2, style: 'stroke:none;fill:#1a1208' }, g); ic.textContent = town ? (seen ? '⌂' : '?') : '⚔';
+    const lb = el('text', { x, y: y + (town ? 8.4 : 7.4), 'text-anchor': 'middle', 'font-size': 2.9 }, g); lb.textContent = z === wmSel ? shortZ(z) : shortZ(z);
+    g.addEventListener('click', () => { wmSel = z; renderWmap(); });
+    const hit = el('circle', { cx: x, cy: y, r: 7, fill: 'transparent' }, g);
+  }
+  b.appendChild(svg);
+  const z = wmSel, d = ZD[z], town = d.kind === 'town', lv = G.ZONE_LV[z];
+  const box_ = mkEl('div', 'zt');
+  box_.appendChild(mkEl('b', '', d.n + (z === curZone ? '  ◉ คุณอยู่ที่นี่' : '')));
+  box_.appendChild(mkEl('span', '', (town ? 'เมือง · ปลอดภัย ไม่มีมอนสเตอร์' : 'แมพล่ามอนสเตอร์' + (lv ? ' · เลเวล ' + lv[0] + '–' + lv[1] : '')) + (town && !seenZ.has(z) ? ' · ยังไม่เคยไป' : '')));
+  if (d.blurb) box_.appendChild(mkEl('span', '', d.blurb));
+  b.appendChild(box_);
+  const bt = mkEl('div', 'wbtns');
+  if (z !== curZone) bt.appendChild(btnEl('เดินไปที่นี่ ›', () => { b.hidden = true; navZone(z); }, 'go2'));
+  if (town && z !== curZone && isTown(curZone) && seenZ.has(z)) bt.appendChild(btnEl('เดินทางด่วน (' + WD.travelCost(my.lv) + ' เหรียญ)', () => { net && net.send({ t: 'travel', to: z }); b.hidden = true; }));
+  if (bt.children.length) b.appendChild(bt);
+  if (town) {
+    b.appendChild(mkEl('div', 'sec', 'NPC ในเมือง'));
+    for (const n of zoneNpcs(z)) {
+      const r = mkEl('div', 'wrow'), c = mkEl('div'); c.appendChild(mkEl('b', '', n.name)); c.appendChild(mkEl('small', '', ROLE_TH[n.role] || n.role));
+      r.appendChild(c); const mk = npcMark(n.id); if (mk) r.appendChild(mkEl('b', '', mk));
+      r.appendChild(btnEl('ไปหา ›', () => { b.hidden = true; talkTo(n.id); })); b.appendChild(r);
+    }
+  } else {
+    b.appendChild(mkEl('div', 'sec', 'มอนสเตอร์ในแมพนี้'));
+    const types = Object.keys(MON_ZONE).filter(k => MON_ZONE[k] === z && G.MON[k]).sort((a, c) => G.MON[a].lv - G.MON[c].lv);
+    for (const k of types) {
+      const D = G.MON[k], r = mkEl('div', 'wrow'), c = mkEl('div');
+      c.appendChild(mkEl('b', D.boss ? 'boss' : '', (D.boss ? '★ ' : '') + D.name + '  Lv.' + D.lv));
+      c.appendChild(mkEl('small', '', 'เลือด ' + D.hp + ' · EXP ' + D.exp + (D.rg > 2 ? ' · ยิงไกล' : '') + (D.fly ? ' · บิน' : '') + (dropText(D) ? ' · ดรอป: ' + dropText(D) : '')));
+      r.appendChild(c); r.appendChild(btnEl('ไปล่า ›', () => { b.hidden = true; navMonster(k); })); b.appendChild(r);
+    }
+  }
+}
+$('mapbtn').onclick = () => { const b = $('wmap'); if (b.hidden) { wmSel = curZone; showPanel('wmap'); renderWmap(); } else b.hidden = true; };
+window.addEventListener('langchange', () => { if (!$('wmap').hidden) renderWmap(); });
 function npcMark(id) {
   const q = qs.list.filter(x => qDef(x.id).giver === id);
   return q.some(x => x.st === 'ready') ? '?' : q.some(x => x.st === 'avail') ? '!' : null;
@@ -1723,6 +1828,17 @@ function renderStwin() {
   b.appendChild(mkEl('div', 'sec', rc ? 'รีเซ็ตต้องเสียเหรียญ เพราะผ่านคลาส 2 แล้ว' : 'รีเซ็ตฟรีจนกว่าจะเปลี่ยนคลาส 2 เสร็จ'));
 }
 let advSel = null;
+function jobQuestBlock(job, c4) {   // เควสต์เปลี่ยนอาชีพ (Solo Player ไม่ต้องทำ)
+  if (job === 'Solo Player') return null;
+  const id = WD.jobQuestId(job, c4), q = G.QUESTS[id]; if (!q) return null;
+  const ok = !!my.gm || qs.done.indexOf(id) >= 0, d = mkEl('div', 'detail');
+  d.appendChild(mkEl('b', '', ok ? '✓ ผ่านเควสต์เปลี่ยนอาชีพแล้ว' : 'ต้องทำเควสต์: ' + q.title));
+  if (!ok) {
+    d.appendChild(mkEl('div', 'desc', 'ไปหา ' + npcName(q.giver) + ' ที่ ' + zoneName(npcZone(q.giver)) + ' (Lv ' + q.minLv + '+) · เป้าหมาย: ' + q.goal + ' ' + q.n));
+    d.appendChild(btnEl('ไปหาครู ›', () => { $('adwin').hidden = true; talkTo(q.giver); }, 'lnk'));
+  }
+  return { ok, el: d };
+}
 function renderAdwin() {
   const b = $('adwin'); if (b.hidden) return; b.textContent = '';
   const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'เลื่อนอาชีพ')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
@@ -1744,7 +1860,8 @@ function renderAdwin() {
       d.appendChild(mkEl('div', 'desc', 'สกิล: ' + sk));
       if (ws.length) d.appendChild(mkEl('div', 'desc', 'อาวุธเฉพาะอาชีพ: ' + ws.join(', ')));
       b.appendChild(d);
-      const bt = btnEl('เลื่อนเป็น ' + advSel, () => { net && net.send({ t: 'adv', w: 'job', a: advSel }); advSel = null; }, 'go2'); bt.disabled = !a.ok; bt.style.height = '36px';
+      const jq = jobQuestBlock(advSel, 0); if (jq) b.appendChild(jq.el);
+      const bt = btnEl('เลื่อนเป็น ' + advSel, () => { net && net.send({ t: 'adv', w: 'job', a: advSel }); advSel = null; }, 'go2'); bt.disabled = !a.ok || (jq && !jq.ok); bt.style.height = '36px';
       b.appendChild(bt);
     }
     return;
@@ -1762,7 +1879,8 @@ function renderAdwin() {
   }
   if (a.kind === 'c4') {
     b.appendChild(mkEl('div', 'detail', 'คลาส 4 (Lv 80): เพิ่มสกิลไม้ตายใหม่ 1 อัน' + (a.ok ? '' : ' — ' + a.need)));
-    const bt = btnEl('เลื่อนเป็นคลาส 4', () => net && net.send({ t: 'adv', w: 'c4' }), 'go2'); bt.disabled = !a.ok; bt.style.height = '36px'; b.appendChild(bt); return;
+    const jq = jobQuestBlock(my.job, 1); if (jq) b.appendChild(jq.el);
+    const bt = btnEl('เลื่อนเป็นคลาส 4', () => net && net.send({ t: 'adv', w: 'c4' }), 'go2'); bt.disabled = !a.ok || (jq && !jq.ok); bt.style.height = '36px'; b.appendChild(bt); return;
   }
   if (a.kind === 'rebirth') {
     const C = RPG.REBIRTH_COST;
@@ -1806,6 +1924,8 @@ function renderGm() {
   const r2 = mkEl('div', 'chips'); r2.appendChild(btnEl('Dharma', () => g('fac', 'd'))); r2.appendChild(btnEl('Adharma', () => g('fac', 'a'))); r2.appendChild(btnEl('คลาส 4', () => g('c4')));
   if (RPG.ALT[my.job]) for (const v of RPG.ALT[my.job]) r2.appendChild(btnEl('via ' + v, () => g('via', v)));
   b.appendChild(r2);
+  b.appendChild(mkEl('div', 'sec', 'วาร์ปไปแมพ'));
+  { const rz = mkEl('div', 'chips'); for (const z of WD.ZONES) rz.appendChild(btnEl(T(zoneName(z)).slice(0, 12), () => g('zone', z))); b.appendChild(rz); }
   b.appendChild(mkEl('div', 'sec', 'เกิดใหม่ (ตั้งจำนวนครั้ง)'));
   const r3 = mkEl('div', 'chips'); for (const n of [0, 1, 2, 3]) r3.appendChild(btnEl(String(n), () => g('rb', n))); b.appendChild(r3);
   b.appendChild(mkEl('div', 'sec', 'ของ'));
@@ -1829,6 +1949,7 @@ function handle(m) {
       for (const p of m.players) { const en = makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false); en.dead = !!p.dead; setEq(en, p.eq, p); ents.set(p.id, en); }
       mons.clear(); myTarget = null; for (const mo of (m.monsters || [])) mons.set(mo.id, makeMon(mo));
       qs.list = m.quests || []; qs.done = m.qdone || [];
+      seenZ.clear(); seenZ.add('village'); seenZ.add(curZone); for (const z of (m.seen || [])) seenZ.add(z);
       if (m.me) applyMe(m.me);
       onQuests(true);
       const me = ents.get(myId); const c = proj(me.x, me.y); cam.x = c[0]; cam.y = c[1] - 18;
@@ -1927,6 +2048,12 @@ function handle(m) {
       addLog('sys', '', m.name + (m.rb ? ' เกิดใหม่ครั้งที่ ' + m.rb + '!' : m.c4 ? ' เลื่อนเป็นคลาส 4 ของ ' + m.job + '!' : ' เลื่อนอาชีพเป็น ' + m.job + '!'));
       break;
     }
+    case 'mshout': { const mo = mons.get(m.id); if (mo) floatText(mo.x, mo.y - 0.9, m.text, '#ffd23c', true); break; }
+    case 'mshot': {
+      const mo = mons.get(m.id), e = ents.get(m.to); if (!mo || !e) break;
+      fx.push({ k: 'proj', x: mo.x, y: mo.y, x2: e.x, y2: e.y, color: '#ff8a5a', shape: 'orb', dur: 260, t0: performance.now() });
+      mo.atkT = performance.now(); break;
+    }
     case 'shot': {
       const e = ents.get(m.id), mo = mons.get(m.to); if (!e || !mo) break;
       const shape = m.w === 'gun' ? 'bullet' : (m.w === 'bow' || m.w === 'longbow') ? 'arrow' : 'orb';
@@ -1949,8 +2076,9 @@ function handle(m) {
       if (m.me) applyMe(m.me);
       const me = ents.get(myId);
       if (me) { me.x = me.tx = m.x; me.y = me.ty = m.y; const c = proj(me.x, me.y); cam.x = c[0]; cam.y = c[1] - 18; }
+      seenZ.add(m.zone); for (const z of (m.seen || [])) seenZ.add(z);
       closeShop(); setStatus();
-      showBanner(m.zone);
+      showBanner(m.zone); if (!$('wmap').hidden) renderWmap();
       ring(m.x, m.y, '143,216,255');
       break;
     }
@@ -2037,8 +2165,8 @@ cv.addEventListener('pointerup', e => {
   if (d > 10 || dt > 700) return;
   if (floating) { cancelFloat(); return; }
   nav = null; pendingSkill = null;
-  if (curZone === 'village') {
-    for (const [nid, act] of [['n2', 'potion'], ['n5', 'smith'], ['n1', 'talk'], ['n3', 'talk'], ['n4', 'talk']]) {
+  if (isTown(curZone)) {
+    for (const [nid, act] of (curZone === 'village' ? [['n2', 'potion'], ['n5', 'smith'], ['n1', 'talk'], ['n3', 'talk'], ['n4', 'talk']] : map.npcs.map(n => [n.id, WD.SHOP_OF_NPC[n.id] || 'talk']))) {
       const sn = ents.get(nid); if (!sn) continue;
       const q = proj(sn.x, sn.y);
       if (Math.hypot(e.clientX - S2X(q[0]), e.clientY - (S2Y(q[1]) - 26 * zoom)) < 30 * zoom) {
@@ -2146,7 +2274,11 @@ function sortItems() {
 let frame = 0;
 let waterTiles = [], flies = [];
 function buildWater() { waterTiles = []; for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (map.tiles[y * MW + x] === 3) waterTiles.push([x, y]); }
-function buildFlies() { flies = []; const r = G.rng(99); for (let i = 0; i < 30; i++) { let x, y; do { x = 3 + r() * 34; y = 3 + r() * 27; } while (map.solid[Math.floor(y) * MW + Math.floor(x)] || tAt(Math.floor(x), Math.floor(y)) === 2); flies.push({ x, y, p: r() * 6.28, s: 0.3 + r() * 0.5 }); } }
+function buildFlies() {
+  flies = []; if (map.theme && ['bamboo', 'euro', 'jungle', 'treehouse', 'thai'].indexOf(map.theme) < 0) return;   // หิ่งห้อยเฉพาะแมพป่า/เมืองสีเขียว
+  const r = G.rng(99);
+  for (let i = 0; i < 30; i++) { let x, y, k = 0; do { x = 3 + r() * 34; y = 3 + r() * 27; k++; } while (k < 300 && (map.solid[Math.floor(y) * MW + Math.floor(x)] || tAt(Math.floor(x), Math.floor(y)) === 2)); if (k < 300) flies.push({ x, y, p: r() * 6.28, s: 0.3 + r() * 0.5 }); }
+}
 
 const S2X = wx => (wx - cam.x) * zoom + vw / 2, S2Y = wy => (wy - cam.y) * zoom + vh / 2;
 
@@ -2214,7 +2346,7 @@ function render(now, dt) {
   cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k;
 
   // เวลา
-  const th = targetHour(), tt = tintAt(th), tl = lightsAt(th), ek = 1 - Math.exp(-dt * 3);
+  const th = targetHour(), tt0 = tintAt(th), tm = TA.tint(map.theme), tt = tm ? tt0.map((v, i) => v * tm[i]) : tt0, tl = lightsAt(th), ek = 1 - Math.exp(-dt * 3);
   tintNow = tintNow.map((v, i) => lerp(v, tt[i], ek)); LIGHTS = lerp(LIGHTS, tl, ek);
 
   // เอนทิตี
@@ -2236,7 +2368,7 @@ function render(now, dt) {
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = '#243f2c'; ctx.fillRect(0, 0, vw, vh);
+  { const P = map.theme && map.theme !== 'bamboo' ? TA.pal(map.theme) : null; ctx.fillStyle = P ? P.bg : '#243f2c'; ctx.fillRect(0, 0, vw, vh); }
   drawTerrain();
   drawWaterFx(now);
   if (hover && joined) { const hx = Math.floor(hover[0]), hy = Math.floor(hover[1]); if (hx >= 0 && hy >= 0 && hx < MW && hy < MH && !map.solid[hy * MW + hx]) drawTileMark(hx, hy, 'rgba(255,255,255,A)', 0.8); }
@@ -2274,8 +2406,10 @@ function render(now, dt) {
       else p = proj(o.x, o.y);
       cur.sx = S2X(p[0]); cur.sy = S2Y(p[1]); cur.z = zoom;
       ctx.translate(cur.sx, cur.sy); ctx.scale(zoom, zoom);
-      if (o.type === 'building') drawBuilding(o);
-      else if (o.type === 'tree') drawTree(o.v, t, it.s.seed);
+      const themed = map.theme && map.theme !== 'bamboo';
+      if (o.type === 'building') { if (themed) TA.building(o, t, map.theme); else drawBuilding(o); }
+      else if (o.type === 'tree') { if (themed) TA.tree(map.theme, o.v, t, it.s.seed); else drawTree(o.v, t, it.s.seed); }
+      else if (o.type === 'prop') TA.prop(o, t, map.theme, it.s.seed);
       else if (o.type === 'lamp') drawLamp(t);
       else if (o.type === 'well') drawWell();
       else if (o.type === 'stall') drawStall(o.v);
@@ -2285,7 +2419,8 @@ function render(now, dt) {
       cur.sx = S2X(p[0]); cur.sy = S2Y(p[1]); cur.z = zoom;
       mo.vis = frame; mo.sx = cur.sx; mo.sy = cur.sy;
       ctx.translate(cur.sx, cur.sy); ctx.scale(zoom, zoom);
-      if (mo.type === 'boar') drawBoar(mo, t, now); else drawSlime(mo, t, now);
+      const MA = WD.MART[mo.type];
+      if (mo.type === 'boar') drawBoar(mo, t, now); else if (MA && mo.type !== 'slime') TA.monster(mo, t, now, MA); else drawSlime(mo, t, now);
     } else {
       const e = it.e, p = proj(e.x, e.y);
       cur.sx = S2X(p[0]); cur.sy = S2Y(p[1]); cur.z = zoom;
@@ -2328,6 +2463,7 @@ function render(now, dt) {
     ctx.fillStyle = g; ctx.fillRect(gl.x - gl.r, gl.y - gl.r, gl.r * 2, gl.r * 2);
   }
   ctx.globalCompositeOperation = 'source-over';
+  TA.atmos(TA.skyFx(map.theme), t, vw, vh, zoom);
   const vg = ctx.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.45, vw / 2, vh / 2, Math.max(vw, vh) * 0.78);
   vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.34)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, vw, vh);
@@ -2424,12 +2560,13 @@ function render(now, dt) {
 const mini = $('mini'), mctx = mini.getContext('2d');
 const miniBase = document.createElement('canvas'); miniBase.width = 120; miniBase.height = 96;
 function buildMini() {
-  const g = miniBase.getContext('2d'), C = ['#6f9e5a', '#cdb184', '#b5b0a5', '#4d9bcb', '#8c6238'];
+  const g = miniBase.getContext('2d'), P = map.theme && map.theme !== 'bamboo' ? TA.pal(map.theme) : null, C = P ? [P.g[0], P.p[0], P.s[0], P.w[1], P.br, '#07060b'] : ['#6f9e5a', '#cdb184', '#b5b0a5', '#4d9bcb', '#8c6238'];
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) { g.fillStyle = C[map.tiles[y * MW + x]]; g.fillRect(x * 3, y * 3, 3, 3); }
   for (const o of map.objs) {
     if (o.type === 'building') { g.fillStyle = '#8f3a2c'; g.fillRect(o.x * 3, o.y * 3, o.w * 3, o.h * 3); }
-    else if (o.type === 'tree') { g.fillStyle = '#3f7a45'; g.fillRect(o.x * 3, o.y * 3, 3, 3); }
+    else if (o.type === 'tree') { g.fillStyle = P ? shade(P.g[0], 0.62) : '#3f7a45'; g.fillRect(o.x * 3, o.y * 3, 3, 3); }
     else if (o.type === 'well') { g.fillStyle = '#6b7f8c'; g.fillRect(o.x * 3, o.y * 3, 6, 6); }
+    else if (o.type === 'prop' && o.kind !== 'lamp' && o.kind !== 'torch') { g.fillStyle = 'rgba(30,30,30,.55)'; g.fillRect(o.x * 3, o.y * 3, Math.min(9, (o.w || 1) * 3), Math.min(9, (o.h || 1) * 3)); }
   }
 }
 function updateHud() {
@@ -2865,10 +3002,13 @@ initAuth();
 
 /* ============================================================ main loop */
 function setZone(name) {
-  curZone = name; map = MAPS[name];
+  curZone = name; map = mapOf(name);
+  { const h = targetHour(), tm = TA.tint(map.theme), tt = tintAt(h); tintNow = tm ? tt.map((v, i) => v * tm[i]) : tt; LIGHTS = lightsAt(h); }
   buildStatics(); buildWater(); buildFlies(); buildMini(); bakeTerrain();
   resetEnts(); mons.clear(); fx.length = 0; marker = null; myTarget = null;
 }
+TA.env({ ctx: () => ctx, lights: () => LIGHTS, poly, line, rr, box, LP, shade, mixc, hsh, glowPx, glowAt, shadowDiamond, FONT, diamond, proj, drawStall, hangSign, T: window.T, OX, MW, MH });
+{ const rows = WD.NAMES.map(r => [r[0], r[1], r[1], r[1]]); for (const z of Object.keys(ZD)) { const d = ZD[z]; rows.push([d.n, d.en, d.vi || d.en, d.ko || d.en]); if (d.blurb) rows.push([d.blurb, d.bEn || d.en, d.bEn || d.en, d.bEn || d.en]); } if (window.I18N && I18N.addRows) I18N.addRows(rows); }
 setZone('village');
 let last = performance.now();
 function loop(now) {
@@ -2882,7 +3022,18 @@ requestAnimationFrame(loop);
 window.__bc = {
   ents, mons, my, get map() { return map; }, get zone() { return curZone; }, get zoom() { return zoom; }, set zoom(v) { zoom = v; },
   setMode(m, snap) { timeMode = m; if (snap) { const h = targetHour(); tintNow = tintAt(h); LIGHTS = lightsAt(h); } },
-  cam, get me() { return ents.get(myId); }, get pending() { return pendingSkill; }, get joined() { return joined; }, get mode() { return mode; },
+  cam, send(m) { return net && net.send(m); },
+  gallery(c, types, cols, sc, t, extra) {   // ใช้ตรวจภาพมอนสเตอร์ทั้งหมดบนผืนผ้าใบแยก
+    const prev = ctx, g = c.getContext('2d'); ctx = g; g.clearRect(0, 0, c.width, c.height); g.fillStyle = '#6f8f5a'; g.fillRect(0, 0, c.width, c.height);
+    const cw = c.width / cols, ch = 96 * sc;
+    types.forEach((k, i) => {
+      const A = WD.MART[k]; g.save(); g.translate((i % cols + 0.5) * cw, Math.floor(i / cols) * ch + ch - 14 * sc); g.scale(sc, sc);
+      const m = Object.assign({ type: k, dir: 3, moving: false, dead: false, deadT: 0, hitT: -1e9, off: i, wp: i % 5, x: 0, y: 0 }, extra || {});
+      if (A && k !== 'slime' && k !== 'boar') TA.monster(m, t || 1, performance.now(), A); else if (k === 'boar') drawBoar(m, t || 1, performance.now()); else drawSlime(m, t || 1, performance.now());
+      g.restore(); g.fillStyle = '#fff'; g.font = '10px sans-serif'; g.textAlign = 'center'; g.fillText(k, (i % cols + 0.5) * cw, Math.floor(i / cols) * ch + ch - 2);
+    });
+    ctx = prev;
+  }, get seen() { return [...seenZ]; }, get me() { return ents.get(myId); }, get pending() { return pendingSkill; }, get joined() { return joined; }, get mode() { return mode; },
   toScreen(x, y) { const p = proj(x, y); return [S2X(p[0]), S2Y(p[1])]; }
 };
 })();

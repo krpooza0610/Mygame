@@ -116,15 +116,22 @@
     out.arrow0 = { name: 'ลูกธนูไม้', slot: 'ammo', kind: 'arrow', atk: 2, buy: 3, sell: 1, desc: 'ลูกธนูพื้นฐาน ยิงแล้วหมดไป ต้องซื้อเติม' };
     out.arrow1 = { name: 'ลูกธนูเหล็ก', slot: 'ammo', kind: 'arrow', atk: 7, buy: 9, sell: 3, desc: 'ปลายเหล็ก แรงกว่าธนูไม้ ยิงแล้วหมดไป' };
     out.bullet0 = { name: 'กระสุนตะกั่ว', slot: 'ammo', kind: 'bullet', atk: 3, buy: 5, sell: 2, desc: 'กระสุนปืนพื้นฐาน ยิงแล้วหมดไป ต้องซื้อเติม' };
+    out.arrow2 = { name: 'ลูกธนูเงินแท้', slot: 'ammo', kind: 'arrow', atk: 16, buy: 24, sell: 8, desc: 'ลูกธนูปลายเงิน ทะลวงเกราะหนา' };
+    out.arrow3 = { name: 'ลูกธนูมังกร', slot: 'ammo', kind: 'arrow', atk: 30, buy: 60, sell: 20, desc: 'ลูกธนูปลายเกล็ดมังกร แรงสะท้านฟ้า' };
+    out.bullet2 = { name: 'กระสุนเงินแท้', slot: 'ammo', kind: 'bullet', atk: 22, buy: 32, sell: 10, desc: 'กระสุนเงินแท้ แรงกว่ากระสุนเหล็ก' };
+    out.bullet3 = { name: 'กระสุนพลังงาน', slot: 'ammo', kind: 'bullet', atk: 40, buy: 80, sell: 26, desc: 'กระสุนอัดพลังงาน ทะลุทะลวงทุกสิ่ง' };
     out.bullet1 = { name: 'กระสุนเหล็กกล้า', slot: 'ammo', kind: 'bullet', atk: 9, buy: 14, sell: 4, desc: 'กระสุนเจาะเกราะ แรงกว่ากระสุนตะกั่ว' };
     return out;
   }
   // รายการสินค้าร้านอาวุธ/เกราะ
-  function smithList() {
-    const l = ['sword_wood', 'sword_iron', 'robe_cloth', 'armor_hide'];
-    for (const k of Object.keys(WT)) for (let t = 0; t < SHOP_TIERS; t++) { if (k === 'sword' && t < 2) continue; l.push(k + t); }
-    for (const k of ['cloth', 'leather', 'plate']) for (let t = 0; t < SHOP_TIERS; t++) { if ((k === 'cloth' || k === 'leather') && t === 0) continue; l.push(k + t); }
-    l.push('arrow0', 'arrow1', 'bullet0', 'bullet1');
+  function smithList(lo, hi) {
+    lo = lo == null ? 0 : lo; hi = hi == null ? SHOP_TIERS - 1 : hi;
+    const l = lo === 0 ? ['sword_wood', 'sword_iron', 'robe_cloth', 'armor_hide'] : [];
+    for (const k of Object.keys(WT)) for (let t = lo; t <= hi; t++) { if (k === 'sword' && t < 2) continue; l.push(k + t); }
+    for (const k of ['cloth', 'leather', 'plate']) for (let t = lo; t <= hi; t++) { if ((k === 'cloth' || k === 'leather') && t === 0) continue; l.push(k + t); }
+    if (lo <= 1) l.push('arrow0', 'arrow1', 'bullet0', 'bullet1');
+    if (hi >= 2 && lo <= 3) l.push('arrow2', 'bullet2');
+    if (hi >= 3) l.push('arrow3', 'bullet3');
     return l;
   }
 
