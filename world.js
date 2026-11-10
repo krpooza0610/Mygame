@@ -827,10 +827,10 @@
         q.title = lbl[0] + name;
         q.offer = fl[0] + ' ผู้ที่จะเป็น ' + name + ' ต้องพิสูจน์ตนเองก่อน — ' + aTh;
         q.progress = 'ยังไม่ครบนะ ไปทำให้เสร็จแล้วค่อยกลับมา';
-        q.done = sp.c4 ? 'ยอดเยี่ยม! เจ้าพร้อมก้าวสู่คลาส 4 ของ ' + name + ' แล้ว เปิดเมนูอาชีพเพื่อเลื่อนขั้นได้เลย' : 'ดีมาก! เจ้าพร้อมจะเป็น ' + name + ' แล้ว เปิดเมนูอาชีพเพื่อเปลี่ยนอาชีพได้เลย';
+        q.done = sp.c4 ? 'ยอดเยี่ยม! เจ้าพร้อมก้าวสู่คลาส 4 ของ ' + name + ' แล้ว ข้าเลื่อนขั้นให้เจ้าเรียบร้อย!' : 'ดีมาก! จากนี้เจ้าคือ ' + name + ' แล้ว ข้าส่งชุดเริ่มต้นไปที่กล่องจดหมายของเจ้า ไปรับได้เลย';
         q.rewards = { exp: Math.round(nextExpF(sp.minLv) * 0.7), items: { coin: sp.minLv * 60, [potionFor(sp.minLv)]: 3, [dewFor(sp.minLv)]: 2 } };
         out[id] = q;
-        NAMES.push([q.title, lbl[1] + name], [q.offer, fl[1] + ' To become ' + name + ', you must prove yourself — ' + aEn], [q.done, sp.c4 ? 'Superb! You are ready for Class 4 of ' + name + '. Open the Job menu to advance.' : 'Well done! You are ready to become ' + name + '. Open the Job menu to change your job.'],
+        NAMES.push([q.title, lbl[1] + name], [q.offer, fl[1] + ' To become ' + name + ', you must prove yourself — ' + aEn], [q.done, sp.c4 ? 'Superb! You are now Class 4 ' + name + '!' : 'Well done! You are now a ' + name + '. I sent your starter gear to your mailbox.'],
           [q.goal, (q.kill ? 'Hunt ' + MONX[q.kill].en : 'Collect ' + (MITEMS[q.collect].en))]);
       }
     }

@@ -48,6 +48,39 @@ button{font-family:inherit}
 #smenu.open{transform:none;opacity:1;visibility:visible;pointer-events:auto;transition:transform .24s cubic-bezier(.2,.8,.3,1),opacity .2s}
 #smenu .btn{flex-direction:column;height:64px;font-size:12.5px;padding:4px;gap:1px;min-width:0}
 #smenu .btn i{font-style:normal;font-size:21px;line-height:1.1}
+#smenu .btn{position:relative}
+#smenu .bdg{position:absolute;right:5px;top:3px;min-width:17px;height:17px;border-radius:9px;background:var(--accent);color:#fff;font:700 10.5px/17px var(--font);font-style:normal;text-align:center;padding:0 4px}
+#startbtn.has:after{content:"";position:absolute;right:3px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--accent2);border:1px solid #000}
+#startbtn{position:fixed}
+#hotbar .slot.lift{opacity:.35}
+#qmenu,#mail{left:50%;top:max(66px,calc(env(safe-area-inset-top) + 56px));transform:translateX(-50%);width:min(92vw,370px);padding:10px;pointer-events:auto;display:flex;flex-direction:column;gap:7px;max-height:74vh;overflow:auto;font-size:13px}
+#qmenu h4,#mail h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center;gap:8px}
+#qmenu button,#mail button{font:600 12.5px var(--font);cursor:pointer}
+#qmenu h4 button,#mail h4 button{height:26px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;padding:0 10px}
+.qtabs{display:flex;gap:5px}
+.qtabs button{flex:1;height:30px;border:0;border-radius:8px;background:rgba(255,255,255,.12);color:var(--text)}
+.qtabs button.on{background:var(--accent);color:#fff}
+.qgh{display:flex;justify-content:space-between;align-items:center;width:100%;height:34px;border:0;border-radius:8px;background:rgba(255,255,255,.1);color:var(--text);padding:0 10px;font:700 13px var(--font)}
+.qgh span:last-child{color:var(--muted)}
+.qrow{display:flex;justify-content:space-between;align-items:center;gap:6px;width:100%;border:0;border-radius:8px;background:rgba(0,0,0,.25);color:var(--text);padding:8px 10px;text-align:left;margin-top:4px}
+.qrow.sel{outline:1px solid var(--accent2)}
+.qrow em{font-style:normal;font-size:11px;padding:1px 7px;border-radius:9px;background:#24536b;color:#bfe6ff;flex:none}
+.qrow em.ready{background:#246b3a;color:#bff0cc}.qrow em.done{background:#3a3a3a;color:#ccc}
+.qdet{background:rgba(0,0,0,.3);border-radius:8px;padding:8px;margin-top:3px;display:flex;flex-direction:column;gap:6px}
+.qdet .desc{color:#d8d2c0;font-size:12.5px;line-height:1.45}
+.qdet .links{display:flex;gap:6px;flex-wrap:wrap}
+.qdet .links button,.qcard .links button.go2{height:28px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;padding:0 10px}
+.qdet .rew,.qcard .rew{border-top:1px solid var(--line);padding-top:6px}
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:6px;width:100%;border:0;border-radius:8px;background:rgba(0,0,0,.25);color:var(--text);padding:8px 10px;text-align:left}
+.mrow b{font-weight:700}.mrow.unread b:before{content:"● ";color:var(--accent2)}
+.mrow small{color:var(--muted);display:block;font-size:11.5px}
+.mrow.sel{outline:1px solid var(--accent2)}
+.mdet{background:rgba(0,0,0,.3);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:7px}
+.mdet .items{display:flex;flex-wrap:wrap;gap:6px}
+.mdet .it{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);border-radius:7px;padding:3px 7px 3px 4px;font-size:12px}
+.mdet .links{display:flex;gap:6px}
+.mdet .links button{height:30px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;padding:0 12px}
+.mdet .links button.go2,.qdet .links button.go2{background:var(--accent)}
 #smenu .btn.has{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(255,200,90,.45)}
 #chat{left:calc(max(10px,env(safe-area-inset-left)) + 56px);width:min(300px,calc(100vw - 214px));
   bottom:max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:5px;transition:width .15s}
@@ -186,7 +219,7 @@ button{font-family:inherit}
 .chips button.on{background:var(--accent2);color:#2a1a06}
 #shop .bad{color:#ff9a8f;font-size:11px}
 #sbtn.has,#stbtn.has{animation:blink 1s ease-in-out infinite}
-#bag,#shop,#kafra,#qwin,#dialog{z-index:20}
+#bag,#shop,#kafra,#qwin,#qmenu,#mail,#dialog{z-index:20}
 #bag h4,#qwin h4,#dialog h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center;gap:8px}
 #bag h4 button,#qwin h4 button{height:26px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;font:600 12.5px var(--font);padding:0 10px;cursor:pointer}
 .eqrow{display:flex;gap:8px}
@@ -382,6 +415,8 @@ button{font-family:inherit}
     <button id="stbtn" class="btn" type="button" aria-label="สถานะ"><i>🧍</i><span>สถานะ</span></button>
     <button id="sbtn" class="btn" type="button" aria-label="สกิล"><i>✨</i><span>สกิล</span></button>
     <button id="bbtn" class="btn" type="button" aria-label="ถุงของ"><i>🎒</i><span>ถุง</span></button>
+    <button id="qbtn" class="btn" type="button" aria-label="เควสต์"><i>📜</i><span>เควสต์</span><em class="bdg" hidden></em></button>
+    <button id="mailbtn" class="btn" type="button" aria-label="กล่องจดหมาย"><i>✉</i><span>จดหมาย</span><em class="bdg" hidden></em></button>
     <button id="mapbtn" class="btn" type="button" aria-label="แผนที่โลก"><i>🗺</i><span>แผนที่</span></button>
     <button id="setbtn" class="btn" type="button" aria-label="ตั้งค่า"><i>⚙</i><span>ตั้งค่า</span></button>
   </div>
@@ -403,6 +438,8 @@ button{font-family:inherit}
   <div id="gmwin" class="panel" hidden></div>
   <div id="setwin" class="panel" hidden></div>
   <div id="qwin" class="panel" hidden></div>
+  <div id="qmenu" class="panel" hidden></div>
+  <div id="mail" class="panel" hidden></div>
   <div id="wmap" class="panel" hidden></div>
   <div id="dialog" class="panel" hidden></div>
   <div id="joy" aria-label="จอยสติ๊ก"><i id="knob"></i></div>
@@ -1391,13 +1428,13 @@ function iconEl(key, px) {
 const ITEM_ORDER = Object.keys(G.ITEMS);
 const qs = { list: [], done: [] };
 let pendingSkill = null;
-let bagSel = null, floating = null, curShop = null, nav = null, lastPtr = [200, 400], lastSig = '';
+let bagSel = null, floating = null, floatFrom = -1, curShop = null, nav = null, lastPtr = [200, 400], lastSig = '';
 const hb = new Array(12).fill(null);
 let hbSize = 12; try { const z = +localStorage.getItem('bc-hbsize'); if (z === 3 || z === 6 || z === 12) hbSize = z; } catch (e) {}
 const skCd = {}; let skSel = null;
 try { const s = JSON.parse(localStorage.getItem('bc-hotbar') || 'null'); if (Array.isArray(s)) s.slice(0, 12).forEach((k, i) => { if ((G.ITEMS[k] && (G.ITEMS[k].heal || G.ITEMS[k].mp)) || (typeof k === 'string' && k.indexOf('skill:') === 0 && (G.SKILLS[k.slice(6)] || k.slice(6) === 'basic' || /^b[0-3]$/.test(k.slice(6))))) hb[i] = k; }); } catch (e) {}
 try { if (!localStorage.getItem('bc-basic1')) { localStorage.setItem('bc-basic1', '1'); const f = hb.indexOf(null); if (f >= 0 && hb.indexOf('skill:basic') < 0) { hb[f] = 'skill:basic'; localStorage.setItem('bc-hotbar', JSON.stringify(hb)); } } } catch (e) {}
-const PANELS = ['bag', 'shop', 'kafra', 'qwin', 'dialog', 'skills', 'stwin', 'adwin', 'gmwin', 'setwin', 'wmap'];
+const PANELS = ['bag', 'shop', 'kafra', 'qmenu', 'mail', 'qwin', 'dialog', 'skills', 'stwin', 'adwin', 'gmwin', 'setwin', 'wmap'];
 function showPanel(name) { for (const p of PANELS) $(p).hidden = p !== name; }
 function closePanels() { for (const p of PANELS) $(p).hidden = true; }
 function mkEl(tag, cls, text) { const d = document.createElement(tag); if (cls) d.className = cls; if (text != null) d.textContent = text; return d; }
@@ -1472,11 +1509,19 @@ function tapCell(sel) {
 }
 
 /* ---- ไอเท็มลอย + คีย์ลัด ---- */
-function startFloat(key) {
-  floating = key; const g = $('ghost'); g.textContent = ''; g.appendChild(iconEl(key, 44)); g.hidden = false; moveGhost();
-  $('hotbar').classList.add('armed'); toast('แตะช่องคีย์ลัดเพื่อวางไอเท็ม (แตะที่อื่นเพื่อยกเลิก)', 3200);
+function startFloat(key, from) {
+  floating = key; floatFrom = from == null ? -1 : from; const g = $('ghost'); g.textContent = ''; g.appendChild(iconEl(key, 44)); g.hidden = false; moveGhost();
+  $('hotbar').classList.add('armed'); if (floatFrom >= 0) renderHotbar(); toast(floatFrom >= 0 ? 'แตะช่องใหม่เพื่อย้าย · แตะที่อื่นเพื่อเอาออกจากคีย์ลัด' : 'แตะช่องคีย์ลัดเพื่อวางไอเท็ม (แตะที่อื่นเพื่อยกเลิก)', 3200);
 }
-function cancelFloat() { floating = null; $('ghost').hidden = true; $('hotbar').classList.remove('armed'); }
+function cancelFloat() { const was = floatFrom; floating = null; floatFrom = -1; $('ghost').hidden = true; $('hotbar').classList.remove('armed'); if (was >= 0) renderHotbar(); }
+let dropAt = 0;
+function dropFromHotbar() {
+  const i = floatFrom; if (i < 0) return;
+  hb[i] = null; try { localStorage.setItem('bc-hotbar', JSON.stringify(hb)); } catch (e) {}
+  dropAt = performance.now(); cancelFloat(); renderHotbar(); toast('เอาออกจากคีย์ลัดแล้ว', 1500);
+}
+window.addEventListener('pointerdown', e => { if (floatFrom >= 0 && !(e.target.closest && e.target.closest('#hotbar'))) { e.stopPropagation(); e.preventDefault(); dropFromHotbar(); } }, true);
+window.addEventListener('click', e => { if (performance.now() - dropAt < 500 && !(e.target.closest && e.target.closest('#hotbar'))) { e.stopPropagation(); e.preventDefault(); } }, true);
 function moveGhost() { const g = $('ghost'); g.style.left = (lastPtr[0] - 22) + 'px'; g.style.top = (lastPtr[1] - 52) + 'px'; }
 window.addEventListener('pointermove', e => { lastPtr = [e.clientX, e.clientY]; if (floating) moveGhost(); }, true);
 window.addEventListener('pointerdown', e => { lastPtr = [e.clientX, e.clientY]; if (floating) moveGhost(); }, true);
@@ -1487,8 +1532,22 @@ function useItemKey(key) {
   if (it.mp && !it.heal && my.mp >= my.maxMp) { toast('MP เต็มอยู่แล้ว', 1500); return; }
   net && net.send({ t: 'use', item: key });
 }
+let lastHbTap = { i: -1, t: 0 }, hbUseT = 0;
+function hotbarClick(i) {   // แตะที่ช่อง: 1 ที = ใช้, 2 ที = ยกลอย
+  if (floating) { hotbarTap(i); return; }
+  const k = hb[i], now = performance.now();
+  if (k && lastHbTap.i === i && now - lastHbTap.t < 380) { lastHbTap = { i: -1, t: 0 }; clearTimeout(hbUseT); startFloat(k, i); return; }
+  lastHbTap = { i, t: now }; if (!k) return;
+  if (k.indexOf('skill:') === 0) hotbarTap(i);   // สกิลใช้ทันที (มีคูลดาวน์กันซ้ำ)
+  else { clearTimeout(hbUseT); hbUseT = setTimeout(() => { if (lastHbTap.i === i && !floating) hotbarTap(i); }, 300); }   // ของใช้รอดูว่าเป็นการแตะ 2 ทีหรือไม่
+}
 function hotbarTap(i) {
   if (floating) {
+    if (floatFrom >= 0) {   // ยกมาจากช่องอื่น → ย้าย/สลับ
+      if (i !== floatFrom) { const t = hb[i]; hb[i] = floating; hb[floatFrom] = t; }
+      try { localStorage.setItem('bc-hotbar', JSON.stringify(hb)); } catch (e) {}
+      cancelFloat(); renderHotbar(); return;
+    }
     if (hb[i] === floating) hb[i] = null;
     else { for (let k = 0; k < 12; k++) if (hb[k] === floating) hb[k] = null; hb[i] = floating; }
     try { localStorage.setItem('bc-hotbar', JSON.stringify(hb)); } catch (e) {}
@@ -1628,7 +1687,7 @@ function renderHotbar() {
   tg.title = 'ย่อ/ขยายแถบคีย์ลัด'; tg.onclick = () => { hbSize = hbSize === 12 ? 6 : hbSize === 6 ? 3 : 12; try { localStorage.setItem('bc-hbsize', hbSize); } catch (e) {} renderHotbar(); };
   bar.appendChild(tg);
   for (let i = 0; i < hbSize; i++) {
-    const s = mkEl('div', 'slot'); s.onclick = () => hotbarTap(i);
+    const s = mkEl('div', 'slot' + (floatFrom === i ? ' lift' : '')); s.onclick = () => hotbarClick(i);
     s.appendChild(mkEl('b', '', 'F' + (i + 1)));
     const k = hb[i];
     if (k && k.indexOf('skill:') === 0) {
@@ -1741,9 +1800,9 @@ function rewardRow(q) {
 }
 function goalText(q, st) { return q.goal + ' ' + (st ? st.n : 0) + '/' + q.n; }
 function onQuests(first) {
-  const el = $('pigeon'), act = qs.list.filter(x => x.st === 'avail' || x.st === 'ready');
+  const el = $('pigeon'), act = qs.list.filter(x => x.st === 'avail');
   el.hidden = !act.length; $('pgn').textContent = act.length;
-  renderTracker(); renderQwin(); if (!$('dialog').hidden) renderDialog();
+  setBadges(); renderTracker(); renderQwin(); renderQmenu(); if (!$('dialog').hidden) renderDialog();
   saveLocal();
 }
 function renderTracker() {
@@ -1761,22 +1820,94 @@ function renderTracker() {
 function renderQwin() {
   const b = $('qwin'); if (b.hidden) return;
   b.textContent = '';
-  const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'จดหมายนกพิราบ · เควสต์')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
-  const list = qs.list;
-  if (!list.length) b.appendChild(mkEl('div', 'em', 'ยังไม่มีเควสต์ใหม่ — เลเวลสูงขึ้นแล้วจะมีจดหมายมาอีก'));
+  const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'จดหมายนกพิราบ · เควสต์ใหม่')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
+  const list = qs.list.filter(x => x.st === 'avail');
+  if (!list.length) { b.appendChild(mkEl('div', 'em', 'ไม่มีเควสต์ใหม่ — เควสต์ที่รับแล้วดูได้ที่ Start › เควสต์')); b.appendChild(btnEl('เปิดเมนูเควสต์', () => { b.hidden = true; openQmenu(); }, 'go2')); }
   for (const st of list) {
     const q = qDef(st.id), c = mkEl('div', 'qcard');
-    const tl = mkEl('div', 'qt'); tl.appendChild(mkEl('b', '', q.title));
-    tl.appendChild(mkEl('em', st.st, st.st === 'avail' ? 'เควสต์ใหม่' : st.st === 'ready' ? 'ครบแล้ว' : 'กำลังทำ')); c.appendChild(tl);
-    c.appendChild(mkEl('div', 'desc', st.st === 'ready' ? q.done : q.offer));
+    const tl = mkEl('div', 'qt'); tl.appendChild(mkEl('b', '', q.title)); tl.appendChild(mkEl('em', 'avail', QCAT_TH[qCat(st.id)])); c.appendChild(tl);
+    c.appendChild(mkEl('div', 'desc', q.offer));
     c.appendChild(mkEl('div', 'desc', 'เป้าหมาย: ' + goalText(q, st)));
     c.appendChild(rewardRow(q));
     const links = mkEl('div', 'links');
-    links.appendChild(btnEl('ไปหา ' + npcName(q.giver) + ' ›', () => { $('qwin').hidden = true; talkTo(q.giver); }, 'lnk'));
-    if (st.st === 'active') links.appendChild(btnEl('ไปที่เป้าหมาย ›', () => { $('qwin').hidden = true; navMonster(q.nav, st.id); }, 'lnk'));
+    links.appendChild(btnEl('รับเควสต์', () => net && net.send({ t: 'qaccept', id: st.id }), 'go2'));
     c.appendChild(links); b.appendChild(c);
   }
 }
+/* ---- เมนูเควสต์: ทั้งหมด / ทำเสร็จแล้ว × ภารกิจหลัก / รอง / เลื่อนคลาส ---- */
+const QCAT_TH = { main: 'ภารกิจหลัก', side: 'ภารกิจรอง', class: 'เลื่อนคลาส' };
+const qCat = id => { const q = qDef(id); return q.job ? 'class' : q.side ? 'side' : 'main'; };
+const qm = { tab: 'all', open: { main: true, side: false, class: false }, sel: null };
+function openQmenu() { showPanel('qmenu'); renderQmenu(); }
+function renderQmenu() {
+  const b = $('qmenu'); if (b.hidden) return;
+  b.textContent = '';
+  const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'เควสต์')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
+  const cur = qs.list.filter(x => x.st !== 'avail'), dn = qs.done.filter(id => G.QUESTS[id]);
+  const tabs = mkEl('div', 'qtabs');
+  for (const [k, t, n] of [['all', 'ภารกิจทั้งหมด', cur.length], ['done', 'ทำเสร็จแล้ว', dn.length]]) { const x = btnEl(t + ' (' + n + ')', () => { qm.tab = k; qm.sel = null; renderQmenu(); }); if (k === qm.tab) x.className = 'on'; tabs.appendChild(x); }
+  b.appendChild(tabs);
+  const items = qm.tab === 'all' ? cur.map(x => ({ id: x.id, st: x })) : dn.map(id => ({ id, st: null }));
+  for (const cat of ['main', 'side', 'class']) {
+    const list = items.filter(x => qCat(x.id) === cat), open = qm.open[cat];
+    const gh = btnEl('', () => { qm.open[cat] = !qm.open[cat]; renderQmenu(); }, 'qgh');
+    gh.appendChild(mkEl('span', '', QCAT_TH[cat] + ' (' + list.length + ')')); gh.appendChild(mkEl('span', '', open ? '▾' : '▸')); b.appendChild(gh);
+    if (!open) continue;
+    if (!list.length) b.appendChild(mkEl('div', 'em', qm.tab === 'all' ? 'ยังไม่มีภารกิจในหมวดนี้' : 'ยังไม่มีที่ทำเสร็จ'));
+    for (const it of list) {
+      const q = qDef(it.id), r = btnEl('', () => { qm.sel = qm.sel === it.id ? null : it.id; renderQmenu(); }, 'qrow' + (qm.sel === it.id ? ' sel' : ''));
+      r.appendChild(mkEl('span', '', q.title));
+      r.appendChild(mkEl('em', it.st ? it.st.st : 'done', it.st ? (it.st.st === 'ready' ? 'ครบแล้ว' : goalText(q, it.st)) : 'เสร็จแล้ว'));
+      b.appendChild(r);
+      if (qm.sel !== it.id) continue;
+      const d = mkEl('div', 'qdet');
+      d.appendChild(mkEl('div', 'desc', !it.st ? q.done : it.st.st === 'ready' ? q.done : q.offer));
+      if (it.st) {
+        d.appendChild(mkEl('div', 'desc', 'เป้าหมาย: ' + goalText(q, it.st) + (it.st.st === 'ready' ? ' — ครบแล้ว ไปส่งที่ ' + npcName(q.giver) : '')));
+        const links = mkEl('div', 'links');
+        links.appendChild(btnEl('ไปหา ' + npcName(q.giver) + ' ›', () => { $('qmenu').hidden = true; talkTo(q.giver); }, 'go2'));
+        if (it.st.st === 'active') links.appendChild(btnEl('ไปที่เป้าหมาย ›', () => { $('qmenu').hidden = true; navMonster(q.nav, it.id); }));
+        d.appendChild(links);
+      }
+      const rw = rewardRow(q); if (!it.st) rw.firstChild.textContent = 'รางวัลที่ได้รับ: EXP ' + q.rewards.exp;
+      d.appendChild(rw); b.appendChild(d);
+    }
+  }
+}
+/* ---- กล่องจดหมาย ---- */
+let mailbox = [], mailSel = null;
+function openMail() { showPanel('mail'); renderMail(); }
+function renderMail() {
+  const b = $('mail'); if (b.hidden) return;
+  b.textContent = '';
+  const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'กล่องจดหมาย (' + mailbox.length + ')')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
+  if (!mailbox.length) b.appendChild(mkEl('div', 'em', 'ยังไม่มีจดหมาย — เปลี่ยนอาชีพแล้วจะมีชุดเริ่มต้นส่งมา'));
+  for (const m of mailbox.slice().reverse()) {
+    const hasIt = Object.keys(m.items || {}).length > 0;
+    const r = btnEl('', () => { mailSel = mailSel === m.id ? null : m.id; if (mailSel === m.id && !m.read) { m.read = 1; net && net.send({ t: 'mail', id: m.id, a: 'read' }); setBadges(); } renderMail(); }, 'mrow' + (m.read ? '' : ' unread') + (mailSel === m.id ? ' sel' : ''));
+    const l = mkEl('div'); l.appendChild(mkEl('b', '', m.subj)); l.appendChild(mkEl('small', '', 'จาก ' + m.from)); r.appendChild(l);
+    r.appendChild(mkEl('span', '', hasIt ? (m.got ? '✔' : '🎁') : ''));
+    b.appendChild(r);
+    if (mailSel !== m.id) continue;
+    const d = mkEl('div', 'mdet'); d.appendChild(mkEl('div', 'desc', m.body));
+    if (hasIt) {
+      const its = mkEl('div', 'items');
+      for (const k of Object.keys(m.items)) { if (!G.ITEMS[k]) continue; const w = mkEl('span', 'it'); w.appendChild(iconEl(k, 26)); w.appendChild(document.createTextNode(G.ITEMS[k].name + ' ×' + m.items[k])); its.appendChild(w); }
+      d.appendChild(its);
+    }
+    const links = mkEl('div', 'links');
+    if (hasIt && !m.got) links.appendChild(btnEl('รับของ', () => net && net.send({ t: 'mail', id: m.id, a: 'claim' }), 'go2'));
+    if (!hasIt || m.got) links.appendChild(btnEl('ลบจดหมาย', () => { mailSel = null; net && net.send({ t: 'mail', id: m.id, a: 'del' }); }));
+    d.appendChild(links); b.appendChild(d);
+  }
+}
+function setBadges() {
+  const ready = qs.list.filter(x => x.st === 'ready').length, mails = mailbox.filter(m => !m.read || (!m.got && Object.keys(m.items || {}).length)).length;
+  for (const [id, n] of [['qbtn', ready], ['mailbtn', mails]]) { const bt = $(id), bd = bt.querySelector('.bdg'); bd.hidden = !n; bd.textContent = n; bt.classList.toggle('has', n > 0); }
+  $('startbtn').classList.toggle('has', ready > 0 || mails > 0);
+}
+$('qbtn').onclick = () => openQmenu();
+$('mailbtn').onclick = () => openMail();
 let dlgNpc = null;
 function openDialog(npcId) {
   if (npcId.indexOf('kf_') === 0) { openKafra(); return; }
@@ -2093,7 +2224,7 @@ function handle(m) {
       setZone(m.zone || 'village'); myId = m.id;
       for (const p of m.players) { const en = makeEnt(p.id, p.name, p.look, p.x, p.y, p.dir, p.m, false); en.dead = !!p.dead; setEq(en, p.eq, p); ents.set(p.id, en); }
       mons.clear(); myTarget = null; for (const mo of (m.monsters || [])) mons.set(mo.id, makeMon(mo));
-      qs.list = m.quests || []; qs.done = m.qdone || [];
+      qs.list = m.quests || []; qs.done = m.qdone || []; mailbox = m.mail || [];
       seenZ.clear(); seenZ.add('village'); seenZ.add(curZone); for (const z of (m.seen || [])) seenZ.add(z);
       if (m.me) applyMe(m.me);
       onQuests(true);
@@ -2206,6 +2337,7 @@ function handle(m) {
       fx.push({ k: 'proj', x: e.x, y: e.y, x2: mo.x, y2: mo.y, color: shape === 'orb' ? '#8fd8ff' : shape === 'bullet' ? '#ffd24a' : '#f0e2b0', shape, dur: 230, t0: performance.now() });
       break;
     }
+    case 'mail': mailbox = m.list || []; renderMail(); setBadges(); break;
     case 'quests': {
       const prev = qs.list.filter(x => x.st === 'avail').map(x => x.id);
       qs.list = m.list; qs.done = m.done;
@@ -2393,7 +2525,7 @@ cv.addEventListener('wheel', e => { e.preventDefault(); zoom = clamp(zoom * (e.d
 /* เมนู Start (เลื่อนขึ้นจากมุมซ้ายล่าง) */
 function setMenu(on) { $('smenu').classList.toggle('open', on); $('startbtn').classList.toggle('on', on); $('smenu').setAttribute('aria-hidden', on ? 'false' : 'true'); }
 $('startbtn').onclick = () => setMenu(!$('smenu').classList.contains('open'));
-for (const id of ['stbtn', 'sbtn', 'bbtn', 'mapbtn', 'setbtn']) $(id).addEventListener('click', () => setMenu(false));
+for (const id of ['stbtn', 'sbtn', 'bbtn', 'qbtn', 'mailbtn', 'mapbtn', 'setbtn']) $(id).addEventListener('click', () => setMenu(false));
 cv.addEventListener('pointerdown', () => { if ($('smenu').classList.contains('open')) setMenu(false); });
 /* แชท: ซ่อน/แสดง */
 function setChatMin(v) { $('chat').classList.toggle('min', v); $('chtg').textContent = v ? '💬' : '▾'; $('chtg').setAttribute('aria-label', v ? 'แสดงแชท' : 'ซ่อนแชท'); if (!v) $('chtg').classList.remove('new'); try { localStorage.setItem('bc-chatmin', v ? '1' : '0'); } catch (e) {} }

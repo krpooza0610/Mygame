@@ -418,6 +418,32 @@
     if (p.lv >= LV.rebirth) { out.kind = 'rebirth'; out.ok = true; return out; }
     out.kind = 'rebirth'; out.need = 'ถึง Lv ' + LV.rebirth; return out;
   }
+  /* ชุดอุปกรณ์เริ่มต้นที่ส่งทางจดหมายเมื่อเปลี่ยนอาชีพ → { ไอเท็ม: จำนวน } */
+  function starterKit(job) {
+    const J = JOBS[job]; if (!J) return {};
+    const kit = {}, solo = job === 'Solo Player';
+    const idx = solo ? 2 : Math.max(0, Math.min(2, (J.tier || 1) - 1));
+    const root = J.root;
+    const ar = { Swordman: 'plate', Thief: 'leather', Archer: 'leather', Magician: 'cloth', Acolyte: 'cloth', 'Solo Player': 'plate' }[root] || 'plate';
+    let wId = null, two = false, ammo = null;
+    const restricted = Object.keys(WT).filter(k => WT[k].jobs && WT[k].jobs.indexOf(job) >= 0);
+    const wk = restricted.find(k => !WT[k].off), ok = restricted.find(k => WT[k].off);
+    const idOf = k => k + idx;
+    if (wk) { wId = idOf(wk); two = WT[wk].h === 2; ammo = WT[wk].ammo; }
+    else if (root === 'Swordman' || solo) { wId = idx === 0 ? 'sword_iron' : 'sword2'; }
+    else if (root === 'Thief') wId = idOf('dagger');
+    else if (root === 'Archer') { wId = idOf('bow'); two = true; ammo = 'arrow'; }
+    else wId = idOf('wand');
+    if (wId) kit[wId] = 1;
+    if (!two) {
+      if (ok) kit[idOf(ok)] = 1;
+      else if (root === 'Swordman' || solo) kit[idOf('shield')] = 1;
+      else if (root === 'Magician' || root === 'Acolyte') kit[idOf('book')] = 1;
+    }
+    kit[idx === 0 ? (ar === 'plate' ? 'plate0' : ar === 'leather' ? 'armor_hide' : 'robe_cloth') : ar + idx] = 1;
+    if (ammo) kit[ammo + Math.min(idx, ammo === 'arrow' ? 3 : 3)] = 100;
+    return kit;
+  }
   const REBIRTH_COST = { jelly: 100, tusk: 50, coin: 5000 };
   const resetCost = p => (JOBS[p.job].tier >= 2 || p.job === 'Solo Player' ? 3000 : 0);
 
@@ -452,6 +478,6 @@
     STATS, STAT_TH, MAX_LV, MAX_STAT, LV, TREE, JOBS, JOB_LIST, chain, WT, TIERS, genItems, smithList, SHOP_TIERS,
     statCost, spentStats, totalStatPts, totalSkillPts, newStats, SK, SK_BY_JOB, SPEC, KIND_TH, PAS_TH, ROMAN,
     viaOf, rootOf, ALT, emptyBorrow, fillRand, BSLOTS, skillEff, skillDesc, skillShape, ACTIVE_IDS, bslots, borrowLv, skillLevel, skillLock, skillCanUp, spentSkills, recalcPoints,
-    reqCheck, derive, illegalGear, advInfo, REBIRTH_COST, resetCost, fromSave, toSave, clamp
+    reqCheck, derive, illegalGear, advInfo, starterKit, REBIRTH_COST, resetCost, fromSave, toSave, clamp
   };
 });

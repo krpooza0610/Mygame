@@ -119,7 +119,7 @@
   }
 
   /* ---------------------------------------------------------------- map */
-  const STORE_SLOTS = 60;
+  const STORE_SLOTS = 60, MAIL_MAX = 60;
   function buildMap(name) {
     if (name === 'village') { const vm = buildVillage(); WORLD.addKafra(vm, 'village'); return vm; }
     if (name === 'field') { const m = buildField(); WORLD.fieldExtra(m); return m; }
@@ -492,6 +492,15 @@
           if (q && !p.qdone[id]) p.quests[id] = { n: clamp(Number.isFinite(n) ? n : 0, 0, q.n) };
         }
       }
+      p.mail = []; p.mailSeq = 0;
+      if (save && Array.isArray(save.mail)) for (const m of save.mail.slice(0, MAIL_MAX)) {
+        if (!m || typeof m !== 'object') continue;
+        const items = {};
+        if (m.items && typeof m.items === 'object') for (const k of Object.keys(m.items)) { const v = Math.floor(Number(m.items[k])); if (ITEMS[k] && v > 0) items[k] = Math.min(v, 99999); }
+        const id = Math.floor(Number(m.id)) || ++p.mailSeq; p.mailSeq = Math.max(p.mailSeq, id);
+        p.mail.push({ id, from: String(m.from || 'ระบบ').slice(0, 40), subj: String(m.subj || '').slice(0, 80), body: String(m.body || '').slice(0, 400), items, got: m.got ? 1 : 0, read: m.read ? 1 : 0, key: m.key ? String(m.key).slice(0, 40) : '' });
+      }
+      this.purgeJobQuests(p);
       this.applyLevel(p); p.hp = p.maxHp; p.mp = p.maxMp;
       this.players.set(p.id, p);
       return p;
@@ -507,7 +516,7 @@
     saveOf(p) {
       const active = {};
       for (const id of Object.keys(p.quests)) active[id] = p.quests[id].n | 0;
-      return Object.assign({ lv: p.lv, exp: p.exp, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip), quests: { done: Object.keys(p.qdone), active }, home: p.home, seen: Object.keys(p.seen), storage: Object.assign({}, p.storage) }, RPG.toSave(p));
+      return Object.assign({ lv: p.lv, exp: p.exp, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip), quests: { done: Object.keys(p.qdone), active }, home: p.home, seen: Object.keys(p.seen), storage: Object.assign({}, p.storage), mail: p.mail.map(m => Object.assign({}, m, { items: Object.assign({}, m.items) })) }, RPG.toSave(p));
     }
     meMsg(p) {
       const buffs = {};
@@ -739,7 +748,44 @@
       this.dropIllegalGear(p);
       this.applyLevel(p);
       this.emit(p.zone, { t: 'job', id: p.id, job: p.job, fac: p.fac });
-      this.tellMe(p);
+      this.purgeJobQuests(p);
+      this.sendKit(p);
+      this.tellMe(p); this.tellQuests(p);
+    }
+    purgeJobQuests(p) {   // เควสต์เปลี่ยนอาชีพของสายอื่น/ขั้นอื่นที่ทำไม่ได้แล้ว → ลบทิ้ง
+      for (const id of Object.keys(p.quests)) { const q = QUESTS[id]; if (!q || (q.job && !this.jqOk(p, q))) delete p.quests[id]; }
+    }
+    /* ---- กล่องจดหมาย ---- */
+    addMail(p, o) {
+      if (o.key && p.mail.some(m => m.key === o.key)) return false;
+      const items = {}; for (const k of Object.keys(o.items || {})) if (ITEMS[k]) items[k] = o.items[k];
+      p.mail.push({ id: ++p.mailSeq, from: o.from || 'ระบบ', subj: o.subj, body: o.body || '', items, got: 0, read: 0, key: o.key || '' });
+      while (p.mail.length > MAIL_MAX) { const i = p.mail.findIndex(m => m.got || !Object.keys(m.items).length); p.mail.splice(i < 0 ? 0 : i, 1); }
+      p.dirty = true; this.tellMail(p); this.note(p, 'มีจดหมายใหม่: ' + o.subj);
+      return true;
+    }
+    tellMail(p) { this.events.push({ _to: p.id, t: 'mail', list: p.mail }); }
+    sendKit(p) {
+      const kit = RPG.starterKit(p.job); if (!Object.keys(kit).length) return;
+      this.addMail(p, { key: 'kit:' + p.job + ':' + (p.rb || 0), from: 'สมาคมอาชีพ', subj: 'ชุดเริ่มต้นของ ' + p.job,
+        body: 'ยินดีด้วยที่ได้เป็น ' + p.job + '! สมาคมส่งอุปกรณ์เริ่มต้นประจำอาชีพมาให้ รับของแล้วเปิดถุงเพื่อสวมใส่ได้เลย', items: kit });
+    }
+    mailAct(id, mid, act) {
+      const p = this.players.get(id); if (!p) return false;
+      const m = p.mail.find(x => x.id === mid); if (!m) return false;
+      if (act === 'read') { if (!m.read) { m.read = 1; p.dirty = true; this.tellMail(p); } return true; }
+      if (act === 'del') {
+        if (Object.keys(m.items).length && !m.got) { this.note(p, 'รับของในจดหมายก่อนนะ'); return false; }
+        p.mail.splice(p.mail.indexOf(m), 1); p.dirty = true; this.tellMail(p); return true;
+      }
+      if (act === 'claim') {
+        if (m.got || !Object.keys(m.items).length) return false;
+        for (const k of Object.keys(m.items)) p.inv[k] = Math.min(99999, (p.inv[k] || 0) + m.items[k]);
+        m.got = 1; m.read = 1; p.dirty = true;
+        this.note(p, 'รับของจากจดหมายแล้ว'); this.tellMe(p); this.tellMail(p);
+        return true;
+      }
+      return false;
     }
     grantRand(p) {
       const got = RPG.fillRand(p);
@@ -907,6 +953,7 @@
         const q = QUESTS[id];
         if (p.qdone[id]) continue;
         const act = p.quests[id];
+        if (act && q.job && !this.jqOk(p, q)) continue;
         if (act) {
           const n = q.collect ? Math.min(q.n, p.inv[q.collect] || 0) : act.n;
           out.push({ id, st: n >= q.n ? 'ready' : 'active', n });
@@ -924,7 +971,6 @@
     acceptQuest(id, qid) {
       const p = this.players.get(id), q = QUESTS[qid];
       if (!p || p.dead || !q || p.quests[qid] || p.qdone[qid] || p.lv < q.minLv || (q.prereq && !p.qdone[q.prereq]) || !this.jqOk(p, q)) return false;
-      if (!this.nearNpc(p, q.giver)) { this.note(p, 'เดินเข้าไปใกล้ผู้ให้เควสต์ก่อนนะ'); return false; }
       p.quests[qid] = { n: 0 };
       this.note(p, 'รับเควสต์: ' + q.title);
       this.tellQuests(p);
@@ -940,10 +986,19 @@
       for (const k of Object.keys(q.rewards.items)) {
         p.inv[k] = Math.min(99999, (p.inv[k] || 0) + q.rewards.items[k]);
       }
+      if (q.job && !this.jqOk(p, q)) { delete p.quests[qid]; this.tellQuests(p); return false; }
       delete p.quests[qid]; p.qdone[qid] = 1;
       this.giveExp(p, q.rewards.exp);
       this.note(p, 'เควสต์สำเร็จ: ' + q.title);
       this.events.push({ _to: p.id, t: 'qdone', id: qid });
+      if (q.job && !q.job.c4) {   // ทำเควสต์เปลี่ยนอาชีพเสร็จ → เปลี่ยนอาชีพให้ทันที
+        this.changeJob(p, q.job.to, p.job); this.note(p, 'เลื่อนอาชีพเป็น ' + q.job.to + '!');
+        this.events.push({ t: 'advd', id: p.id, name: p.name, job: q.job.to });
+      } else if (q.job && q.job.c4) {
+        p.c4 = true; this.applyLevel(p); this.purgeJobQuests(p);
+        this.events.push({ t: 'advd', id: p.id, name: p.name, job: p.job, c4: 1 });
+        this.note(p, 'เลื่อนเป็นคลาส 4! ปลดล็อกสกิลไม้ตายแล้ว');
+      }
       this.tellMe(p); this.tellQuests(p);
       return true;
     }
@@ -1248,7 +1303,7 @@
           t: 'init', id: p.id, zone: p.zone, phase: w.phase(now), dayMs: DAY_MS,
           players: w.playersIn(p.zone).map(pub),
           monsters: w.monsters.filter(q => q.zone === p.zone).map(pubM), me: w.meMsg(p),
-          quests: w.questList(p), qdone: Object.keys(p.qdone), seen: Object.keys(p.seen)
+          quests: w.questList(p), qdone: Object.keys(p.qdone), seen: Object.keys(p.seen), mail: p.mail
         }));
         this.bcast({ t: 'join', p: pub(p) }, p.zone, p.id);
       } else if (!c.player) {
@@ -1281,6 +1336,10 @@
         else if (m.t === 'reset') w.resetPoints(id, m.w === 'stats' ? 'stats' : 'skills');
         else if (m.t === 'borrow') w.setBorrow(id, m.slot, m.id ? String(m.id) : null);
         else if (m.t === 'gm') w.gm(id, String(m.cmd), m.v);
+      } else if (m.t === 'mail') {
+        if (now - c.lastAct < 80) return;
+        c.lastAct = now;
+        w.mailAct(c.player.id, Math.floor(Number(m.id)), String(m.a));
       } else if (m.t === 'store' || m.t === 'savepoint') {
         if (now - c.lastAct < 80) return;
         c.lastAct = now;
