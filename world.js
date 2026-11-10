@@ -840,9 +840,30 @@
 
   /* ------------------------------------------------------------- เริ่มต้นและส่งออก */
   const BUILT = {};
+  // คาฟร่า: พนักงานบริการประจำเมือง (คลังเก็บของ / บันทึกจุดเกิด / เดินทางด่วน)
+  const KAFRA_NAME = 'คาฟร่า · พนักงานบริการ';
+  function addKafra(m, zone) {
+    if (m.npcs.some(n => n.id === 'kf_' + zone)) return;
+    let sp = m.spawn && m.spawn.length ? m.spawn : [20, 16];
+    if (Array.isArray(sp[0])) sp = sp[Math.floor(sp.length / 2)];
+    const W_ = m.W || 40, H_ = m.H || 32;
+    const free = (x, y) => x > 1 && y > 1 && x < W_ - 2 && y < H_ - 2 && !m.solid[y * W_ + x] && [0, 1, 2].indexOf(m.tiles[y * W_ + x]) >= 0 &&
+      !m.npcs.some(n => Math.hypot(n.x - x, n.y - y) < 2) && !(m.portals || []).some(p => x >= p.x - 2 && x <= p.x + p.w + 1 && y >= p.y - 2 && y <= p.y + p.h + 1);
+    let best = null;
+    for (let r = 2; r <= 9 && !best; r++) for (let dy = -r; dy <= r && !best; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+      const x = Math.floor(sp[0]) + dx, y = Math.floor(sp[1]) + dy;
+      if (free(x, y)) { best = [x, y]; break; }
+    }
+    if (!best) return;
+    m.npcs.push({ id: 'kf_' + zone, name: KAFRA_NAME, x: best[0], y: best[1], look: { o: 3, h: 1, c: 1, g: 1 }, role: 'kafra',
+      lines: ['ยินดีให้บริการค่ะ ฝากของ บันทึกจุดเกิด หรือเดินทางด่วน ถามคาฟร่าได้เลยนะคะ', 'ของล้นถุงแล้วหรือคะ? ฝากไว้กับคาฟร่าได้ค่ะ'] });
+    m.solid[best[1] * W_ + best[0]] = 1;
+  }
   function build(zone) {
     if (!BUILT[zone]) {
       const m = SPEC[zone]();
+      if (TOWNS.indexOf(zone) >= 0) addKafra(m, zone);
       for (const s of m.spawns || []) if (!MON_ZONE[s[0]]) MON_ZONE[s[0]] = zone;
       BUILT[zone] = m;
     }
@@ -853,6 +874,8 @@
     for (const s of FIELD_SPAWN_X) if (!MON_ZONE[s[0]]) MON_ZONE[s[0]] = 'field';
     MON_ZONE.slime = 'field'; MON_ZONE.boar = 'field';
     for (const z of ZONES) if (SPEC[z]) build(z);
+    for (const z of TOWNS) NPCINFO['kf_' + z] = { zone: z, role: 'kafra', name: KAFRA_NAME, en: 'Kafra · Service Staff' };
+    NAMES.push([KAFRA_NAME, 'Kafra · Service Staff']);
     NPCINFO.n1 = { zone: 'village', role: 'mayor', name: 'ผู้ใหญ่บ้าน', en: 'Village Chief' };
     NPCINFO.n2 = { zone: 'village', role: 'potion', name: 'เจ้าของร้านยา', en: 'Apothecary' };
     NPCINFO.n3 = { zone: 'village', role: 'inn', name: 'เถ้าแก่โรงเตี๊ยม', en: 'Innkeeper' };
@@ -868,6 +891,6 @@
 
   return {
     W, H, T, ZD, ZONES, TOWNS, LINKS, EXITS, OPP, FRONT, frontOf, portalsFor, route, build, fieldExtra, FIELD_SPAWN_X, init,
-    MONX, MART, MROWS, ITEMS_X, NPCINFO, MON_ZONE, TOWN_CODE, SHOP_OF_NPC, NAMES, BNAMES, travelCost, jobQuestId, tierOf, setStrict(v) { STRICT = v; }, SPEC
+    addKafra, MONX, MART, MROWS, ITEMS_X, NPCINFO, MON_ZONE, TOWN_CODE, SHOP_OF_NPC, NAMES, BNAMES, travelCost, jobQuestId, tierOf, setStrict(v) { STRICT = v; }, SPEC
   };
 });

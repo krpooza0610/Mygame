@@ -38,10 +38,28 @@ button{font-family:inherit}
 #tbtn{font-size:14px;font-variant-numeric:tabular-nums}
 @media (max-width:460px){#ttxt{display:none}#tr{gap:6px}}
 @media (max-width:460px){#ttxt{display:none}#tr{gap:6px}}
-#chat{left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right));
-  bottom:max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;max-width:440px}
-#log{display:flex;flex-direction:column;justify-content:flex-end;gap:3px;font-size:13px;line-height:1.35;
-  text-shadow:0 1px 2px #000;max-height:30vh;overflow:hidden}
+#startbtn{pointer-events:auto;left:max(10px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));height:46px;min-width:48px;padding:0 6px;z-index:26;flex-direction:column;gap:0}
+#startbtn .sico{font-size:19px;line-height:1}
+#startbtn b{font-size:10.5px;line-height:1.1;letter-spacing:.3px}
+#startbtn.on{background:var(--accent);color:#fff}
+#smenu{left:max(10px,env(safe-area-inset-left));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 56px);width:min(88vw,290px);padding:10px;z-index:25;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;transform:translateY(60px);opacity:0;visibility:hidden;pointer-events:none;
+  transition:transform .24s cubic-bezier(.2,.8,.3,1),opacity .2s,visibility 0s .24s}
+#smenu.open{transform:none;opacity:1;visibility:visible;pointer-events:auto;transition:transform .24s cubic-bezier(.2,.8,.3,1),opacity .2s}
+#smenu .btn{flex-direction:column;height:64px;font-size:12.5px;padding:4px;gap:1px;min-width:0}
+#smenu .btn i{font-style:normal;font-size:21px;line-height:1.1}
+#smenu .btn.has{border-color:var(--accent2);box-shadow:0 0 0 2px rgba(255,200,90,.45)}
+#chat{left:calc(max(10px,env(safe-area-inset-left)) + 56px);width:min(300px,calc(100vw - 214px));
+  bottom:max(10px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:5px;transition:width .15s}
+#chat:focus-within{width:calc(100vw - 72px - max(10px,env(safe-area-inset-right)))}
+#chat.min{width:auto}
+#chat.min #log,#chat.min #cin,#chat.min .send{display:none}
+#chat.min #cform{padding:0;background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+.chtg{flex:none;position:relative;width:36px;height:36px;border:0;border-radius:8px;background:rgba(255,255,255,.12);color:var(--text);font-size:15px;cursor:pointer}
+#chat.min .chtg{width:46px;height:46px;border-radius:11px;border:1px solid var(--line);background:var(--panel);font-size:19px}
+.chtg.new:after{content:"";position:absolute;right:4px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--accent2)}
+#log{display:flex;flex-direction:column;justify-content:flex-end;gap:2px;font-size:12px;line-height:1.3;
+  text-shadow:0 1px 2px #000;max-height:15vh;overflow:hidden}
 #log .l{padding:2px 9px;border-radius:7px;background:rgba(0,0,0,.34);width:fit-content;max-width:100%;
   word-break:break-word;transition:opacity .6s}
 #log .l b{font-weight:700;margin-right:6px}
@@ -55,6 +73,19 @@ button{font-family:inherit}
 #cin::placeholder{color:#8f8a79}
 #cin:focus{background:rgba(255,255,255,.14)}
 .send{height:36px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:600 14px var(--font);padding:0 14px;cursor:pointer}
+/* back / exit overlay */
+#exitov{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:rgba(8,12,10,.52);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#exitov[hidden]{display:none}
+.eo-box{display:flex;flex-direction:column;align-items:center;gap:14px;width:min(86vw,300px)}
+.eo-box[hidden]{display:none}
+.eo-btn{width:100%;height:54px;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--text);font:700 17px var(--font);cursor:pointer}
+.eo-btn.q{background:rgba(160,56,56,.85);border-color:#c06060;color:#fff}
+.eo-btn:active{transform:scale(.97)}
+.eo-link{border:0;background:none;color:var(--muted);font:14px var(--font);padding:8px;cursor:pointer;text-decoration:underline}
+.eo-q{font-size:20px;font-weight:700;text-align:center;text-shadow:0 1px 3px #000}
+.eo-sub{color:var(--muted);font-size:13px}
+.eo-row{display:flex;gap:10px;width:100%}.eo-row .eo-btn{flex:1;font-size:15px}
 #stats{padding:7px 10px;width:120px;font-size:12px;display:flex;flex-direction:column;gap:4px}
 .srow{display:flex;justify-content:space-between;gap:6px;font-variant-numeric:tabular-nums}
 .bar{height:7px;border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden}
@@ -155,7 +186,7 @@ button{font-family:inherit}
 .chips button.on{background:var(--accent2);color:#2a1a06}
 #shop .bad{color:#ff9a8f;font-size:11px}
 #sbtn.has,#stbtn.has{animation:blink 1s ease-in-out infinite}
-#bag,#shop,#qwin,#dialog{z-index:20}
+#bag,#shop,#kafra,#qwin,#dialog{z-index:20}
 #bag h4,#qwin h4,#dialog h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center;gap:8px}
 #bag h4 button,#qwin h4 button{height:26px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;font:600 12.5px var(--font);padding:0 10px;cursor:pointer}
 .eqrow{display:flex;gap:8px}
@@ -212,6 +243,25 @@ button{font-family:inherit}
 #qwin .em,#bag .em{color:var(--muted);text-align:center}
 #dialog{left:50%;bottom:calc(max(10px,env(safe-area-inset-bottom)) + 130px);transform:translateX(-50%);width:min(92vw,360px);padding:12px;pointer-events:auto;display:flex;flex-direction:column;gap:8px;font-size:13px}
 #dialog .say{font-size:14px;line-height:1.5}
+#kafra{left:50%;top:max(112px,calc(env(safe-area-inset-top) + 102px));transform:translateX(-50%);width:min(92vw,330px);padding:10px;
+  pointer-events:auto;display:flex;flex-direction:column;gap:7px;font-size:13px;max-height:68vh;overflow:auto}
+#kafra h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center}
+#kafra .sec{color:var(--muted);font-size:12px;margin-top:4px}
+#kafra .it{display:flex;align-items:center;gap:6px;justify-content:space-between}
+#kafra .it span{flex:1;min-width:0}
+#kafra .it canvas{flex:none}
+#kafra button{height:28px;border:0;border-radius:7px;background:var(--accent);color:#fff;font:600 12.5px var(--font);padding:0 9px;cursor:pointer}
+#kafra h4 button{background:rgba(255,255,255,.14)}
+#kafra .tabs{display:flex;gap:5px}
+#kafra .tabs button{flex:1;background:rgba(255,255,255,.12)}
+#kafra .tabs button.on{background:var(--accent)}
+#kafra .em{color:var(--muted);text-align:center}
+#kafra .say{font-size:13.5px;line-height:1.5}
+#skills .bsrow{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.07);font-size:13px}
+#skills .bsrow>div{flex:1;min-width:0}
+#skills .bsrow .stat{color:var(--muted);font-size:11.5px}
+#skills .bsrow button{height:28px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:var(--text);font:600 12px var(--font);padding:0 8px;cursor:pointer}
+#skills .bsrow button.bsuse{background:var(--accent);color:#fff}
 #shop .it canvas{flex:none}
 #shop{left:50%;top:max(112px,calc(env(safe-area-inset-top) + 102px));transform:translateX(-50%);width:min(92vw,330px);padding:10px;
   pointer-events:auto;display:flex;flex-direction:column;gap:7px;font-size:13px;max-height:68vh;overflow:auto}
@@ -326,17 +376,19 @@ button{font-family:inherit}
   <div id="hotbar"></div>
   <div id="tr">
     <button id="tbtn" class="btn" type="button" aria-label="เวลาในเกม"><span id="ticon">☀</span><span id="ttxt">10:00</span></button>
-    <button id="stbtn" class="btn" type="button" aria-label="สถานะ">สถานะ</button>
-    <button id="sbtn" class="btn" type="button" aria-label="สกิล">สกิล</button>
-    <button id="bbtn" class="btn" type="button" aria-label="ถุงของ">ถุง</button>
-    <button id="mapbtn" class="btn" type="button" aria-label="แผนที่โลก">แผนที่</button>
-    <button id="setbtn" class="btn" type="button" aria-label="ตั้งค่า">⚙</button>
-    <button id="zin" class="btn" type="button" aria-label="ซูมเข้า">＋</button>
-    <button id="zout" class="btn" type="button" aria-label="ซูมออก">－</button>
+  </div>
+  <button id="startbtn" class="btn" type="button" aria-label="เมนู"><span class="sico">☰</span><b>Start</b></button>
+  <div id="smenu" class="panel" aria-hidden="true">
+    <button id="stbtn" class="btn" type="button" aria-label="สถานะ"><i>🧍</i><span>สถานะ</span></button>
+    <button id="sbtn" class="btn" type="button" aria-label="สกิล"><i>✨</i><span>สกิล</span></button>
+    <button id="bbtn" class="btn" type="button" aria-label="ถุงของ"><i>🎒</i><span>ถุง</span></button>
+    <button id="mapbtn" class="btn" type="button" aria-label="แผนที่โลก"><i>🗺</i><span>แผนที่</span></button>
+    <button id="setbtn" class="btn" type="button" aria-label="ตั้งค่า"><i>⚙</i><span>ตั้งค่า</span></button>
   </div>
   <div id="chat">
     <div id="log"></div>
     <form id="cform" class="panel" autocomplete="off">
+      <button id="chtg" class="chtg" type="button" aria-label="ซ่อนแชท">▾</button>
       <input id="cin" maxlength="80" placeholder="พิมพ์ข้อความ แล้วกดส่ง…" enterkeyhint="send">
       <button class="send" type="submit">ส่ง</button>
     </form>
@@ -344,6 +396,7 @@ button{font-family:inherit}
   <div id="banner"><b></b><span></span></div>
   <div id="bag" class="panel" hidden></div>
   <div id="shop" class="panel" hidden></div>
+  <div id="kafra" class="panel" hidden></div>
   <div id="skills" class="panel" hidden></div>
   <div id="stwin" class="panel" hidden></div>
   <div id="adwin" class="panel" hidden></div>
@@ -410,6 +463,22 @@ button{font-family:inherit}
   </div>
 </div>
 
+<div id="exitov" hidden>
+  <div class="eo-box" id="eo-main">
+    <button type="button" id="eo-char" class="eo-btn">เลือกตัวละคร</button>
+    <button type="button" id="eo-quit" class="eo-btn q">ออกจากเกม</button>
+    <button type="button" id="eo-back" class="eo-link">กลับไปเล่นต่อ</button>
+  </div>
+  <div class="eo-box" id="eo-ask" hidden>
+    <div class="eo-q">จะไปแล้วจริงๆหรอ</div>
+    <div class="eo-row"><button type="button" id="eo-yes" class="eo-btn q">ใช่</button><button type="button" id="eo-no" class="eo-btn">ยังแค่กดผิด</button></div>
+  </div>
+  <div class="eo-box" id="eo-bye" hidden>
+    <div class="eo-q">แล้วเจอกันใหม่นะ 👋</div>
+    <div class="eo-sub">ปิดหน้านี้ได้เลย</div>
+    <button type="button" id="eo-again" class="eo-btn">กลับเข้าเกม</button>
+  </div>
+</div>
 <div id="join" hidden>
   <div class="card panel">
     <div class="brand"><b id="jt">เลือกตัวละคร</b><span id="acct"></span></div>
@@ -1115,6 +1184,7 @@ function addLog(kind, name, text) {
   if (name) { const b = document.createElement('b'); b.textContent = name; d.appendChild(b); }
   d.appendChild(document.createTextNode(text));
   const log = $('log'); log.appendChild(d);
+  if ($('chat').classList.contains('min') && kind !== 'sys') $('chtg').classList.add('new');
   while (log.children.length > 8) log.removeChild(log.firstChild);
   setTimeout(() => d.classList.add('fade'), 18000);
   setTimeout(() => d.remove(), 18700);
@@ -1127,7 +1197,7 @@ let marker = null;
 function applyMe(m) {
   const gained = m.lv > my.lv || (m.lv === my.lv && m.exp > my.exp);
   my.mp = m.mp; my.maxMp = m.maxMp;
-  my.lv = m.lv; my.exp = m.exp; my.next = m.next; my.hp = m.hp; my.maxHp = m.maxHp; my.atk = m.atk; my.def = m.def; my.inv = m.inv || {}; my.equip = m.equip || {};
+  my.lv = m.lv; my.exp = m.exp; my.next = m.next; my.hp = m.hp; my.maxHp = m.maxHp; my.atk = m.atk; my.def = m.def; my.inv = m.inv || {}; my.equip = m.equip || {}; my.storage = m.storage || {}; if (m.home) my.home = m.home;
   for (const k of ['job', 'via', 'fac', 'c4', 'rb', 'orig', 'st', 'sp', 'skp', 'skills', 'borrow', 'bsl', 'buffs', 'atkS', 'atkD', 'atkI', 'crit', 'dodge', 'cdA', 'rng', 'gm']) if (m[k] !== undefined) my[k] = m[k];
   $('slv').textContent = my.lv;
   $('shp').textContent = my.hp + '/' + my.maxHp;
@@ -1140,8 +1210,8 @@ function applyMe(m) {
     $('sxp').textContent = my.exp + '/' + my.next + ' · ' + Math.floor(xpp) + '%';
   } else { $('xpb').style.width = '100%'; $('sxp').textContent = 'MAX'; }
   if (gained) { const xb = $('xpbar'); xb.classList.remove('flash'); void xb.offsetWidth; xb.classList.add('flash'); }
-  const sig = JSON.stringify([my.inv, my.equip, my.atk, my.def, my.lv, my.st, my.sp, my.skp, my.skills, my.borrow, my.job, my.via, my.fac, my.c4, my.rb, my.bsl, my.maxHp, my.maxMp]);
-  if (sig !== lastSig) { lastSig = sig; renderBag(); renderShop(); renderHotbar(); renderSkills(); renderStwin(); renderAdwin(); }
+  const sig = JSON.stringify([my.inv, my.storage, my.home, my.equip, my.atk, my.def, my.lv, my.st, my.sp, my.skp, my.skills, my.borrow, my.job, my.via, my.fac, my.c4, my.rb, my.bsl, my.maxHp, my.maxMp]);
+  if (sig !== lastSig) { lastSig = sig; renderBag(); renderShop(); renderKafra(); renderHotbar(); renderSkills(); renderStwin(); renderAdwin(); }
   $('sbtn').classList.toggle('has', my.skp > 0);
   const adv = RPG.advInfo(my);
   $('stbtn').classList.toggle('has', my.sp > 0 || (adv.ok && adv.kind));
@@ -1179,6 +1249,16 @@ function drawGearIcon(g, key, it) {
 }
 function drawSkillIcon(g, id) {
   g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
+  if (id === 'basic') {
+    g.fillStyle = '#3a4a3c'; g.beginPath(); g.arc(32, 32, 26, 0, 6.3); g.fill(); g.strokeStyle = '#c9b37a'; g.lineWidth = 3; g.stroke();
+    for (const sg of [1, -1]) {
+      g.save(); g.translate(32, 32); g.rotate(sg * Math.PI / 4);
+      g.fillStyle = '#e8eef2'; g.strokeStyle = '#6a7a84'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(-3.5, 14); g.lineTo(-3.5, -16); g.lineTo(0, -21); g.lineTo(3.5, -16); g.lineTo(3.5, 14); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#c79a3c'; g.fillRect(-8, 14, 16, 3.5); g.fillStyle = '#6b4a2a'; g.fillRect(-2, 17.5, 4, 7);
+      g.restore();
+    }
+    g.restore(); return;
+  }
   let sk = G.SKILLS[id];
   if (/^b[0-4]$/.test(id)) sk = G.SKILLS[my.borrow[+id[1]]];
   if (!sk) { g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(32, 32, 22, 0, 6.3); g.fill(); g.restore(); return; }
@@ -1315,8 +1395,9 @@ let bagSel = null, floating = null, curShop = null, nav = null, lastPtr = [200, 
 const hb = new Array(12).fill(null);
 let hbSize = 12; try { const z = +localStorage.getItem('bc-hbsize'); if (z === 3 || z === 6 || z === 12) hbSize = z; } catch (e) {}
 const skCd = {}; let skSel = null;
-try { const s = JSON.parse(localStorage.getItem('bc-hotbar') || 'null'); if (Array.isArray(s)) s.slice(0, 12).forEach((k, i) => { if ((G.ITEMS[k] && (G.ITEMS[k].heal || G.ITEMS[k].mp)) || (typeof k === 'string' && k.indexOf('skill:') === 0 && (G.SKILLS[k.slice(6)] || /^b[0-3]$/.test(k.slice(6))))) hb[i] = k; }); } catch (e) {}
-const PANELS = ['bag', 'shop', 'qwin', 'dialog', 'skills', 'stwin', 'adwin', 'gmwin', 'setwin', 'wmap'];
+try { const s = JSON.parse(localStorage.getItem('bc-hotbar') || 'null'); if (Array.isArray(s)) s.slice(0, 12).forEach((k, i) => { if ((G.ITEMS[k] && (G.ITEMS[k].heal || G.ITEMS[k].mp)) || (typeof k === 'string' && k.indexOf('skill:') === 0 && (G.SKILLS[k.slice(6)] || k.slice(6) === 'basic' || /^b[0-3]$/.test(k.slice(6))))) hb[i] = k; }); } catch (e) {}
+try { if (!localStorage.getItem('bc-basic1')) { localStorage.setItem('bc-basic1', '1'); const f = hb.indexOf(null); if (f >= 0 && hb.indexOf('skill:basic') < 0) { hb[f] = 'skill:basic'; localStorage.setItem('bc-hotbar', JSON.stringify(hb)); } } } catch (e) {}
+const PANELS = ['bag', 'shop', 'kafra', 'qwin', 'dialog', 'skills', 'stwin', 'adwin', 'gmwin', 'setwin', 'wmap'];
 function showPanel(name) { for (const p of PANELS) $(p).hidden = p !== name; }
 function closePanels() { for (const p of PANELS) $(p).hidden = true; }
 function mkEl(tag, cls, text) { const d = document.createElement(tag); if (cls) d.className = cls; if (text != null) d.textContent = text; return d; }
@@ -1430,7 +1511,16 @@ function skillReady(id, quiet) {
   return true;
 }
 /* แตะสกิลโจมตี → เซิร์ฟเวอร์วิ่งไปหามอนที่ใกล้ที่สุดจนอยู่ในระยะแล้วร่ายให้เอง */
+function basicAttack() {
+  if (isTown(curZone)) { toast('ในเมืองไม่มีมอนสเตอร์ — ออกไปแมพล่าก่อนนะ', 1800); return; }
+  const me = ents.get(myId); if (!me || me.dead) return;
+  let best = null, bd = 1e9;
+  for (const m of mons.values()) { if (m.dead) continue; const d = Math.hypot(m.x - me.x, m.y - me.y); if (d < bd) { bd = d; best = m; } }
+  if (!best) { toast('ไม่มีมอนสเตอร์ในแมพนี้ตอนนี้', 1500); return; }
+  nav = null; pendingSkill = null; myTarget = best.id; net && net.send({ t: 'attack', id: best.id });
+}
 function useSkillKey(id) {
+  if (id === 'basic') { basicAttack(); return; }
   if (!skillReady(id)) return;
   const r = skillOf(id);
   if (['A', 'R', 'Z', 'T', 'Y', 'B', 'X'].indexOf(r.sk.k) >= 0 && isTown(curZone)) { toast('ในเมืองไม่มีมอนสเตอร์ — ออกไปแมพล่ามอนก่อนนะ', 2200); return; }
@@ -1450,6 +1540,13 @@ function renderSkills() {
   const b = $('skills'); if (b.hidden) return;
   b.textContent = '';
   const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'สกิล · แต้มสกิล ' + my.skp)); h.appendChild(btnEl('ปิด', () => { cancelFloat(); b.hidden = true; })); b.appendChild(h);
+  const bsr = mkEl('div', 'bsrow');
+  bsr.appendChild(iconEl('skill:basic', 36));
+  const bst = mkEl('div'); bst.appendChild(mkEl('b', '', 'โจมตีปกติ')); bst.appendChild(mkEl('div', 'stat', 'พื้นฐาน · วิ่งไปตีมอนสเตอร์ที่ใกล้ที่สุด'));
+  bsr.appendChild(bst);
+  bsr.appendChild(btnEl('ใช้', () => { b.hidden = true; basicAttack(); }, 'bsuse'));
+  bsr.appendChild(btnEl('ลงคีย์ลัด', () => startFloat('skill:basic')));
+  b.appendChild(bsr);
   const tabs = skTabs(); if (tabs.indexOf(skTab) < 0) skTab = tabs.indexOf(my.job) >= 0 ? my.job : tabs[0];
   const tb = mkEl('div', 'tabs');
   for (const t of tabs) { const x = btnEl(t === 'borrow' ? (my.job === 'Solo Player' ? 'สกิลสุ่ม' : 'ยืมสกิล') : t, () => { skTab = t; skSel = null; skPick = false; renderSkills(); }); if (t === skTab) x.className = 'on'; tb.appendChild(x); }
@@ -1535,7 +1632,7 @@ function renderHotbar() {
     s.appendChild(mkEl('b', '', 'F' + (i + 1)));
     const k = hb[i];
     if (k && k.indexOf('skill:') === 0) {
-      const id = k.slice(6), r = skillOf(id); s.dataset.sk = id; s.appendChild(iconEl(k, 26));
+      const id = k.slice(6), r = id === 'basic' ? null : skillOf(id); if (id !== 'basic') s.dataset.sk = id; s.appendChild(iconEl(k, 26));
       if (r && r.lvl) s.appendChild(mkEl('i', 'mpc', RPG.skillEff(r.sk, r.lvl, my.rb, my.fac).mp || ''));
       s.appendChild(mkEl('div', 'cdov'));
     } else if (k) { const ic = iconEl(k, 26); if (!(my.inv[k] > 0)) ic.style.opacity = 0.35; s.appendChild(ic); s.appendChild(mkEl('i', '', my.inv[k] || 0)); }
@@ -1547,6 +1644,53 @@ function renderHotbar() {
 /* ---- ร้านค้า ---- */
 function openShop(id) { curShop = id; showPanel('shop'); renderShop(); }
 function closeShop() { $('shop').hidden = true; }
+/* ---- คาฟร่า: คลังเก็บของ / บันทึกจุดเกิด / เดินทางด่วน ---- */
+let kfTab = 'store';
+function openKafra() { kfTab = 'store'; showPanel('kafra'); renderKafra(); }
+function renderKafra() {
+  const b = $('kafra'); if (b.hidden) return;
+  b.textContent = '';
+  const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'คาฟร่า · พนักงานบริการ')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
+  const tabs = mkEl('div', 'tabs');
+  for (const [k, t] of [['store', 'คลังเก็บของ'], ['save', 'จุดเกิด'], ['go', 'เดินทาง']]) { const x = btnEl(t, () => { kfTab = k; renderKafra(); }); if (k === kfTab) x.className = 'on'; tabs.appendChild(x); }
+  b.appendChild(tabs);
+  const st = my.storage || {};
+  if (kfTab === 'store') {
+    const row = (key, label, btns) => {
+      const r = mkEl('div', 'it'); r.appendChild(iconEl(key, 30));
+      r.appendChild(mkEl('span', '', label)); for (const [t, fn] of btns) r.appendChild(btnEl(t, fn)); b.appendChild(r);
+    };
+    const send = (item, n, dir) => net && net.send({ t: 'store', item, n, dir });
+    b.appendChild(mkEl('div', 'sec', 'ในคลัง (' + Object.keys(st).length + '/60 ชนิด)'));
+    let any = false;
+    for (const k of ITEM_ORDER) {
+      if (!(st[k] > 0)) continue; any = true;
+      const nm = G.ITEMS[k].name;
+      row(k, nm + ' ×' + st[k], [['ถอน 1', () => send(k, 1, 'out')], ['ทั้งหมด', () => send(k, st[k], 'out')]]);
+    }
+    if (!any) b.appendChild(mkEl('div', 'em', 'คลังยังว่างอยู่'));
+    b.appendChild(mkEl('div', 'sec', 'ในกระเป๋า — ฝากได้'));
+    any = false;
+    for (const k of ITEM_ORDER) {
+      if (!(my.inv[k] > 0)) continue; any = true;
+      const nm = G.ITEMS[k].name;
+      row(k, nm + ' ×' + my.inv[k], [['ฝาก 1', () => send(k, 1, 'in')], ['ทั้งหมด', () => send(k, my.inv[k], 'in')]]);
+    }
+    if (!any) b.appendChild(mkEl('div', 'em', 'กระเป๋าว่าง'));
+  } else if (kfTab === 'save') {
+    b.appendChild(mkEl('div', 'say', 'ถ้าตาย จะฟื้นที่เมืองที่บันทึกไว้ค่ะ — ตอนนี้บันทึกไว้ที่ ' + zoneName(my.home || 'village')));
+    if (isTown(curZone)) b.appendChild(btnEl('บันทึกจุดเกิดที่ ' + zoneName(curZone), () => net && net.send({ t: 'savepoint' })));
+  } else {
+    b.appendChild(mkEl('div', 'say', 'ไปเมืองที่เคยไปแล้ว ค่าบริการ ' + WD.travelCost(my.lv) + ' เหรียญ'));
+    let any = false;
+    for (const z of WD.TOWNS) {
+      if (z === curZone || !seenZ.has(z)) continue; any = true;
+      const r = mkEl('div', 'it'); r.appendChild(mkEl('span', '', zoneName(z)));
+      r.appendChild(btnEl('ไป', () => { net && net.send({ t: 'travel', to: z }); b.hidden = true; })); b.appendChild(r);
+    }
+    if (!any) b.appendChild(mkEl('div', 'em', 'ยังไม่มีเมืองอื่นที่เคยไป'));
+  }
+}
 let shopCat = 'all';
 const SHOP_CATS = [['all', 'ทั้งหมด'], ['weapon', 'อาวุธ'], ['off', 'มืออีกข้าง'], ['armor', 'เกราะ'], ['ammo', 'กระสุน'], ['ok', 'ใช้ได้']];
 function renderShop() {
@@ -1635,6 +1779,7 @@ function renderQwin() {
 }
 let dlgNpc = null;
 function openDialog(npcId) {
+  if (npcId.indexOf('kf_') === 0) { openKafra(); return; }
   const rel = qs.list.filter(x => qDef(x.id).giver === npcId);
   if (!rel.length) { const e = ents.get(npcId), n = map.npcs.find(q => q.id === npcId); if (e && n) say(e, n.lines[Math.floor(Math.random() * n.lines.length)]); return; }
   dlgNpc = npcId; showPanel('dialog'); renderDialog();
@@ -1695,10 +1840,10 @@ setInterval(navTick, 350);
 
 /* ---- แผนที่โลก: กราฟเมือง/แมพ + ข้อมูลเมือง NPC มอนสเตอร์ ---- */
 let wmSel = null;
-const ROLE_TH = { mayor: 'ผู้ปกครองเมือง', inn: 'โรงเตี๊ยม', potion: 'ร้านยา', smith: 'ช่างตีเหล็ก', scholar: 'นักปราชญ์', villager: 'ชาวเมือง', guard: 'ทหารยาม', master: 'ครูเปลี่ยนอาชีพ', merchant: 'พ่อค้า' };
+const ROLE_TH = { mayor: 'ผู้ปกครองเมือง', inn: 'โรงเตี๊ยม', potion: 'ร้านยา', smith: 'ช่างตีเหล็ก', scholar: 'นักปราชญ์', villager: 'ชาวเมือง', guard: 'ทหารยาม', master: 'ครูเปลี่ยนอาชีพ', kafra: 'พนักงานบริการ', merchant: 'พ่อค้า' };
 function shortZ(z) { const n = T(zoneName(z)); return n.length > 10 ? n.slice(0, 9) + '…' : n; }
 function zoneNpcs(z) {
-  if (z === 'village') return mapOf('village').npcs.map(n => ({ id: n.id, name: n.name, role: n.id === 'n2' ? 'potion' : n.id === 'n5' ? 'smith' : 'villager' }));
+  if (z === 'village') return mapOf('village').npcs.map(n => ({ id: n.id, name: n.name, role: n.id === 'n2' ? 'potion' : n.id === 'n5' ? 'smith' : n.id === 'kf_village' ? 'kafra' : 'villager' }));
   return Object.keys(WD.NPCINFO).filter(id => WD.NPCINFO[id].zone === z).map(id => ({ id, name: WD.NPCINFO[id].name, role: WD.NPCINFO[id].role }));
 }
 function dropText(D) {
@@ -1954,6 +2099,7 @@ function handle(m) {
       onQuests(true);
       const me = ents.get(myId); const c = proj(me.x, me.y); cam.x = c[0]; cam.y = c[1] - 18;
       joined = true; setStatus();
+      if (!guarded) { guarded = true; pushGuard(); }
       { const mm = ents.get(myId); if (mm) $('sname').textContent = mm.name; }
       $('join').hidden = true; $('hud').hidden = false; showBanner(curZone); restoreStatPos();
       try { if (!localStorage.getItem('bc-hint1')) { localStorage.setItem('bc-hint1', '1'); addLog('sys', '', 'เคล็ดลับ: กดค้างที่กรอบสถานะ (HP/MP/EXP) แล้วลากเพื่อย้ายตำแหน่งได้'); } } catch (e) {}
@@ -2166,7 +2312,7 @@ cv.addEventListener('pointerup', e => {
   if (floating) { cancelFloat(); return; }
   nav = null; pendingSkill = null;
   if (isTown(curZone)) {
-    for (const [nid, act] of (curZone === 'village' ? [['n2', 'potion'], ['n5', 'smith'], ['n1', 'talk'], ['n3', 'talk'], ['n4', 'talk']] : map.npcs.map(n => [n.id, WD.SHOP_OF_NPC[n.id] || 'talk']))) {
+    for (const [nid, act] of (curZone === 'village' ? [['n2', 'potion'], ['n5', 'smith'], ['n1', 'talk'], ['n3', 'talk'], ['n4', 'talk'], ['kf_village', 'talk']] : map.npcs.map(n => [n.id, WD.SHOP_OF_NPC[n.id] || 'talk']))) {
       const sn = ents.get(nid); if (!sn) continue;
       const q = proj(sn.x, sn.y);
       if (Math.hypot(e.clientX - S2X(q[0]), e.clientY - (S2Y(q[1]) - 26 * zoom)) < 30 * zoom) {
@@ -2231,8 +2377,51 @@ setInterval(joyPush, 110);
 cv.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') hover = screenToTile(e.clientX, e.clientY); });
 cv.addEventListener('pointerleave', () => { hover = null; });
 cv.addEventListener('wheel', e => { e.preventDefault(); zoom = clamp(zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.5, 1.8); }, { passive: false });
-$('zin').onclick = () => { zoom = clamp(zoom * 1.15, 0.5, 1.8); };
-$('zout').onclick = () => { zoom = clamp(zoom / 1.15, 0.5, 1.8); };
+/* ซูมด้วยสองนิ้ว (pinch) */
+{
+  const ptrs = new Map(); let pd = 0;
+  const dist = () => { const a = [...ptrs.values()]; return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); };
+  cv.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size === 2) { pd = dist(); down = null; } });
+  cv.addEventListener('pointermove', e => {
+    if (!ptrs.has(e.pointerId)) return;
+    ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ptrs.size === 2) { const d = dist(); if (pd > 8 && d > 8) zoom = clamp(zoom * d / pd, 0.5, 1.8); pd = d; down = null; }
+  });
+  const up = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pd = 0; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('pointerleave', up);
+}
+/* เมนู Start (เลื่อนขึ้นจากมุมซ้ายล่าง) */
+function setMenu(on) { $('smenu').classList.toggle('open', on); $('startbtn').classList.toggle('on', on); $('smenu').setAttribute('aria-hidden', on ? 'false' : 'true'); }
+$('startbtn').onclick = () => setMenu(!$('smenu').classList.contains('open'));
+for (const id of ['stbtn', 'sbtn', 'bbtn', 'mapbtn', 'setbtn']) $(id).addEventListener('click', () => setMenu(false));
+cv.addEventListener('pointerdown', () => { if ($('smenu').classList.contains('open')) setMenu(false); });
+/* แชท: ซ่อน/แสดง */
+function setChatMin(v) { $('chat').classList.toggle('min', v); $('chtg').textContent = v ? '💬' : '▾'; $('chtg').setAttribute('aria-label', v ? 'แสดงแชท' : 'ซ่อนแชท'); if (!v) $('chtg').classList.remove('new'); try { localStorage.setItem('bc-chatmin', v ? '1' : '0'); } catch (e) {} }
+$('chtg').onclick = () => setChatMin(!$('chat').classList.contains('min'));
+try { if (localStorage.getItem('bc-chatmin') === '1') setChatMin(true); } catch (e) {}
+/* ปุ่มย้อนกลับ → หน้าต่างเลือกตัวละคร / ออกจากเกม */
+let leaving = false, guarded = false;
+function eoShow(which) { $('exitov').hidden = !which; for (const k of ['main', 'ask', 'bye']) $('eo-' + k).hidden = k !== which; }
+function pushGuard() { try { history.pushState({ bc: 1 }, ''); } catch (e) {} }
+function handleBack() {
+  if (!$('exitov').hidden) { if (!$('eo-bye').hidden) return; eoShow(null); return; }
+  if ($('smenu').classList.contains('open')) { setMenu(false); return; }
+  if (PANELS.some(p => !$(p).hidden)) { cancelFloat(); closePanels(); return; }
+  eoShow('main');
+}
+window.addEventListener('popstate', () => { if (!joined || leaving) return; pushGuard(); handleBack(); });
+$('eo-char').onclick = () => { leaving = true; if (net && net.close) net.close(); location.reload(); };
+$('eo-quit').onclick = () => eoShow('ask');
+$('eo-no').onclick = () => eoShow(null);
+$('eo-back').onclick = () => eoShow(null);
+$('exitov').addEventListener('pointerdown', e => { if (e.target === $('exitov') && $('eo-bye').hidden) eoShow(null); });
+$('eo-yes').onclick = () => {
+  leaving = true; if (net && net.close) net.close();
+  eoShow('bye');
+  try { window.close(); } catch (e) {}
+  setTimeout(() => { try { history.go(-2); } catch (e) {} }, 250);
+};
+$('eo-again').onclick = () => location.reload();
 $('sbtn').onclick = () => { const b = $('skills'); if (b.hidden) { showPanel('skills'); renderSkills(); } else { cancelFloat(); b.hidden = true; } };
 $('bbtn').onclick = () => { const b = $('bag'); if (b.hidden) { showPanel('bag'); renderBag(); } else { cancelFloat(); b.hidden = true; } };
 $('tbtn').onclick = () => { timeMode = timeMode === 'auto' ? 'day' : timeMode === 'day' ? 'night' : 'auto'; };
@@ -2244,7 +2433,7 @@ $('cform').addEventListener('submit', e => {
 });
 window.addEventListener('keydown', e => {
   if (e.key === 'Enter' && joined && document.activeElement !== $('cin') && document.activeElement !== $('nm')) { e.preventDefault(); $('cin').focus(); }
-  if (e.key === 'Escape') { $('cin').blur(); cancelFloat(); }
+  if (e.key === 'Escape') { if (document.activeElement === $('cin')) $('cin').blur(); else if (joined && !leaving) handleBack(); cancelFloat(); }
   const fm = /^F(\d{1,2})$/.exec(e.key);
   if (fm && joined && document.activeElement !== $('cin') && +fm[1] >= 1 && +fm[1] <= 12) { e.preventDefault(); hotbarTap(+fm[1] - 1); }
 });

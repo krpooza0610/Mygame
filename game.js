@@ -119,8 +119,9 @@
   }
 
   /* ---------------------------------------------------------------- map */
+  const STORE_SLOTS = 60;
   function buildMap(name) {
-    if (name === 'village') return buildVillage();
+    if (name === 'village') { const vm = buildVillage(); WORLD.addKafra(vm, 'village'); return vm; }
     if (name === 'field') { const m = buildField(); WORLD.fieldExtra(m); return m; }
     return WORLD.build(name);
   }
@@ -473,6 +474,8 @@
       }
       if (save && Array.isArray(save.seen)) for (const z of save.seen) if (ZONES.indexOf(z) >= 0) p.seen[z] = 1;
       p.seen[home] = 1;
+      p.storage = {};
+      if (save && save.storage && typeof save.storage === 'object') for (const k of Object.keys(save.storage)) { const v = Math.floor(Number(save.storage[k])); if ((ITEMS[k] || k === 'coin') && v > 0 && Object.keys(p.storage).length < STORE_SLOTS) p.storage[k] = Math.min(v, 999999); }
       RPG.fromSave(p, save, ITEMS);
       if (save && save.equip && typeof save.equip === 'object') {
         for (const slot of ['weapon', 'off', 'armor', 'ammo']) {
@@ -504,7 +507,7 @@
     saveOf(p) {
       const active = {};
       for (const id of Object.keys(p.quests)) active[id] = p.quests[id].n | 0;
-      return Object.assign({ lv: p.lv, exp: p.exp, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip), quests: { done: Object.keys(p.qdone), active }, home: p.home, seen: Object.keys(p.seen) }, RPG.toSave(p));
+      return Object.assign({ lv: p.lv, exp: p.exp, inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip), quests: { done: Object.keys(p.qdone), active }, home: p.home, seen: Object.keys(p.seen), storage: Object.assign({}, p.storage) }, RPG.toSave(p));
     }
     meMsg(p) {
       const buffs = {};
@@ -512,7 +515,7 @@
       return {
         t: 'me', lv: p.lv, exp: p.exp, next: p.lv >= LVCAP ? 0 : nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp, atk: p.atk, def: p.def,
         inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip),
-        home: p.home, job: p.job, via: p.via || null, fac: p.fac, c4: p.c4 ? 1 : 0, rb: p.rb, orig: p.orig, st: Object.assign({}, p.st), sp: p.sp, skp: p.skp,
+        home: p.home, storage: Object.assign({}, p.storage), job: p.job, via: p.via || null, fac: p.fac, c4: p.c4 ? 1 : 0, rb: p.rb, orig: p.orig, st: Object.assign({}, p.st), sp: p.sp, skp: p.skp,
         skills: Object.assign({}, p.skills), borrow: p.borrow.slice(), bsl: RPG.bslots(p), buffs,
         atkS: p.atkS, atkD: p.atkD, atkI: p.atkI, crit: Math.round(p.crit * 1000) / 10, dodge: Math.round(p.dodge * 1000) / 10, cdA: Math.round(p.acd * 100) / 100, rng: p.rng, gm: p.gm ? 1 : 0
       };
@@ -526,7 +529,7 @@
       const old = p.zone;
       this.emit(old, { t: 'leave', id: p.id });
       p.zone = zone; p.x = x; p.y = y; p.path = []; p.moving = false; p.target = null; p.dirty = true; p.warpCd = 1.5;
-      p.seen[zone] = 1; if (TOWNS.indexOf(zone) >= 0) p.home = zone;
+      p.seen[zone] = 1;
       this.emit(zone, { t: 'join', p: pub(p), _x: p.id });
       this.events.push({
         _to: p.id, t: 'zone', zone, x, y,
@@ -841,6 +844,26 @@
       p.inv.coin -= cost; if (p.inv.coin <= 0) delete p.inv.coin;
       const f = this.arrival(to); this.moveZone(p, to, f[0], f[1]);
       this.note(p, 'เดินทางไป ' + WORLD.ZD[to].n + ' (-' + cost + ' เหรียญ)');
+      return true;
+    }
+    store(id, item, n, dir) {   // คาฟร่า: ฝาก/ถอนของจากคลัง
+      const p = this.players.get(id);
+      if (!p || p.dead || !this.nearNpc(p, 'kf_' + p.zone, 4)) { if (p) this.note(p, 'เดินเข้าไปใกล้คาฟร่าก่อนนะ'); return false; }
+      if (!ITEMS[item] && item !== 'coin') return false;
+      n = clamp(Math.floor(Number(n)) || 1, 1, 999999);
+      const from = dir === 'out' ? p.storage : p.inv, to = dir === 'out' ? p.inv : p.storage;
+      if (!(from[item] > 0)) return false;
+      n = Math.min(n, from[item]);
+      if (dir !== 'out' && !(to[item] > 0) && Object.keys(to).length >= STORE_SLOTS) { this.note(p, 'คลังเต็มแล้ว (สูงสุด ' + STORE_SLOTS + ' ชนิด)'); return false; }
+      from[item] -= n; if (from[item] <= 0) delete from[item];
+      to[item] = Math.min((to[item] || 0) + n, 999999);
+      p.dirty = true; this.tellMe(p); this.tellQuests(p);
+      return true;
+    }
+    savePoint(id) {   // คาฟร่า: บันทึกจุดเกิด (ตายแล้วฟื้นที่นี่)
+      const p = this.players.get(id);
+      if (!p || p.dead || TOWNS.indexOf(p.zone) < 0 || !this.nearNpc(p, 'kf_' + p.zone, 4)) { if (p) this.note(p, 'เดินเข้าไปใกล้คาฟร่าก่อนนะ'); return false; }
+      p.home = p.zone; p.dirty = true; this.note(p, 'บันทึกจุดเกิดที่ ' + WORLD.ZD[p.zone].n + ' แล้ว'); this.tellMe(p);
       return true;
     }
     nearNpc(p, npcId, r) {
@@ -1258,6 +1281,10 @@
         else if (m.t === 'reset') w.resetPoints(id, m.w === 'stats' ? 'stats' : 'skills');
         else if (m.t === 'borrow') w.setBorrow(id, m.slot, m.id ? String(m.id) : null);
         else if (m.t === 'gm') w.gm(id, String(m.cmd), m.v);
+      } else if (m.t === 'store' || m.t === 'savepoint') {
+        if (now - c.lastAct < 80) return;
+        c.lastAct = now;
+        if (m.t === 'store') w.store(c.player.id, String(m.item), m.n, m.dir === 'out' ? 'out' : 'in'); else w.savePoint(c.player.id);
       } else if (m.t === 'travel') {
         if (now - c.lastAct < 300) return;
         c.lastAct = now;
