@@ -10,7 +10,7 @@
   const STATS = ['str', 'agi', 'vit', 'int', 'dex', 'luk'];
   const STAT_TH = { str: 'STR', agi: 'AGI', vit: 'VIT', int: 'INT', dex: 'DEX', luk: 'LUK' };
   const MAX_LV = 99, MAX_STAT = 99;
-  const LV = { c1: 10, fac: 30, c2: 35, c3: 60, c4: 80, rebirth: 99 };
+  const LV = { c1: 10, fac: 30, c2: 35, c3: 60, c4: 80, rebirth: 99, solo: 50 };
 
   /* ------------------------------------------------------------------ jobs */
   const TREE = [
@@ -20,7 +20,7 @@
     ['Magician', [['Wizard', ['High Wizard', 'Galaxy Magic']], ['Sage', ['Sagemaster', 'Elemental']], ['Summoner', ['Summonmonster', 'Darksummon']], ['Magic Sword', ['Lightsaber', 'Flysword']]]],
     ['Acolyte', [['Priest', ['High Priest', 'Dark Priest']], ['Monk', ['Ashura', 'Taekwondo', 'Muay Thai']], ['Assen', ['Ringmaster', 'Biwposter']]]]
   ];
-  const JOBS = { Adventurer: { name: 'Adventurer', tier: 0, parent: null, root: 'Adventurer', kids: [] }, Passerby: { name: 'Passerby', tier: 0, parent: null, root: 'Passerby', kids: [], special: 1 } };
+  const JOBS = { Adventurer: { name: 'Adventurer', tier: 0, parent: null, root: 'Adventurer', kids: [] }, 'Solo Player': { name: 'Solo Player', tier: 0, parent: null, root: 'Solo Player', kids: [], special: 1 } };
   for (const [c1, c2s] of TREE) {
     JOBS[c1] = { name: c1, tier: 1, parent: 'Adventurer', root: c1, kids: [] }; JOBS.Adventurer.kids.push(c1);
     for (const [c2, c3s] of c2s) {
@@ -28,10 +28,22 @@
       for (const c3 of c3s) { JOBS[c3] = { name: c3, tier: 3, parent: c2, root: c1, kids: [] }; JOBS[c2].kids.push(c3); }
     }
   }
+  // อาชีพคลาส 3 ที่มาจากได้สองสาย (via = คลาส 2 ที่มา)
+  const ALT = { 'Holy Knight': ['Paladin', 'Priest'], 'Ancient Controller': ['Engineer', 'Summoner'] };
+  for (const k of Object.keys(ALT)) {
+    JOBS[k] = { name: k, tier: 3, parent: ALT[k][0], root: JOBS[ALT[k][0]].root, kids: [], alt: ALT[k] };
+    for (const par of ALT[k]) JOBS[par].kids.push(k);
+  }
   const JOB_LIST = Object.keys(JOBS);
-  const chain = job => { const out = []; for (let j = JOBS[job]; j; j = j.parent ? JOBS[j.parent] : null) out.unshift(j.name); return out; };
-  const LINE_HP = { Adventurer: 1.0, Passerby: 1.1, Swordman: 1.3, Thief: 1.0, Archer: 0.95, Magician: 0.8, Acolyte: 1.05 };
-  const LINE_MP = { Adventurer: 1.0, Passerby: 1.2, Swordman: 0.8, Thief: 0.9, Archer: 0.95, Magician: 1.5, Acolyte: 1.35 };
+  const viaOf = (job, via) => (ALT[job] && ALT[job].indexOf(via) >= 0 ? via : ALT[job] ? ALT[job][0] : null);
+  const chain = (job, via) => {
+    const out = []; let j = JOBS[job], first = true;
+    while (j) { out.unshift(j.name); const par = first && ALT[job] ? viaOf(job, via) : j.parent; first = false; j = par ? JOBS[par] : null; }
+    return out;
+  };
+  const rootOf = p => (ALT[p.job] ? JOBS[viaOf(p.job, p.via)].root : JOBS[p.job].root);
+  const LINE_HP = { Adventurer: 1.0, 'Solo Player': 1.15, Swordman: 1.3, Thief: 1.0, Archer: 0.95, Magician: 0.8, Acolyte: 1.05 };
+  const LINE_MP = { Adventurer: 1.0, 'Solo Player': 1.0, Swordman: 0.8, Thief: 0.9, Archer: 0.95, Magician: 1.5, Acolyte: 1.35 };
 
   /* ----------------------------------------------------------- weapon types */
   // h:1/2 = ถือกี่มือ, off = ช่องมืออีกข้าง, sty = สูตรโจมตี (s=STR d=DEX i=INT), st = สเตตัสที่ต้องมี, adv = ต้อง Lv10, jobs = จำกัดอาชีพ
@@ -186,7 +198,9 @@
     Assen: ['s', 'ABPXZ', 'hp', 0, ['Club Smash', 'Ground Pound', 'Thick Skin', 'Rampage', 'Mountain Fall']],
     Ringmaster: ['s', 'ABUXZ', 'atk', 0, ['Whip Show', 'Fire Hoop', 'Showtime', 'Grand Parade', 'Circus Ruin']],
     Biwposter: ['s', 'ABUXZ', 'atk', 0, ['Poster Slap', 'Billboard Bash', 'Hype Train', 'Mega Print', 'Viral Storm']],
-    Passerby: ['s', 'ABUYX', 'atk', 5, ['Wanderer Strike', 'Crossing Wave', 'Traveler Grace', 'Footprints of Many', 'Road Beyond']]
+    'Holy Knight': ['s', 'ABDXH', 'def', 0, ['Holy Strike', 'Radiant Cleave', 'Aegis of Light', 'Judgement Blade', 'Archangel Oath']],
+    'Ancient Controller': ['i', 'RTUYX', 'mp', 6, ['Relic Bolt', 'Ruin Resonance', 'Artifact Sync', 'Titan Relic', 'Ancient Awakening']],
+    'Solo Player': ['s', 'ABPZX', 'aspd', 0, ['Dual Slash', 'Whirling Blades', 'Dual Mastery', 'Eclipse Barrage', 'Black Moon Dance']]
   };
   const KIND_TH = { A: 'โจมตีเป้าหมาย', R: 'โจมตีระยะไกล', B: 'โจมตีรอบตัว', T: 'ระเบิดรอบเป้าหมาย', U: 'บัฟพลังโจมตี', D: 'บัฟป้องกัน', H: 'ฟื้นเลือด', P: 'พาสซีฟ', X: 'ท่าไม้ตายรอบตัว', Y: 'ท่าไม้ตายระยะไกล', Z: 'ท่าไม้ตายโจมตีหนัก' };
   const PAS_TH = { atk: 'พลังโจมตี', crit: 'โอกาสคริติคอล', dodge: 'โอกาสหลบ', hp: 'เลือดสูงสุด', mp: 'MP สูงสุด', def: 'พลังป้องกัน', aspd: 'ความเร็วโจมตี', heal: 'พลังฟื้นฟู' };
@@ -207,13 +221,13 @@
     addSkill('Adventurer', 2, 'Mend', 'H', { id: 'mend', sty: 'i', rng: 0, min: 5, pas: null, bm: 1 });
     for (const job of Object.keys(SPEC)) {
       const [sty, kinds, pas, rng, names] = SPEC[job], J = JOBS[job];
-      const base = job === 'Passerby' ? 80 : [1, 10, 35, 60][J.tier];
+      const base = job === 'Solo Player' ? 50 : [1, 10, 35, 60][J.tier];
       for (let i = 0; i < 5; i++) {
         const o = { sty, rng, pas, min: i < 3 ? Math.min(79, base + i * 4) : 80 };
-        if (job === 'Passerby') o.min = 80 + i * 3;
+        if (job === 'Solo Player') o.min = [50, 54, 58, 70, 80][i];
         if (i === 3) { o.max = 3; o.cost = 2; o.c4 = 1; }
         if (i === 4) { o.max = 3; o.cost = 2; o.sp = 1; o.c4 = 1; }
-        if (job === 'Passerby' && i >= 3) { o.c4 = 0; o.sp = 0; }
+        if (job === 'Solo Player' && i >= 3) { o.c4 = 0; o.sp = 0; }
         if (i > 0 && i < 3 && kinds[i] !== 'P') o.pre = SK_BY_JOB[job][i - 1].id;
         addSkill(job, i, names[i], kinds[i], o);
       }
@@ -262,16 +276,31 @@
     return '';
   }
   const skillShape = sk => (sk.k === 'P' ? 'sq' : sk.k === 'U' || sk.k === 'D' ? 'rr' : 'ci');   // สี่เหลี่ยมคม = พาสซีฟ, มนเหลี่ยม = บัฟ, วงกลม = ใช้งาน
-  const ACTIVE_IDS = () => Object.keys(SK).filter(id => SK[id].k !== 'P' && !SK[id].sp && !SK[id].c4 && SK[id].job !== 'Adventurer');
+  const ACTIVE_IDS = () => Object.keys(SK).filter(id => SK[id].k !== 'P' && !SK[id].sp && !SK[id].c4 && SK[id].job !== 'Adventurer' && SK[id].job !== 'Solo Player');
 
   /* ------------------------------------------------- player-rpg state helpers */
-  const bslots = p => (p.job === 'Adventurer' || p.job === 'Passerby' ? [10, 30, 50, 70].filter(v => p.lv >= v).length : 0);
+  const BSLOTS = 5;
+  // Adventurer: ยืมสกิลเองได้ที่ Lv10/30/50/70 · Solo Player: ได้สกิลสุ่มจากอาชีพอื่นทุก 10 เลเวล (Lv50,60,70,80,90)
+  const bslots = p => (p.job === 'Adventurer' ? [10, 30, 50, 70].filter(v => p.lv >= v).length : p.job === 'Solo Player' ? clamp(Math.floor(p.lv / 10) - 4, 0, 5) : 0);
+  const emptyBorrow = () => [null, null, null, null, null];
+  function fillRand(p) {   // Solo Player: เติมสกิลสุ่มให้ช่องที่ปลดล็อกแล้ว (คืนค่า = สกิลใหม่)
+    const got = [];
+    if (p.job !== 'Solo Player') return got;
+    const n = bslots(p), pool = ACTIVE_IDS();
+    for (let i = 0; i < n; i++) {
+      if (p.borrow[i]) continue;
+      const left = pool.filter(id => p.borrow.indexOf(id) < 0);
+      if (!left.length) break;
+      p.borrow[i] = left[Math.floor(Math.random() * left.length)]; got.push(p.borrow[i]);
+    }
+    return got;
+  }
   const borrowLv = p => clamp(1 + Math.floor(p.lv / 25), 1, 5);
   function skillLevel(p, id) { return (p.skills && p.skills[id]) | 0; }
   // เงื่อนไขของสกิล → null ถ้าเรียนได้ / ข้อความ ถ้ายัง
   function skillLock(p, sk) {
-    if (sk.job !== 'Adventurer' && chain(p.job).indexOf(sk.job) < 0) return 'ต้องเป็นอาชีพ ' + sk.job;
-    if (sk.job === 'Passerby' && p.job !== 'Passerby') return 'เฉพาะ Passerby';
+    if (sk.job !== 'Adventurer' && chain(p.job, p.via).indexOf(sk.job) < 0) return 'ต้องเป็นอาชีพ ' + sk.job;
+    if (sk.job === 'Solo Player' && p.job !== 'Solo Player') return 'เฉพาะ Solo Player';
     if (p.lv < sk.min) return 'ต้องเลเวล ' + sk.min;
     if (sk.c4 && !p.c4) return 'ต้องเลื่อนเป็นคลาส 4 (Lv 80)';
     if (sk.sp && !(p.rb >= 1 && p.job === p.orig)) return 'ปลดล็อกหลังเกิดใหม่ (เฉพาะอาชีพเดิม)';
@@ -309,7 +338,7 @@
     const gb = { atk: 0, def: 0, aspd: 0, crit: 0, dodge: 0, hp: 0, mp: 0, heal: 0, spd: 0 };
     for (const id of Object.keys(p.skills || {})) {
       const sk = SK[id]; if (!sk || sk.k !== 'P' || !p.skills[id]) continue;
-      if (chain(p.job).indexOf(sk.job) < 0 && sk.job !== 'Adventurer') continue;
+      if (chain(p.job, p.via).indexOf(sk.job) < 0 && sk.job !== 'Adventurer') continue;
       const e = skillEff(sk, p.skills[id], rb, p.fac); gb[sk.pas] += e.v;
     }
     let bAtk = 0, bDef = 0, bAspd = 0, bSpd = 0;
@@ -321,6 +350,8 @@
     const ammo = ITEMS[p.equip.ammo];
     const wtA = (w && w.atk) || 0, wtM = (w && w.matk) || 0, oA = (off && off.atk) || 0, oM = (off && off.matk) || 0;
     const ammoA = w && WT[w.wt] && WT[w.wt].ammo && ammo && ammo.kind === WT[w.wt].ammo && (p.inv[p.equip.ammo] | 0) > 0 ? ammo.atk : 0;
+    const dual = p.job === 'Solo Player' && w && off && w.wt === 'sword' && off.wt === 'sword';
+    p.dual = dual ? 1 : 0;
     const base = 6 + lv / 2;
     const luk = st.luk * 0.3;
     const fm = (1 + bAtk) * (p.fac === 'a' ? 1.0 : 1.0);
@@ -330,16 +361,17 @@
     const wt = w && WT[w.wt];
     p.sty = wt && wt.sty ? wt.sty : 's';
     p.atk = p.sty === 'd' ? p.atkD : p.sty === 'i' ? p.atkI : p.atkS;
+    if (dual) p.atk = Math.round(p.atk * 1.1);
     p.rng = wt && wt.rng ? wt.rng : 1.6;
     p.ammoKind = wt && wt.ammo ? wt.ammo : null;
-    const aspdB = Math.min(0.6, st.agi * 0.005 + st.dex * 0.002 + gb.aspd + bAspd);
+        const aspdB = Math.min(0.6, st.agi * 0.005 + st.dex * 0.002 + gb.aspd + bAspd + (dual ? 0.15 : 0));
     p.acd = Math.max(0.3, (wt && wt.cd ? wt.cd : 1.0) * (1 - aspdB));
     p.crit = Math.min(0.75, 0.05 + st.luk * 0.003 + gb.crit);
     p.dodge = Math.min(0.5, st.agi * 0.004 + gb.dodge);
     p.def = Math.floor(st.vit * 0.5 + lv / 4 + gb.def + ((ar && ar.def) || 0) + ((off && off.def) || 0) + ((w && w.def) || 0));
     p.def = Math.round(p.def * (1 + bDef) * (p.fac === 'd' ? 1.05 : 1));
     p.healMul = 1 + gb.heal + st.int * 0.003;
-    const hpm = (LINE_HP[JOBS[p.job].root] || 1) * (1 + 0.1 * rb), mpm = LINE_MP[JOBS[p.job].root] || 1;
+    const hpm = (LINE_HP[rootOf(p)] || 1) * (1 + 0.1 * rb), mpm = LINE_MP[rootOf(p)] || 1;
     p.maxHp = Math.round((60 + 15 * (lv - 1)) * hpm * (1 + st.vit * 0.012 + gb.hp));
     p.maxMp = Math.round((30 + 6 * (lv - 1)) * mpm * (1 + st.int * 0.012 + gb.mp + ((ar && ar.mpp) || 0)));
     p.spdMul = 1 + bSpd;
@@ -351,6 +383,8 @@
     for (const slot of ['weapon', 'off', 'armor']) {
       const it = ITEMS[p.equip[slot]]; if (it && reqCheck(p, it)) bad.push(slot);
     }
+    const o = ITEMS[p.equip.off];
+    if (o && o.slot === 'weapon' && !(p.job === 'Solo Player' && o.wt === 'sword') && bad.indexOf('off') < 0) bad.push('off');
     const w = ITEMS[p.equip.weapon];
     if (w && w.two && p.equip.off && bad.indexOf('off') < 0) bad.push('off');
     return bad;
@@ -362,11 +396,11 @@
     const out = { kind: null, jobs: [], need: '', ok: false };
     const J = JOBS[p.job];
     if (p.job === 'Adventurer') {
-      if (p.lv >= LV.c4) { out.kind = 'job'; out.jobs = ['Passerby']; out.ok = true; out.opt = 'special'; return out; }
       out.kind = 'job'; out.jobs = JOBS.Adventurer.kids.slice(); out.ok = p.lv >= LV.c1; out.need = out.ok ? '' : 'ถึง Lv ' + LV.c1;
+      if (p.lv >= LV.solo) { out.jobs.push('Solo Player'); out.opt = 'special'; }
       return out;
     }
-    if (p.job === 'Passerby') { out.need = 'คุณคือ Passerby แล้ว — ไม่มีคลาสถัดไป'; return out; }
+    if (p.job === 'Solo Player') { out.need = 'คุณคือ Solo Player แล้ว — ไม่มีคลาสถัดไป'; return out; }
     if (J.tier === 1 && !p.fac) { out.kind = 'fac'; out.ok = p.lv >= LV.fac; out.need = out.ok ? '' : 'ถึง Lv ' + LV.fac; return out; }
     if (J.kids.length) {
       const need = J.tier === 1 ? LV.c2 : LV.c3;
@@ -378,22 +412,25 @@
     out.kind = 'rebirth'; out.need = 'ถึง Lv ' + LV.rebirth; return out;
   }
   const REBIRTH_COST = { jelly: 100, tusk: 50, coin: 5000 };
-  const resetCost = p => (JOBS[p.job].tier >= 2 || p.job === 'Passerby' ? 3000 : 0);
+  const resetCost = p => (JOBS[p.job].tier >= 2 || p.job === 'Solo Player' ? 3000 : 0);
 
   /* ----------------------------------------------------------- save format */
   function fromSave(p, save, ITEMS) {
     save = save && typeof save === 'object' ? save : {};
     p.st = newStats();
     if (save.st && typeof save.st === 'object') for (const k of STATS) p.st[k] = clamp(Math.floor(Number(save.st[k])) || 1, 1, MAX_STAT);
+    if (save.job === 'Passerby') save.job = 'Solo Player';
     p.job = typeof save.job === 'string' && JOBS[save.job] ? save.job : 'Adventurer';
+    p.via = ALT[p.job] ? viaOf(p.job, save.via) : null;
     p.fac = save.fac === 'd' || save.fac === 'a' ? save.fac : null;
     p.rb = clamp(Math.floor(Number(save.rb)) || 0, 0, 9);
     p.c4 = !!save.c4 && p.job !== 'Adventurer';
     p.orig = typeof save.orig === 'string' && JOBS[save.orig] ? save.orig : null;
     p.skills = {};
     if (save.skills && typeof save.skills === 'object') for (const id of Object.keys(save.skills)) if (SK[id]) p.skills[id] = clamp(Math.floor(Number(save.skills[id])) || 0, 0, SK[id].max);
-    p.borrow = Array.isArray(save.borrow) ? save.borrow.slice(0, 4).map(x => (typeof x === 'string' && SK[x] ? x : null)) : [null, null, null, null];
-    while (p.borrow.length < 4) p.borrow.push(null);
+    p.borrow = Array.isArray(save.borrow) ? save.borrow.slice(0, 5).map(x => (typeof x === 'string' && SK[x] ? x : null)) : emptyBorrow();
+    while (p.borrow.length < 5) p.borrow.push(null);
+    if (p.job === 'Solo Player') fillRand(p);
     p.buffs = {};
     // ถ้าแต้มที่ใช้เกินที่ควรมี (เซฟเก่า/ดัดแปลง) → รีเซ็ต
     if (spentStats(p.st) > totalStatPts(p.lv, p.rb)) p.st = newStats();
@@ -401,13 +438,13 @@
     recalcPoints(p);
   }
   function toSave(p) {
-    return { st: Object.assign({}, p.st), job: p.job, fac: p.fac, rb: p.rb, c4: p.c4 ? 1 : 0, orig: p.orig, skills: Object.assign({}, p.skills), borrow: (p.borrow || []).slice() };
+    return { st: Object.assign({}, p.st), job: p.job, via: p.via || null, fac: p.fac, rb: p.rb, c4: p.c4 ? 1 : 0, orig: p.orig, skills: Object.assign({}, p.skills), borrow: (p.borrow || []).slice() };
   }
 
   return {
     STATS, STAT_TH, MAX_LV, MAX_STAT, LV, TREE, JOBS, JOB_LIST, chain, WT, TIERS, genItems, smithList, SHOP_TIERS,
     statCost, spentStats, totalStatPts, totalSkillPts, newStats, SK, SK_BY_JOB, SPEC, KIND_TH, PAS_TH, ROMAN,
-    skillEff, skillDesc, skillShape, ACTIVE_IDS, bslots, borrowLv, skillLevel, skillLock, skillCanUp, spentSkills, recalcPoints,
+    viaOf, rootOf, ALT, emptyBorrow, fillRand, BSLOTS, skillEff, skillDesc, skillShape, ACTIVE_IDS, bslots, borrowLv, skillLevel, skillLock, skillCanUp, spentSkills, recalcPoints,
     reqCheck, derive, illegalGear, advInfo, REBIRTH_COST, resetCost, fromSave, toSave, clamp
   };
 });

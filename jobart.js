@@ -64,7 +64,9 @@
  'Assen': ['#7e5109',0,'#5a3b24',['club'],['headband:#e0a020'],[],'#e0b070'],
  'Ringmaster': ['#922b21',0,'#1d1a1a',['club'],['tophat'],['cape:#5b1a14','sparks:#ffd24a'],'#ffd24a'],
  'Biwposter': ['#5d4037',2,'#1d1a1a',['club','glove'],['headband:#cfd6dc'],['aura:#e0b070'],'#e0b070'],
- 'Passerby': ['#7f8c8d',2,'#5a3b24',['sword','book'],['hood:#566573'],['cape:#4d5656','stars','aura:#ecf0f1'],'#ecf0f1']
+ 'Holy Knight': ['#e8dcae',0,'#e0b73a',['sword','shield'],['helm:gold'],['cape:#fff6d0','aura:#ffe27a','sparks:#ffe27a'],'#ffe27a'],
+ 'Ancient Controller': ['#7a5c2e',3,'#2c3e50',['staff:#e0b73a','book'],['hood:#4a3a1e'],['cape:#4a3a1e','orbs:#e0b73a,#7ee0c4','aura:#e0b73a'],'#e0b73a'],
+ 'Solo Player': ['#17171f',1,'#1d1a1a',['sword2'],['headband:#c0392b'],['cape:#0d0d12','aura:#8a96a3','sparks:#cfd6dc'],'#9aa5b1']
 };
 const tint = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
 const ln = (x1,y1,x2,y2,c,w) => { C.strokeStyle=c; C.lineWidth=w; C.lineCap='round'; C.beginPath(); C.moveTo(x1,y1); C.lineTo(x2,y2); C.stroke(); };
@@ -82,6 +84,7 @@ function weapon(spec) {
     case 'sword2h': ln(13,-14,15.5,-72,STEEL2,8); ln(13,-14,15.5,-72,STEEL,5); ln(13.8,-20,14.8,-66,'#fff',1.2); ln(6,-18,21,-18,'#8a5a2b',4); circ(13,-9,2.6,'#8a5a2b'); break;
     case 'katana': C.strokeStyle='#dfe6ee'; C.lineWidth=3; C.lineCap='round'; C.beginPath(); C.moveTo(13,-24); C.quadraticCurveTo(10,-48,21,-68); C.stroke(); circ(13,-22,3.4,GOLD,'#7a5a10',1); ln(13,-14,13,-22,'#a93226',4); break;
     case 'dagger': ln(13,-17,14.2,-34,STEEL2,4.2); ln(13,-17,14.2,-34,STEEL,2.4); ln(9.5,-18,16.5,-18,'#6b4a2e',2.6); break;
+    case 'sword2': weapon('sword'); C.save(); C.scale(-1,1); weapon('sword'); C.restore(); break;
     case 'dagger2': weapon('dagger'); C.save(); C.scale(-1,1); weapon('dagger'); C.restore(); break;
     case 'katar': pg([[9.5,-18],[16.5,-18],[13,-48]],STEEL,STEEL2,1.4); ln(9,-17,17,-17,'#5a3b24',3); break;
     case 'katar2': weapon('katar'); C.save(); C.scale(-1,1); weapon('katar'); C.restore(); break;

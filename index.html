@@ -117,10 +117,10 @@ button{font-family:inherit}
 @keyframes armed{50%{background:rgba(242,193,78,.28)}}
 #ghost{position:fixed;pointer-events:none;z-index:60;filter:drop-shadow(0 6px 6px rgba(0,0,0,.6));animation:float 1s ease-in-out infinite}
 @keyframes float{50%{transform:translateY(-5px)}}
-#stwin,#adwin,#gmwin{right:calc(max(6px,env(safe-area-inset-right)) + 44px);top:calc(max(10px,env(safe-area-inset-top)) + 54px);padding:9px;width:min(calc(100vw - 64px),320px);max-height:calc(100vh - 130px);overflow:auto;pointer-events:auto;display:flex;flex-direction:column;gap:7px;font-size:13px;z-index:21}
-#stwin h4,#adwin h4,#gmwin h4,#skills h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center;gap:8px}
-#stwin h4 button,#adwin h4 button,#gmwin h4 button{height:26px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;font:600 12.5px var(--font);padding:0 10px;cursor:pointer}
-#stwin .sec,#adwin .sec,#gmwin .sec{color:var(--muted);font-size:12px}
+#stwin,#adwin,#gmwin,#setwin{right:calc(max(6px,env(safe-area-inset-right)) + 44px);top:calc(max(10px,env(safe-area-inset-top)) + 54px);padding:9px;width:min(calc(100vw - 64px),320px);max-height:calc(100vh - 130px);overflow:auto;pointer-events:auto;display:flex;flex-direction:column;gap:7px;font-size:13px;z-index:21}
+#stwin h4,#adwin h4,#gmwin h4,#setwin h4,#skills h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center;gap:8px}
+#stwin h4 button,#adwin h4 button,#gmwin h4 button,#setwin h4 button{height:26px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;font:600 12.5px var(--font);padding:0 10px;cursor:pointer}
+#stwin .sec,#adwin .sec,#gmwin .sec,#setwin .sec{color:var(--muted);font-size:12px}
 .strow{display:flex;align-items:center;gap:8px;padding:3px 0}
 .strow b{width:38px;font-size:12.5px;color:#ffe9a0}.strow span{flex:1;font-variant-numeric:tabular-nums}.strow small{color:var(--muted);font-size:11px}
 .strow button,.mini{height:26px;min-width:30px;border:0;border-radius:7px;background:var(--accent);color:#fff;font:700 14px var(--font);padding:0 9px;cursor:pointer}
@@ -147,6 +147,10 @@ button{font-family:inherit}
 .pickl{display:flex;flex-direction:column;gap:4px;max-height:220px;overflow:auto}
 .pickl button{display:flex;align-items:center;gap:8px;text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:9px;color:#fff;font:600 12.5px var(--font);padding:4px 8px;cursor:pointer}
 .chips{display:flex;gap:4px;flex-wrap:wrap}
+.langrow{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.langrow button{height:28px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.07);color:#ddd;font:600 12px var(--font);padding:0 11px;cursor:pointer}
+.langrow button.on{background:var(--accent2);color:#2a1a06}
+#setbtn{font-size:17px}
 .chips button{height:24px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.07);color:#ddd;font:600 11.5px var(--font);padding:0 9px;cursor:pointer}
 .chips button.on{background:var(--accent2);color:#2a1a06}
 #shop .bad{color:#ff9a8f;font-size:11px}
@@ -307,6 +311,7 @@ button{font-family:inherit}
     <button id="stbtn" class="btn" type="button" aria-label="สถานะ">สถานะ</button>
     <button id="sbtn" class="btn" type="button" aria-label="สกิล">สกิล</button>
     <button id="bbtn" class="btn" type="button" aria-label="ถุงของ">ถุง</button>
+    <button id="setbtn" class="btn" type="button" aria-label="ตั้งค่า">⚙</button>
     <button id="zin" class="btn" type="button" aria-label="ซูมเข้า">＋</button>
     <button id="zout" class="btn" type="button" aria-label="ซูมออก">－</button>
   </div>
@@ -324,6 +329,7 @@ button{font-family:inherit}
   <div id="stwin" class="panel" hidden></div>
   <div id="adwin" class="panel" hidden></div>
   <div id="gmwin" class="panel" hidden></div>
+  <div id="setwin" class="panel" hidden></div>
   <div id="qwin" class="panel" hidden></div>
   <div id="dialog" class="panel" hidden></div>
   <div id="joy" aria-label="จอยสติ๊ก"><i id="knob"></i></div>
@@ -334,6 +340,7 @@ button{font-family:inherit}
 <div id="login">
   <div class="card panel">
     <div class="brand"><b>Chathai Online</b><span>เกมออนไลน์สไตล์ RO</span></div>
+    <div class="langrow" id="langlogin"></div>
 
     <div class="lv" id="lv-main" hidden>
       <form id="f-login" autocomplete="on" novalidate>
@@ -413,6 +420,7 @@ button{font-family:inherit}
 </div>
 
 <script src="firebase-config.js"></script>
+<script src="i18n.js"></script>
 <script src="rpg.js"></script>
 <script src="jobart.js"></script>
 <script src="game.js"></script>
@@ -701,7 +709,7 @@ function hangSign(text, lx, ly, lz) {
   line([p[0] - 18, p[1]], [p[0] - 18, p[1] + 7], '#4a3020', 1.2); line([p[0] + 18, p[1]], [p[0] + 18, p[1] + 7], '#4a3020', 1.2);
   rr(p[0] - 30, p[1] + 7, 60, 19, 3); ctx.fillStyle = '#7a3b22'; ctx.fill(); ctx.strokeStyle = '#e8b64a'; ctx.lineWidth = 1.5; ctx.stroke();
   ctx.font = '700 11px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#ffe9a8'; ctx.fillText(text, p[0], p[1] + 17);
+  ctx.fillStyle = '#ffe9a8'; ctx.fillText(T(text), p[0], p[1] + 17);
 }
 
 const STYLES = {
@@ -856,7 +864,7 @@ function drawPillar(o) {
     const a = LP(1.2, 0.74, 46), b = LP(2.8, 0.74, 46), c2 = LP(2.8, 0.74, 60), d = LP(1.2, 0.74, 60);
     poly([a, b, c2, d], '#8e2a20', '#e8b64a', 1.4);
     ctx.save(); const m = LP(2, 0.74, 52); ctx.translate(m[0], m[1]); ctx.transform(1, 0.5, 0, 1, 0, 0);
-    ctx.font = '700 10px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffe9a8'; ctx.fillText('ลำธารไผ่', 0, 0); ctx.restore();
+    ctx.font = '700 10px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#ffe9a8'; ctx.fillText(T('ลำธารไผ่'), 0, 0); ctx.restore();
     hangLantern(1.0, 0.74, 60); hangLantern(3.0, 0.74, 60);
   }
 }
@@ -866,7 +874,7 @@ const FAC_COL = { d: '#ffe27a', a: '#b04adb' };
 function drawGear(vis, fl) {   // อาวุธ/ของมืออีกข้างที่สวมอยู่
   const eq = vis.eq || {}; JobArt.bind(ctx);
   ctx.save(); if (fl < 0) ctx.scale(-1, 1);
-  for (const sl of ['weapon', 'off']) { const it = G.ITEMS[eq[sl]]; const sp = it && JobArt.wpnMap[it.wt]; if (sp) JobArt.weapon(sp); }
+  for (const sl of ['weapon', 'off']) { const it = G.ITEMS[eq[sl]]; const sp = it && JobArt.wpnMap[it.wt]; if (!sp) continue; if (sl === 'off' && it.wt === 'sword') { ctx.save(); ctx.scale(-1, 1); JobArt.weapon(sp); ctx.restore(); } else JobArt.weapon(sp); }
   ctx.restore();
 }
 function drawChar(look, dir, moving, t, off, prop, vis) {
@@ -1091,7 +1099,7 @@ function applyMe(m) {
   const gained = m.lv > my.lv || (m.lv === my.lv && m.exp > my.exp);
   my.mp = m.mp; my.maxMp = m.maxMp;
   my.lv = m.lv; my.exp = m.exp; my.next = m.next; my.hp = m.hp; my.maxHp = m.maxHp; my.atk = m.atk; my.def = m.def; my.inv = m.inv || {}; my.equip = m.equip || {};
-  for (const k of ['job', 'fac', 'c4', 'rb', 'orig', 'st', 'sp', 'skp', 'skills', 'borrow', 'bsl', 'buffs', 'atkS', 'atkD', 'atkI', 'crit', 'dodge', 'cdA', 'rng', 'gm']) if (m[k] !== undefined) my[k] = m[k];
+  for (const k of ['job', 'via', 'fac', 'c4', 'rb', 'orig', 'st', 'sp', 'skp', 'skills', 'borrow', 'bsl', 'buffs', 'atkS', 'atkD', 'atkI', 'crit', 'dodge', 'cdA', 'rng', 'gm']) if (m[k] !== undefined) my[k] = m[k];
   $('slv').textContent = my.lv;
   $('shp').textContent = my.hp + '/' + my.maxHp;
   $('hpb').style.width = Math.max(0, my.hp / my.maxHp * 100) + '%';
@@ -1103,7 +1111,7 @@ function applyMe(m) {
     $('sxp').textContent = my.exp + '/' + my.next + ' · ' + Math.floor(xpp) + '%';
   } else { $('xpb').style.width = '100%'; $('sxp').textContent = 'MAX'; }
   if (gained) { const xb = $('xpbar'); xb.classList.remove('flash'); void xb.offsetWidth; xb.classList.add('flash'); }
-  const sig = JSON.stringify([my.inv, my.equip, my.atk, my.def, my.lv, my.st, my.sp, my.skp, my.skills, my.borrow, my.job, my.fac, my.c4, my.rb, my.bsl, my.maxHp, my.maxMp]);
+  const sig = JSON.stringify([my.inv, my.equip, my.atk, my.def, my.lv, my.st, my.sp, my.skp, my.skills, my.borrow, my.job, my.via, my.fac, my.c4, my.rb, my.bsl, my.maxHp, my.maxMp]);
   if (sig !== lastSig) { lastSig = sig; renderBag(); renderShop(); renderHotbar(); renderSkills(); renderStwin(); renderAdwin(); }
   $('sbtn').classList.toggle('has', my.skp > 0);
   const adv = RPG.advInfo(my);
@@ -1143,7 +1151,7 @@ function drawGearIcon(g, key, it) {
 function drawSkillIcon(g, id) {
   g.save(); g.lineJoin = 'round'; g.lineCap = 'round';
   let sk = G.SKILLS[id];
-  if (/^b[0-3]$/.test(id)) sk = G.SKILLS[my.borrow[+id[1]]];
+  if (/^b[0-4]$/.test(id)) sk = G.SKILLS[my.borrow[+id[1]]];
   if (!sk) { g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(32, 32, 22, 0, 6.3); g.fill(); g.restore(); return; }
   const J = JobArt.J[sk.job], col = J ? J[6] : '#c9b37a', shape = RPG.skillShape(sk);
   const gr = g.createLinearGradient(0, 4, 0, 60); gr.addColorStop(0, mixc(col, '#ffffff', 0.12)); gr.addColorStop(1, shade(col, 0.42));
@@ -1279,7 +1287,7 @@ const hb = new Array(12).fill(null);
 let hbSize = 12; try { const z = +localStorage.getItem('bc-hbsize'); if (z === 3 || z === 6 || z === 12) hbSize = z; } catch (e) {}
 const skCd = {}; let skSel = null;
 try { const s = JSON.parse(localStorage.getItem('bc-hotbar') || 'null'); if (Array.isArray(s)) s.slice(0, 12).forEach((k, i) => { if ((G.ITEMS[k] && G.ITEMS[k].heal) || (typeof k === 'string' && k.indexOf('skill:') === 0 && (G.SKILLS[k.slice(6)] || /^b[0-3]$/.test(k.slice(6))))) hb[i] = k; }); } catch (e) {}
-const PANELS = ['bag', 'shop', 'qwin', 'dialog', 'skills', 'stwin', 'adwin', 'gmwin'];
+const PANELS = ['bag', 'shop', 'qwin', 'dialog', 'skills', 'stwin', 'adwin', 'gmwin', 'setwin'];
 function showPanel(name) { for (const p of PANELS) $(p).hidden = p !== name; }
 function closePanels() { for (const p of PANELS) $(p).hidden = true; }
 function mkEl(tag, cls, text) { const d = document.createElement(tag); if (cls) d.className = cls; if (text != null) d.textContent = text; return d; }
@@ -1377,7 +1385,7 @@ function hotbarTap(i) {
   if (k.indexOf('skill:') === 0) useSkillKey(k.slice(6)); else useItemKey(k);
 }
 function skillOf(id) {   // → { sk, lvl } (รองรับช่องยืมสกิล b0-b3)
-  if (/^b[0-3]$/.test(id)) { const sk = G.SKILLS[my.borrow[+id[1]]]; return sk && +id[1] < my.bsl ? { sk, lvl: RPG.borrowLv(my) } : null; }
+  if (/^b[0-4]$/.test(id)) { const sk = G.SKILLS[my.borrow[+id[1]]]; return sk && +id[1] < my.bsl ? { sk, lvl: RPG.borrowLv(my) } : null; }
   const sk = G.SKILLS[id]; return sk ? { sk, lvl: RPG.skillLevel(my, id) } : null;
 }
 function skillReady(id, quiet) {
@@ -1401,9 +1409,9 @@ function useSkillKey(id) {
 let skTab = null, skPick = false;
 const KIND_SHORT = { A: 'ใช้งาน · ตีเดี่ยว', R: 'ใช้งาน · ระยะไกล', B: 'ใช้งาน · รอบตัว', T: 'ใช้งาน · ระเบิดที่เป้าหมาย', U: 'บัฟ', D: 'บัฟ', H: 'ฟื้นฟู', P: 'ติดตัว (พาสซีฟ)', X: 'ไม้ตาย · รอบตัว', Y: 'ไม้ตาย · ระยะไกล', Z: 'ไม้ตาย · ตีหนัก' };
 function skTabs() {
-  const t = RPG.chain(my.job).slice();
-  if (my.job === 'Passerby') t.unshift('Adventurer');
-  if (my.job === 'Adventurer' || my.job === 'Passerby') t.push('borrow');
+  const t = RPG.chain(my.job, my.via).slice();
+  if (my.job === 'Solo Player') t.unshift('Adventurer');
+  if (my.job === 'Adventurer' || my.job === 'Solo Player') t.push('borrow');
   return t;
 }
 function renderSkills() {
@@ -1412,20 +1420,21 @@ function renderSkills() {
   const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'สกิล · แต้มสกิล ' + my.skp)); h.appendChild(btnEl('ปิด', () => { cancelFloat(); b.hidden = true; })); b.appendChild(h);
   const tabs = skTabs(); if (tabs.indexOf(skTab) < 0) skTab = tabs.indexOf(my.job) >= 0 ? my.job : tabs[0];
   const tb = mkEl('div', 'tabs');
-  for (const t of tabs) { const x = btnEl(t === 'borrow' ? 'ยืมสกิล' : t, () => { skTab = t; skSel = null; skPick = false; renderSkills(); }); if (t === skTab) x.className = 'on'; tb.appendChild(x); }
+  for (const t of tabs) { const x = btnEl(t === 'borrow' ? (my.job === 'Solo Player' ? 'สกิลสุ่ม' : 'ยืมสกิล') : t, () => { skTab = t; skSel = null; skPick = false; renderSkills(); }); if (t === skTab) x.className = 'on'; tb.appendChild(x); }
   b.appendChild(tb);
   const grid = mkEl('div', 'sgrid');
   const d = mkEl('div', 'detail');
   if (skTab === 'borrow') {
-    for (let i = 0; i < 4; i++) {
+    const solo = my.job === 'Solo Player', nsl = solo ? 5 : 4, ulv = solo ? [50, 60, 70, 80, 90] : [10, 30, 50, 70];
+    for (let i = 0; i < nsl; i++) {
       const id = 'b' + i, open = i < my.bsl, bs = G.SKILLS[my.borrow[i]];
       const c = mkEl('div', 'sc ci' + (skSel === id ? ' sel' : '') + (open ? '' : ' lk'));
       if (open && bs) c.appendChild(iconEl('skill:' + id, 38)); else c.appendChild(mkEl('span', '', open ? '＋' : '🔒'));
-      c.onclick = () => { if (!open) { toast('ปลดล็อกช่องยืมที่เลเวล ' + [10, 30, 50, 70][i], 1800); return; } if (skSel !== id) { skSel = id; skPick = false; renderSkills(); return; } if (bs) startFloat('skill:' + id); };
+      c.onclick = () => { if (!open) { toast((solo ? 'ปลดล็อกสกิลสุ่มที่เลเวล ' : 'ปลดล็อกช่องยืมที่เลเวล ') + ulv[i], 1800); return; } if (skSel !== id) { skSel = id; skPick = false; renderSkills(); return; } if (bs) startFloat('skill:' + id); };
       grid.appendChild(c);
     }
     b.appendChild(grid);
-    b.appendChild(mkEl('div', 'sec', 'Adventurer / Passerby ยืมสกิลใช้งานจากอาชีพอื่นได้ (ช่องปลดล็อกที่ Lv 10 / 30 / 50 / 70) พลังตามเลเวล'));
+    b.appendChild(mkEl('div', 'sec', solo ? 'Solo Player ได้สกิลสุ่มจากอาชีพอื่นทุก 10 เลเวล (Lv 50 / 60 / 70 / 80 / 90) ใช้ได้ทันทีไม่มีเงื่อนไข พลังตามเลเวล' : 'Adventurer ยืมสกิลใช้งานจากอาชีพอื่นได้ (ช่องปลดล็อกที่ Lv 10 / 30 / 50 / 70) พลังตามเลเวล'));
     if (skSel && /^b/.test(skSel) && +skSel[1] < my.bsl) {
       const bs = G.SKILLS[my.borrow[+skSel[1]]];
       if (bs && !skPick) {
@@ -1433,15 +1442,15 @@ function renderSkills() {
         d.appendChild(mkEl('div', 'hint', 'แตะไอคอนอีกครั้งเพื่อยกไปวางที่คีย์ลัด'));
       }
       const row = mkEl('div', 'links');
-      row.appendChild(btnEl(bs ? 'เปลี่ยนสกิลที่ยืม' : 'เลือกสกิลที่จะยืม', () => { skPick = !skPick; renderSkills(); }, 'go2'));
-      if (bs) row.appendChild(btnEl('เอาออก', () => net && net.send({ t: 'borrow', slot: +skSel[1], id: null })));
+      if (!solo) row.appendChild(btnEl(bs ? 'เปลี่ยนสกิลที่ยืม' : 'เลือกสกิลที่จะยืม', () => { skPick = !skPick; renderSkills(); }, 'go2'));
+      if (bs && !solo) row.appendChild(btnEl('เอาออก', () => net && net.send({ t: 'borrow', slot: +skSel[1], id: null })));
       d.appendChild(row);
-      if (skPick) {
+      if (skPick && !solo) {
         const pl = mkEl('div', 'pickl');
         for (const id of RPG.ACTIVE_IDS()) { const sk = G.SKILLS[id]; const x = btnEl('', () => { net && net.send({ t: 'borrow', slot: +skSel[1], id }); skPick = false; }); x.appendChild(iconEl('skill:' + id, 26)); x.appendChild(mkEl('span', '', sk.name + ' · ' + sk.job)); pl.appendChild(x); }
         d.appendChild(pl);
       }
-    } else d.appendChild(mkEl('div', 'em', 'แตะช่องเพื่อเลือกสกิลที่จะยืม'));
+    } else d.appendChild(mkEl('div', 'em', solo ? 'ยังไม่ได้สกิลสุ่มในช่องนี้' : 'แตะช่องเพื่อเลือกสกิลที่จะยืม'));
     b.appendChild(d); return;
   }
   for (const sk of RPG.SK_BY_JOB[skTab] || []) {
@@ -1717,12 +1726,12 @@ let advSel = null;
 function renderAdwin() {
   const b = $('adwin'); if (b.hidden) return; b.textContent = '';
   const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'เลื่อนอาชีพ')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
-  const chain = RPG.chain(my.job);
+  const chain = RPG.chain(my.job, my.via);
   b.appendChild(mkEl('div', 'sec', 'เส้นทาง: ' + chain.join(' → ') + (my.c4 ? ' (คลาส 4)' : '') + (my.fac ? ' · ' + (my.fac === 'd' ? 'Dharma' : 'Adharma') : '')));
   const a = RPG.advInfo(my);
   if (!a.kind) { b.appendChild(mkEl('div', 'detail', a.need || 'ไม่มีขั้นถัดไป')); return; }
   if (a.kind === 'job') {
-    if (a.opt === 'special') b.appendChild(mkEl('div', 'sec', 'ถึง Lv 80 โดยไม่เปลี่ยนอาชีพ — กลายเป็นคลาสพิเศษ "Passerby" (ยืมสกิลหลายสายได้)'));
+    if (a.opt === 'special') b.appendChild(mkEl('div', 'sec', 'Lv 50 ขึ้นไป: เลือกเป็น "Solo Player" ได้ (ไม่ต้องเลือกฝ่าย · ดาบคู่ · ได้สกิลสุ่มทุก 10 เลเวล · ถือดาบจะได้ฉายา Black Swordsman) หรือเลือกอาชีพสายปกติ' + (a.ok ? '' : ' (' + a.need + ')')));
     else b.appendChild(mkEl('div', 'sec', 'เลือกอาชีพถัดไป' + (a.ok ? '' : ' (' + a.need + ')')));
     if (advSel && a.jobs.indexOf(advSel) < 0) advSel = null;
     const cs = mkEl('div', 'jcards');
@@ -1766,6 +1775,24 @@ function renderAdwin() {
     b.querySelector('.detail').style.whiteSpace = 'pre-line';
   }
 }
+function langRow(cls) {
+  const r = mkEl('div', cls || 'chips');
+  for (const [k, nm] of I18N.LANGS) { const x = btnEl(nm, () => { I18N.set(k); }); if (k === I18N.get()) x.className = 'on'; x.dataset.lang = k; r.appendChild(x); }
+  return r;
+}
+function renderSet() {
+  const b = $('setwin'); if (b.hidden) return; b.textContent = '';
+  const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'ตั้งค่า')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
+  b.appendChild(mkEl('div', 'sec', 'ภาษา'));
+  b.appendChild(langRow('chips'));
+  b.appendChild(mkEl('div', 'sec', 'ภาษาจะถูกจำไว้ในเครื่องนี้'));
+  b.appendChild(mkEl('div', 'sec', 'ชื่อตัวละคร ชื่ออาชีพ และชื่อสกิลเป็นภาษาอังกฤษในทุกภาษา'));
+}
+$('setbtn').onclick = () => { const b = $('setwin'); if (b.hidden) { showPanel('setwin'); renderSet(); } else b.hidden = true; };
+$('langlogin').replaceWith(Object.assign(langRow('langrow'), { id: 'langlogin' }));
+function syncLangButtons() { document.querySelectorAll('[data-lang]').forEach(x => x.classList.toggle('on', x.dataset.lang === I18N.get())); }
+window.addEventListener('langchange', syncLangButtons);
+window.addEventListener('langchange', () => { try { if (typeof map !== 'undefined' && map && map.objs) buildStatics(); } catch (e) { /* ยังไม่เข้าเกม */ } });
 function renderGm() {
   const b = $('gmwin'); if (b.hidden) return; b.textContent = '';
   const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'GM · เมนูทดสอบ')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
@@ -1776,7 +1803,9 @@ function renderGm() {
   const sl = document.createElement('select'); sl.style.cssText = 'height:30px;border-radius:7px;background:#222;color:#fff;border:1px solid var(--line);font:13px var(--font)';
   for (const j of RPG.JOB_LIST) { const o = document.createElement('option'); o.value = j; o.textContent = j + ' (คลาส ' + RPG.JOBS[j].tier + ')'; if (j === my.job) o.selected = true; sl.appendChild(o); }
   sl.onchange = () => g('job', sl.value); b.appendChild(sl);
-  const r2 = mkEl('div', 'chips'); r2.appendChild(btnEl('Dharma', () => g('fac', 'd'))); r2.appendChild(btnEl('Adharma', () => g('fac', 'a'))); r2.appendChild(btnEl('คลาส 4', () => g('c4'))); b.appendChild(r2);
+  const r2 = mkEl('div', 'chips'); r2.appendChild(btnEl('Dharma', () => g('fac', 'd'))); r2.appendChild(btnEl('Adharma', () => g('fac', 'a'))); r2.appendChild(btnEl('คลาส 4', () => g('c4')));
+  if (RPG.ALT[my.job]) for (const v of RPG.ALT[my.job]) r2.appendChild(btnEl('via ' + v, () => g('via', v)));
+  b.appendChild(r2);
   b.appendChild(mkEl('div', 'sec', 'เกิดใหม่ (ตั้งจำนวนครั้ง)'));
   const r3 = mkEl('div', 'chips'); for (const n of [0, 1, 2, 3]) r3.appendChild(btnEl(String(n), () => g('rb', n))); b.appendChild(r3);
   b.appendChild(mkEl('div', 'sec', 'ของ'));
@@ -2308,9 +2337,13 @@ function render(now, dt) {
   for (const e of ents.values()) {
     if (e.vis !== frame) continue;
     ctx.font = '700 12px ' + FONT;
-    const label = e.name;
+    const label = e.npc ? T(e.name) : e.name;
     ctx.lineJoin = 'round'; ctx.lineWidth = 3.4; ctx.strokeStyle = 'rgba(0,0,0,.85)';
     ctx.strokeText(label, e.sx, e.sy + 17); ctx.fillStyle = e.id === myId ? '#ffe27a' : e.npc ? '#9be7ff' : '#ffffff'; ctx.fillText(label, e.sx, e.sy + 17);
+    if (!e.npc && e.job === 'Solo Player') {
+      const wi = G.ITEMS[(e.eq || {}).weapon], blk = wi && (wi.wt === 'sword' || wi.wt === 'sword2h');
+      if (blk) { ctx.font = '700 10px ' + FONT; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.9)'; const ti = T('Black Swordsman'); ctx.strokeText(ti, e.sx, e.sy + 29); ctx.fillStyle = '#c9d2dc'; ctx.fillText(ti, e.sx, e.sy + 29); ctx.font = '700 12px ' + FONT; ctx.lineWidth = 3.4; }
+    }
     if (e.npc) {
       const mk = npcMark(e.id);
       if (mk) {
@@ -2338,8 +2371,8 @@ function render(now, dt) {
     const p = proj(pt.x + pt.w / 2, pt.y + pt.h / 2), sx = S2X(p[0]), sy = S2Y(p[1]) - 30 * zoom;
     if (sx < -100 || sx > vw + 100 || sy < -40 || sy > vh + 40) continue;
     ctx.font = '700 12px ' + FONT; ctx.lineJoin = 'round'; ctx.lineWidth = 3.4; ctx.strokeStyle = 'rgba(0,0,0,.85)';
-    const lb = 'ประตูวาร์ป › ' + pt.name, lv = G.ZONE_LV[pt.to];
-    const sub = lv ? 'มอนสเตอร์เลเวล ' + lv[0] + ' - ' + lv[1] : 'พื้นที่ปลอดภัย';
+    const lb = T('ประตูวาร์ป › ' + pt.name), lv = G.ZONE_LV[pt.to];
+    const sub = T(lv ? 'มอนสเตอร์เลเวล ' + lv[0] + ' - ' + lv[1] : 'พื้นที่ปลอดภัย');
     ctx.strokeText(lb, sx, sy); ctx.fillStyle = '#bfe6ff'; ctx.fillText(lb, sx, sy);
     ctx.font = '700 11.5px ' + FONT; ctx.strokeText(sub, sx, sy + 14); ctx.fillStyle = lv ? '#ffd76a' : '#9be8a0'; ctx.fillText(sub, sx, sy + 14);
   }
@@ -2353,7 +2386,7 @@ function render(now, dt) {
       ctx.fillStyle = '#e0554a'; rr(x, y, Math.max(2, w * mo.hp / mo.maxHp), 5, 2.5); ctx.fill();
     }
     ctx.font = '700 11.5px ' + FONT; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.85)';
-    const D = G.MON[mo.type], nm = 'Lv.' + D.lv + ' ' + D.name, dl = D.lv - my.lv;
+    const D = G.MON[mo.type], nm = 'Lv.' + D.lv + ' ' + T(D.name), dl = D.lv - my.lv;
     ctx.strokeText(nm, mo.sx, y - 4); ctx.fillStyle = dl >= 3 ? '#ff6b5e' : dl >= -1 ? '#ffd76a' : '#9be8a0'; ctx.fillText(nm, mo.sx, y - 4);
   }
   // แถบเลือดของเราเองใต้ชื่อ

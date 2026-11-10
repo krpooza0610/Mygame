@@ -269,6 +269,7 @@ const FILES = {
   '/game.js': ['game.js', 'text/javascript; charset=utf-8'],
   '/rpg.js': ['rpg.js', 'text/javascript; charset=utf-8'],
   '/jobart.js': ['jobart.js', 'text/javascript; charset=utf-8'],
+  '/i18n.js': ['i18n.js', 'text/javascript; charset=utf-8'],
   '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'],
   '/firebase-config.js': ['firebase-config.js', 'text/javascript; charset=utf-8'],
   '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json; charset=utf-8'],

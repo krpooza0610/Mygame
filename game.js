@@ -458,7 +458,7 @@
       if (save && save.equip && typeof save.equip === 'object') {
         for (const slot of ['weapon', 'off', 'armor', 'ammo']) {
           const k = save.equip[slot];
-          if (typeof k === 'string' && ITEMS[k] && ITEMS[k].slot === slot) p.equip[slot] = k;
+          if (typeof k === 'string' && ITEMS[k] && (ITEMS[k].slot === slot || (slot === 'off' && ITEMS[k].wt === 'sword'))) p.equip[slot] = k;
         }
       }
       this.dropIllegalGear(p, true);
@@ -493,7 +493,7 @@
       return {
         t: 'me', lv: p.lv, exp: p.exp, next: p.lv >= LVCAP ? 0 : nextExp(p.lv), hp: p.hp, maxHp: p.maxHp, mp: p.mp, maxMp: p.maxMp, atk: p.atk, def: p.def,
         inv: Object.assign({}, p.inv), equip: Object.assign({}, p.equip),
-        job: p.job, fac: p.fac, c4: p.c4 ? 1 : 0, rb: p.rb, orig: p.orig, st: Object.assign({}, p.st), sp: p.sp, skp: p.skp,
+        job: p.job, via: p.via || null, fac: p.fac, c4: p.c4 ? 1 : 0, rb: p.rb, orig: p.orig, st: Object.assign({}, p.st), sp: p.sp, skp: p.skp,
         skills: Object.assign({}, p.skills), borrow: p.borrow.slice(), bsl: RPG.bslots(p), buffs,
         atkS: p.atkS, atkD: p.atkD, atkI: p.atkI, crit: Math.round(p.crit * 1000) / 10, dodge: Math.round(p.dodge * 1000) / 10, cdA: Math.round(p.acd * 100) / 100, rng: p.rng, gm: p.gm ? 1 : 0
       };
@@ -558,6 +558,14 @@
         p.equip.ammo = p.equip.ammo === item ? null : item;
       } else {
         const wpn = ITEMS[p.equip.weapon];
+        if (slot === 'weapon' && p.job === 'Solo Player' && it.wt === 'sword' && wpn && wpn.wt === 'sword' && !p.equip.off) {
+          p.inv[item]--; if (p.inv[item] <= 0) delete p.inv[item];
+          p.equip.off = item; this.note(p, 'ถือดาบคู่! (ดาบมือซ้าย: ' + it.name + ')');
+          this.applyLevel(p);
+          this.emit(p.zone, { t: 'eq', id: p.id, eq: Object.assign({}, p.equip) });
+          this.tellMe(p);
+          return true;
+        }
         if (slot === 'off' && wpn && wpn.two) { this.note(p, 'ถืออาวุธสองมืออยู่ ใส่ของมืออีกข้างไม่ได้'); return false; }
         const old = p.equip[slot];
         p.inv[item]--; if (p.inv[item] <= 0) delete p.inv[item];
@@ -584,7 +592,7 @@
     /* ---- สกิล ---- */
     resolveSkill(p, sid) {   // → { sk, lvl } | null (แจ้งเหตุผลให้ผู้เล่น)
       let sk, lvl;
-      if (/^b[0-3]$/.test(sid)) {
+      if (/^b[0-4]$/.test(sid)) {
         const i = +sid[1], bid = p.borrow[i];
         if (i >= RPG.bslots(p) || !bid) { this.note(p, 'ช่องยืมสกิลนี้ยังว่างอยู่'); return null; }
         sk = SKILLS[bid]; lvl = RPG.borrowLv(p);
@@ -699,12 +707,20 @@
       this.note(p, sk.name + ' → Lv ' + p.skills[sid]);
       return true;
     }
-    changeJob(p, job) {
+    changeJob(p, job, via) {
+      const was = p.job;
+      p.via = RPG.ALT[job] ? RPG.viaOf(job, via || (RPG.JOBS[was] && RPG.ALT[job].indexOf(was) >= 0 ? was : null)) : null;
       p.job = job; p.c4 = false;
+      if (job === 'Solo Player') { p.fac = null; p.borrow = RPG.emptyBorrow(); this.grantRand(p); }
       this.dropIllegalGear(p);
       this.applyLevel(p);
       this.emit(p.zone, { t: 'job', id: p.id, job: p.job, fac: p.fac });
       this.tellMe(p);
+    }
+    grantRand(p) {
+      const got = RPG.fillRand(p);
+      for (const id of got) this.note(p, 'ได้รับสกิลสุ่ม: ' + SKILLS[id].name + ' (' + SKILLS[id].job + ')');
+      return got.length;
     }
     advance(id, what, arg) {
       const p = this.players.get(id);
@@ -712,7 +728,7 @@
       const a = RPG.advInfo(p);
       if (!a.ok) { this.note(p, 'ยังเลื่อนขั้นไม่ได้: ' + (a.need || 'ไม่มีขั้นถัดไป')); return false; }
       if (what === 'job' && a.kind === 'job' && a.jobs.indexOf(arg) >= 0) {
-        this.changeJob(p, arg); this.note(p, 'เลื่อนอาชีพเป็น ' + arg + '!');
+        this.changeJob(p, arg, p.job); this.note(p, 'เลื่อนอาชีพเป็น ' + arg + '!');
         this.events.push({ t: 'advd', id: p.id, name: p.name, job: arg });
         return true;
       }
@@ -737,7 +753,7 @@
       for (const k of Object.keys(C)) { p.inv[k] -= C[k]; if (p.inv[k] <= 0) delete p.inv[k]; }
       p.orig = p.orig || (p.job !== 'Adventurer' ? p.job : null);
       p.rb = Math.min(9, p.rb + 1);
-      p.lv = 1; p.exp = 0; p.st = RPG.newStats(); p.skills = {}; p.borrow = [null, null, null, null]; p.buffs = {}; p.c4 = false; p.pend = null;
+      p.lv = 1; p.exp = 0; p.st = RPG.newStats(); p.skills = {}; p.borrow = RPG.emptyBorrow(); p.buffs = {}; p.c4 = false; p.pend = null;
       if (!keep) { p.job = 'Adventurer'; p.fac = null; }
       RPG.recalcPoints(p); this.dropIllegalGear(p, true); this.applyLevel(p); p.hp = p.maxHp; p.mp = p.maxMp;
       this.emit(p.zone, { t: 'job', id: p.id, job: p.job, fac: p.fac });
@@ -752,7 +768,7 @@
       const cost = RPG.resetCost(p);
       if ((p.inv.coin || 0) < cost) { this.note(p, 'ต้องใช้ ' + cost + ' เหรียญในการรีเซ็ต'); return false; }
       if (cost) { p.inv.coin -= cost; if (p.inv.coin <= 0) delete p.inv.coin; }
-      if (what === 'stats') p.st = RPG.newStats(); else { p.skills = {}; p.borrow = [null, null, null, null]; p.buffs = {}; }
+      if (what === 'stats') p.st = RPG.newStats(); else { p.skills = {}; if (p.job !== 'Solo Player') p.borrow = RPG.emptyBorrow(); p.buffs = {}; }
       RPG.recalcPoints(p); this.dropIllegalGear(p); this.applyLevel(p);
       this.note(p, 'รีเซ็ต' + (what === 'stats' ? 'สเตตัส' : 'สกิล') + 'แล้ว' + (cost ? ' (-' + cost + ' เหรียญ)' : ' (ฟรี จนกว่าจะเปลี่ยนคลาส 2)'));
       this.tellMe(p);
@@ -761,7 +777,7 @@
     setBorrow(id, slot, sid) {
       const p = this.players.get(id);
       slot = Math.floor(Number(slot));
-      if (!p || p.dead || !(slot >= 0 && slot < RPG.bslots(p))) return false;
+      if (!p || p.dead || p.job !== 'Adventurer' || !(slot >= 0 && slot < RPG.bslots(p))) return false;
       if (sid && RPG.ACTIVE_IDS().indexOf(sid) < 0) return false;
       p.borrow[slot] = sid || null; this.tellMe(p);
       return true;
@@ -770,7 +786,8 @@
       const p = this.players.get(id);
       if (!p || !p.gm) return false;
       if (cmd === 'lv') { p.lv = clamp(Math.floor(Number(v)) || 1, 1, LVCAP); p.exp = 0; }
-      else if (cmd === 'job' && RPG.JOBS[v]) { p.job = v; p.c4 = false; if (RPG.JOBS[v].tier >= 1 && !p.fac) p.fac = 'd'; if (RPG.JOBS[v].tier < 1) p.fac = null; }
+      else if (cmd === 'job' && RPG.JOBS[v]) { p.job = v; p.via = RPG.ALT[v] ? RPG.ALT[v][0] : null; p.c4 = false; if (v === 'Solo Player') p.borrow = RPG.emptyBorrow(); if (RPG.JOBS[v].tier >= 1 && !p.fac) p.fac = 'd'; if (RPG.JOBS[v].tier < 1) p.fac = null; }
+      else if (cmd === 'via' && RPG.ALT[p.job] && RPG.ALT[p.job].indexOf(v) >= 0) p.via = v;
       else if (cmd === 'fac' && (v === 'd' || v === 'a')) p.fac = v;
       else if (cmd === 'c4') { if (p.job !== 'Adventurer') p.c4 = true; }
       else if (cmd === 'rb') { p.rb = clamp(Math.floor(Number(v)) || 0, 0, 9); p.orig = p.job; }
@@ -778,7 +795,7 @@
       else if (cmd === 'coin') p.inv.coin = Math.min(99999, (p.inv.coin || 0) + 20000);
       else if (cmd === 'heal') { p.hp = p.maxHp; p.mp = p.maxMp; }
       else return false;
-      RPG.recalcPoints(p); this.dropIllegalGear(p, true); this.applyLevel(p);
+      RPG.recalcPoints(p); this.dropIllegalGear(p, true); this.applyLevel(p); this.grantRand(p);
       if (cmd === 'heal' || cmd === 'lv' || cmd === 'job') { p.hp = p.maxHp; p.mp = p.maxMp; }
       this.emit(p.zone, { t: 'job', id: p.id, job: p.job, fac: p.fac });
       this.emit(p.zone, { t: 'eq', id: p.id, eq: Object.assign({}, p.equip) });
@@ -924,7 +941,7 @@
       if (!m || m.state === 'dead' || m.zone !== p.zone) { p.target = null; p.pend = null; return; }
       const d = Math.hypot(m.x - p.x, m.y - p.y);
       let range = p.rng;
-      const pk = p.pend && SKILLS[p.pend] ? SKILLS[p.pend] : (p.pend && /^b[0-3]$/.test(p.pend) && SKILLS[p.borrow[+p.pend[1]]]) || null;
+      const pk = p.pend && SKILLS[p.pend] ? SKILLS[p.pend] : (p.pend && /^b[0-4]$/.test(p.pend) && SKILLS[p.borrow[+p.pend[1]]]) || null;
       if (p.pend && pk) range = this.skillRange(pk);
       if (d <= range) {
         p.path = [];
@@ -988,6 +1005,7 @@
       if (p.lv >= LVCAP) p.exp = 0;
       if (up) {
         RPG.recalcPoints(p); this.applyLevel(p); p.hp = p.maxHp; p.mp = p.maxMp;
+        this.grantRand(p);
         this.tellQuests(p);
         if (p.sp > 0) this.note(p, 'มีแต้มสเตตัสที่ยังไม่ได้ใช้ ' + p.sp + ' แต้ม');
       }
