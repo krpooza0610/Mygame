@@ -408,6 +408,29 @@ button{font-family:inherit}
 .cfm{background:rgba(120,30,30,.35);border:1px solid #a04040;border-radius:10px;padding:9px;display:flex;flex-direction:column;gap:7px;font-size:13px;text-align:center}
 .cfm .r{display:flex;gap:8px}.cfm .r button{flex:1;height:36px;border:0;border-radius:9px;font:700 14px var(--font);color:#fff;cursor:pointer;background:#555}.cfm .r button.y{background:#b03a3a}
 #acct{margin:0;text-align:center;font-size:12px;color:var(--muted)}
+
+/* ===== หน้าต่างสกิลสไตล์กระดาษโบราณ ===== */
+#skills{background:linear-gradient(180deg,#e9d9b3,#d9c08c 60%,#cdb07a);border:3px solid #6e4a28;box-shadow:0 0 0 2px #2d1c10,0 8px 24px rgba(0,0,0,.5),inset 0 0 22px rgba(110,74,40,.45);color:#3a2514;border-radius:10px}
+#skills h4{color:#fff3d0;background:linear-gradient(180deg,#6b8a8f,#4a6a70);margin:-9px -9px 0;padding:7px 10px;border-radius:7px 7px 0 0;border-bottom:3px solid #6e4a28;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+#skills h4 button{background:rgba(45,28,16,.55)}
+#skills .bsrow{background:rgba(110,74,40,.14);border:1px solid rgba(110,74,40,.35);color:#3a2514}
+#skills .bsrow .stat,#skills .sec,#skills .em,#skills .hint{color:#7a5a3a}
+#skills .bsrow button{background:#7a5230;color:#fff3d0}
+#skills .tabs button{background:rgba(110,74,40,.18);color:#5a3b20;border:1px solid rgba(110,74,40,.4)}
+#skills .tabs button.on{background:#6b8a8f;color:#fff;border-color:#2d1c10}
+.sgrid2{display:flex;flex-direction:column;gap:6px;padding:7px;border-radius:6px;background:rgba(110,74,40,.12);border:1px solid rgba(110,74,40,.35);box-shadow:inset 0 0 12px rgba(110,74,40,.25);max-height:34vh;overflow-y:auto}
+.skrow{display:flex;align-items:center;gap:16px;padding-left:2px}
+#skills .skrow .sc{width:46px;height:46px;flex:none;aspect-ratio:auto;background:none;border:0;border-radius:50%;overflow:visible}
+#skills .skrow .sc canvas{width:46px;height:46px;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4))}
+#skills .skrow .sc+.sc::before{content:'';position:absolute;left:-16px;top:50%;width:16px;height:4px;margin-top:-2px;background:linear-gradient(180deg,#9a6a38,#5a3b20);border-radius:2px;box-shadow:0 1px 0 rgba(255,255,255,.3)}
+#skills .skrow .sc.sel canvas{filter:drop-shadow(0 0 5px #ffd24a) drop-shadow(0 0 2px #fff)}
+#skills .skrow .sc.lk{filter:none;opacity:1;background:radial-gradient(circle at 50% 30%,#5a5a58,#2c2c2c);border:3px solid #7a5230;box-shadow:0 0 0 2px #2d1c10;color:#aaa;font-size:20px;font-weight:800}
+#skills .skrow .sc:not(.got):not(.lk) canvas{filter:grayscale(.75) brightness(.8)}
+#skills .skrow .sc i{background:#2d1c10;color:#ffe9b8;border-color:#c79b5a}
+#skills .detail{background:rgba(255,248,225,.55);border:1px solid rgba(110,74,40,.4);border-radius:8px;color:#3a2514}
+#skills .detail b{color:#3a2514}
+#skills .detail .desc{color:#4a321c}
+#skills .detail .stat{color:#7a5a3a}
 </style>
 </head>
 <body>
@@ -1323,13 +1346,22 @@ function drawSkillIcon(g, id) {
   if (/^b[0-4]$/.test(id)) sk = G.SKILLS[my.borrow[+id[1]]];
   if (!sk) { g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(32, 32, 22, 0, 6.3); g.fill(); g.restore(); return; }
   const J = JobArt.J[sk.job], col = J ? J[6] : '#c9b37a', shape = RPG.skillShape(sk);
-  const gr = g.createLinearGradient(0, 4, 0, 60); gr.addColorStop(0, mixc(col, '#ffffff', 0.12)); gr.addColorStop(1, shade(col, 0.42));
-  g.fillStyle = gr; g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 3;
-  g.beginPath();
-  if (shape === 'ci') g.arc(32, 32, 26, 0, 6.3);
-  else if (shape === 'rr') { g.moveTo(18, 6); g.lineTo(46, 6); g.quadraticCurveTo(58, 6, 58, 18); g.lineTo(58, 46); g.quadraticCurveTo(58, 58, 46, 58); g.lineTo(18, 58); g.quadraticCurveTo(6, 58, 6, 46); g.lineTo(6, 18); g.quadraticCurveTo(6, 6, 18, 6); }
-  else g.rect(7, 7, 50, 50);
-  g.fill(); g.stroke();
+  const path = (ins) => {
+    g.beginPath();
+    if (shape === 'ci') g.arc(32, 32, 28 - ins, 0, 6.3);
+    else if (shape === 'rr') { const r = 12, a = 4 + ins, z = 60 - ins; g.moveTo(a + r, a); g.lineTo(z - r, a); g.quadraticCurveTo(z, a, z, a + r); g.lineTo(z, z - r); g.quadraticCurveTo(z, z, z - r, z); g.lineTo(a + r, z); g.quadraticCurveTo(a, z, a, z - r); g.lineTo(a, a + r); g.quadraticCurveTo(a, a, a + r, a); g.closePath(); }
+    else { const a = 5 + ins, z = 59 - ins, c = 7; g.moveTo(a + c, a); g.lineTo(z - c, a); g.lineTo(z, a + c); g.lineTo(z, z - c); g.lineTo(z - c, z); g.lineTo(a + c, z); g.lineTo(a, z - c); g.lineTo(a, a + c); g.closePath(); }
+  };
+  // กรอบไม้น้ำตาลสองชั้น (สไตล์กระดาษโบราณ)
+  path(0); g.fillStyle = '#2d1c10'; g.fill(); g.strokeStyle = '#c79b5a'; g.lineWidth = 3; g.stroke();
+  path(4); g.strokeStyle = '#7a5230'; g.lineWidth = 1.6; g.stroke();
+  g.save(); path(5); g.clip();
+  const gr = g.createRadialGradient(32, 22, 2, 32, 34, 34); gr.addColorStop(0, mixc(col, '#ffffff', 0.62)); gr.addColorStop(0.55, mixc(col, '#ffffff', 0.12)); gr.addColorStop(1, shade(col, 0.5));
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(32, 14, 22, 9, 0, 0, 6.3); g.fill();   // เงาสะท้อนด้านบน
+  g.restore();
+  if (swordSym(g, sk)) { tierBadge(g, sk); g.restore(); return; }
+  g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 3;
   g.strokeStyle = '#fff'; g.fillStyle = '#fff'; g.lineWidth = 5;
   const k = sk.k;
   if (k === 'A' || k === 'Z') { g.lineWidth = k === 'Z' ? 8 : 6; g.beginPath(); g.moveTo(16, 48); g.quadraticCurveTo(26, 22, 48, 14); g.stroke(); g.lineWidth = 3; g.beginPath(); g.moveTo(20, 52); g.lineTo(44, 28); g.stroke(); }
@@ -1341,8 +1373,129 @@ function drawSkillIcon(g, id) {
   else if (k === 'D') { g.beginPath(); g.moveTo(32, 12); g.lineTo(48, 18); g.lineTo(46, 36); g.quadraticCurveTo(44, 48, 32, 53); g.quadraticCurveTo(20, 48, 18, 36); g.lineTo(16, 18); g.closePath(); g.fill(); }
   else if (k === 'H') { g.fillRect(27, 14, 10, 36); g.fillRect(14, 27, 36, 10); }
   else { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -1.5708 + i * 0.62832, r = i % 2 ? 8 : 20; g.lineTo(32 + Math.cos(a) * r, 33 + Math.sin(a) * r); } g.closePath(); g.fill(); }
+  g.shadowBlur = 0;
   if (sk.c4) { g.strokeStyle = sk.sp ? '#ff9ad0' : '#ffd24a'; g.lineWidth = 2.4; g.beginPath(); g.arc(32, 32, 30, 0, 6.3); g.stroke(); }
+  tierBadge(g, sk);
   g.restore();
+}
+
+function tierBadge(g, sk) {   // เลขโรมันมุมซ้ายบน เหมือนในภาพตัวอย่าง
+  const m = / (I{1,3}|IV|V)$/.exec(sk.name || ''); if (!m) return;
+  g.save(); g.shadowBlur = 0; g.fillStyle = 'rgba(30,18,10,.85)'; g.strokeStyle = '#c79b5a'; g.lineWidth = 1.2;
+  const w = 8 + m[1].length * 5; g.beginPath(); g.roundRect ? g.roundRect(3, 3, w, 14, 4) : g.rect(3, 3, w, 14); g.fill(); g.stroke();
+  g.fillStyle = '#ffe9b8'; g.font = '800 11px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(m[1], 3 + w / 2, 10.5); g.restore();
+}
+// สัญลักษณ์เฉพาะสกิลนักดาบ (วาดแบบมีขอบเข้ม ให้ดูเป็นภาพวาด)
+function swordSym(g, sk) {
+  const id = sk.id; if (sk.job !== 'Swordman') return false;
+  const W = '#fff', K = 'rgba(25,14,8,.9)';
+  const line = (c, w, pts) => { g.strokeStyle = c; g.lineWidth = w; g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.stroke(); };
+  const both = (w, pts, c) => { line(K, w + 3.5, pts); line(c || W, w, pts); };
+  const blade = (x, y, ang, len, w) => {   // ดาบ: ใบ + การ์ด + ด้าม
+    g.save(); g.translate(x, y); g.rotate(ang);
+    g.fillStyle = '#f2f6fa'; g.strokeStyle = K; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(-w, 0); g.lineTo(-w, -len); g.lineTo(0, -len - w * 1.6); g.lineTo(w, -len); g.lineTo(w, 0); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = '#9fb0bd'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(0, -len); g.lineTo(0, -2); g.stroke();
+    g.fillStyle = '#e2b24a'; g.strokeStyle = K; g.lineWidth = 1.6; g.fillRect(-w * 2.3, 0, w * 4.6, 3.4); g.strokeRect(-w * 2.3, 0, w * 4.6, 3.4);
+    g.fillStyle = '#6b3f1f'; g.fillRect(-1.8, 3.4, 3.6, 8); g.restore();
+  };
+  const shield = (x, y, sc) => {
+    g.save(); g.translate(x, y); g.scale(sc, sc);
+    g.fillStyle = '#7ba6d8'; g.strokeStyle = K; g.lineWidth = 2.4;
+    g.beginPath(); g.moveTo(0, -17); g.lineTo(15, -12); g.lineTo(13, 4); g.quadraticCurveTo(11, 14, 0, 19); g.quadraticCurveTo(-11, 14, -13, 4); g.lineTo(-15, -12); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#e8c15a'; g.beginPath(); g.moveTo(0, -12); g.lineTo(9, -9); g.lineTo(8, 3); g.quadraticCurveTo(6, 9, 0, 13); g.quadraticCurveTo(-6, 9, -8, 3); g.lineTo(-9, -9); g.closePath(); g.fill();
+    g.fillStyle = '#7ba6d8'; g.beginPath(); g.arc(0, -1, 4.2, 0, 6.3); g.fill(); g.restore();
+  };
+  const spark = (x, y, r, c) => { g.fillStyle = c || '#fff3b0'; g.beginPath(); for (let i = 0; i < 8; i++) { const a = i * 0.7854, rr = i % 2 ? r * 0.38 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); };
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  switch (id) {
+    case 'log_cleave':
+      blade(40, 38, -2.35, 24, 4); both(3.5, [[10, 54], [22, 44], [34, 30]], '#cfe9ff');
+      g.fillStyle = '#c98f4f'; for (const q of [[44, 46, 5], [50, 38, 4], [38, 52, 4]]) { g.strokeStyle = K; g.lineWidth = 1.4; g.save(); g.translate(q[0], q[1]); g.rotate(q[0]); g.fillRect(-q[2], -2, q[2] * 2, 4); g.strokeRect(-q[2], -2, q[2] * 2, 4); g.restore(); } break;
+    case 'shield_slam':
+      shield(26, 34, 1.1); both(3, [[44, 22], [56, 22]], '#ffe27a'); both(3, [[44, 32], [58, 32]], '#ffe27a'); both(3, [[44, 42], [56, 42]], '#ffe27a'); spark(46, 14, 7); break;
+    case 'valor':
+      g.fillStyle = '#ffb347'; g.strokeStyle = K; g.lineWidth = 2.2;
+      g.beginPath(); g.moveTo(32, 8); g.quadraticCurveTo(46, 22, 44, 36); g.quadraticCurveTo(43, 52, 32, 54); g.quadraticCurveTo(20, 52, 20, 38); g.quadraticCurveTo(21, 30, 26, 24); g.quadraticCurveTo(27, 32, 32, 34); g.quadraticCurveTo(28, 22, 32, 8); g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = '#fff2a8'; g.beginPath(); g.moveTo(32, 26); g.quadraticCurveTo(39, 36, 36, 46); g.quadraticCurveTo(32, 52, 28, 46); g.quadraticCurveTo(26, 38, 32, 26); g.fill();
+      both(3, [[14, 40], [20, 32], [26, 40]], '#fff'); break;
+    case 'combo':
+      blade(26, 44, -0.8, 20, 3.2); blade(40, 46, 0.8, 20, 3.2); both(2.6, [[8, 20], [22, 10]], '#cfe9ff'); both(2.6, [[56, 20], [42, 10]], '#cfe9ff'); break;
+    case 'heavy':
+      blade(32, 54, 0, 34, 5.5); both(3, [[10, 18], [22, 24]], '#ff8a7a'); both(3, [[54, 18], [42, 24]], '#ff8a7a'); spark(32, 12, 8, '#ffd0c4'); break;
+    case 'sword_mastery':
+      blade(32, 50, 0.0, 30, 4.2); spark(46, 14, 5); break;
+    case 'onehand':
+      blade(36, 50, 0.0, 28, 3.8); both(2.6, [[8, 22], [20, 22]], '#cfe9ff'); both(2.6, [[6, 32], [18, 32]], '#cfe9ff'); both(2.6, [[8, 42], [20, 42]], '#cfe9ff'); break;
+    case 'twohand_mastery':
+      blade(32, 54, 0, 40, 5.2); g.save(); g.translate(32, 54); g.fillStyle = '#e2b24a'; g.strokeStyle = K; g.restore(); spark(48, 14, 5); break;
+    case 'shield_mastery':
+      shield(32, 34, 1.3); spark(48, 14, 5); break;
+    case 'battle_ready':
+      blade(24, 48, -0.35, 30, 3.8); shield(40, 38, 0.95); spark(50, 14, 5); break;
+    default: return false;
+  }
+  return true;
+}
+
+/* ---------- เอฟเฟกต์สกิลพิเศษ (รอยฟัน / เศษไม้ / คลื่นกระแทก / เปลวไฟ / ประกาย) ---------- */
+function shakeCam(amp, ms) {
+  const t0 = performance.now();
+  (function st() {
+    const a = (performance.now() - t0) / ms; if (a >= 1) { cv.style.transform = ''; return; }
+    const k = amp * (1 - a); cv.style.transform = 'translate(' + ((Math.random() - 0.5) * 2 * k).toFixed(1) + 'px,' + ((Math.random() - 0.5) * 2 * k).toFixed(1) + 'px)';
+    requestAnimationFrame(st);
+  })();
+}
+function drawFx2(f, age, sx, sy) {
+  const z = zoom, H = 26 * z; ctx.save(); ctx.lineCap = 'round';
+  if (f.k === 'slash') {
+    const po = proj(f.ox, f.oy), pt = proj(f.x, f.y), dx = pt[0] - po[0], dy = pt[1] - po[1];
+    const base = Math.atan2(dy, dx) + (f.tilt || -0.9), R = (f.len || 40) * z, a0 = base - 1.0, a1 = a0 + 2.0 * Math.min(1, age * 2.2);
+    ctx.translate(sx, sy - H); ctx.globalAlpha = Math.max(0, 1 - age * 0.9);
+    for (const [w, c] of [[20 * z, f.color], [9 * z, '#ffffff']]) { ctx.strokeStyle = c; ctx.lineWidth = w * (1 - age * 0.5); ctx.beginPath(); ctx.arc(0, 0, R, a0, a1); ctx.stroke(); }
+  } else if (f.k === 'shock') {
+    ctx.translate(sx, sy - H * 0.6); ctx.globalAlpha = 1 - age;
+    const dx = Math.cos(f.dirA || 0), dy = Math.sin(f.dirA || 0) * 0.5;
+    for (let i = 0; i < 3; i++) { const q = Math.min(1, Math.max(0, age * 1.4 - i * 0.18)); ctx.strokeStyle = i ? f.color : '#fff'; ctx.lineWidth = (8 - i * 2) * z; ctx.beginPath(); ctx.ellipse(dx * q * 40 * z, dy * q * 40 * z, (10 + q * 52) * z, (18 + q * 22) * z, 0, 0, 6.3); ctx.stroke(); }
+    const gg = ctx.createRadialGradient(0, 0, 0, 0, 0, 44 * z); gg.addColorStop(0, 'rgba(255,255,255,' + (0.95 * (1 - age * 2)) + ')'); gg.addColorStop(1, 'rgba(255,255,255,0)');
+    if (age < 0.5) { ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(0, 0, 44 * z, 0, 6.3); ctx.fill(); }
+  } else if (f.k === 'chips') {
+    ctx.translate(sx, sy - H * 0.7);
+    for (const c of f.ps) {
+      const t = age * 1.6, x = c.vx * t * 60 * z, y = (c.vy * t + 1.6 * t * t) * 60 * z;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(c.rot + t * c.spin); ctx.globalAlpha = Math.max(0, 1 - age);
+      ctx.fillStyle = c.col; ctx.strokeStyle = 'rgba(40,20,8,.8)'; ctx.lineWidth = 1.5; ctx.fillRect(-c.s * z, -2.2 * z, c.s * 2 * z, 4.4 * z); ctx.strokeRect(-c.s * z, -2.2 * z, c.s * 2 * z, 4.4 * z); ctx.restore();
+    }
+  } else if (f.k === 'flame') {
+    ctx.translate(sx, sy); const n = 26;
+    for (let i = 0; i < n; i++) {
+      const ph = (i / n + age * 1.3) % 1, ang = i * 2.4, rad = (14 + 6 * Math.sin(i)) * z * (1 - ph * 0.4);
+      const x = Math.cos(ang) * rad, y = -ph * 84 * z + Math.sin(ang) * rad * 0.4 - 4 * z;
+      const gg = ctx.createRadialGradient(x, y, 0, x, y, 12 * z); gg.addColorStop(0, 'rgba(255,240,170,' + 0.9 * (1 - ph) * (1 - age * 0.6) + ')'); gg.addColorStop(0.5, 'rgba(255,150,40,' + 0.6 * (1 - ph) + ')'); gg.addColorStop(1, 'rgba(255,80,20,0)');
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(x, y, 12 * z, 0, 6.3); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(255,200,90,' + (1 - age) + ')'; ctx.lineWidth = 3 * z; ctx.beginPath(); ctx.ellipse(0, 0, (14 + age * 36) * z, (7 + age * 18) * z, 0, 0, 6.3); ctx.stroke();
+  } else if (f.k === 'burst') {
+    ctx.translate(sx, sy - H); ctx.globalAlpha = 1 - age; ctx.strokeStyle = f.color; ctx.lineWidth = 5 * z;
+    for (let i = 0; i < 12; i++) { const a = i * 0.5236 + (f.rot || 0), r0 = (8 + age * 20) * z, r1 = (22 + age * 52) * z; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); ctx.stroke(); }
+  }
+  ctx.restore();
+}
+function skillFx(m, e) {   // เอฟเฟกต์ของสกิลนักดาบ (เรียกจาก event 'sk')
+  const now = performance.now(), tx = m.tx, ty = m.ty, dirA = Math.atan2(S2Y(proj(tx, ty)[1]) - S2Y(proj(e.x, e.y)[1]), S2X(proj(tx, ty)[0]) - S2X(proj(e.x, e.y)[0]));
+  const chips = (n, cols) => { const ps = []; for (let i = 0; i < n; i++) ps.push({ vx: (Math.random() - 0.5) * 2.6, vy: -0.8 - Math.random() * 1.2, rot: Math.random() * 6, spin: (Math.random() - 0.5) * 12, s: 4 + Math.random() * 4, col: cols[i % cols.length] }); fx.push({ k: 'chips', x: tx, y: ty, ps, dur: 750, t0: now }); };
+  switch (m.s) {
+    case 'log_cleave':
+      fx.push({ k: 'slash', ox: e.x, oy: e.y, x: tx, y: ty, color: 'rgba(160,215,255,0.9)', len: 78, tilt: -1.4, dur: 420, t0: now });
+      fx.push({ k: 'slash', ox: e.x, oy: e.y, x: tx, y: ty, color: 'rgba(255,255,255,0.7)', len: 54, tilt: -1.0, dur: 360, t0: now + 60 });
+      chips(16, ['#d9a25e', '#b97a3a', '#f0c88a']); shakeCam(3, 160); break;
+    case 'shield_slam':
+      fx.push({ k: 'shock', x: tx, y: ty, color: 'rgba(255,226,122,0.95)', dirA, dur: 480, t0: now });
+      fx.push({ k: 'burst', x: tx, y: ty, color: '#fff3b0', rot: 0.3, dur: 420, t0: now }); shakeCam(6, 230); break;
+    case 'valor':
+      fx.push({ k: 'flame', x: e.x, y: e.y, dur: 1300, t0: now }); fx.push({ k: 'burst', x: e.x, y: e.y, color: '#ffc861', dur: 520, t0: now }); shakeCam(2.5, 200); break;
+  }
 }
 function drawIcon(g, key) {
   if (key.indexOf('sk:') === 0) { drawSkillIcon(g, key.slice(3)); return; }
@@ -1664,18 +1817,29 @@ function renderSkills() {
     } else d.appendChild(mkEl('div', 'em', solo ? 'ยังไม่ได้สกิลสุ่มในช่องนี้' : 'แตะช่องเพื่อเลือกสกิลที่จะยืม'));
     b.appendChild(d); return;
   }
-  for (const sk of RPG.SK_BY_JOB[skTab] || []) {
-    const lock = RPG.skillLock(my, sk), lvl = RPG.skillLevel(my, sk.id);
-    const c = mkEl('div', 'sc ' + RPG.skillShape(sk) + (skSel === sk.id ? ' sel' : '') + (lock ? ' lk' : ''));
-    if (lock) c.appendChild(mkEl('span', '', '?')); else { c.appendChild(iconEl('skill:' + sk.id, 38)); c.appendChild(mkEl('i', '', lvl + '/' + sk.max)); }
-    c.onclick = () => {
-      if (lock) { toast('ยังไม่ปลดล็อก', 1200); return; }
-      if (skSel !== sk.id) { skSel = sk.id; renderSkills(); return; }
-      if (sk.k === 'P') { toast('สกิลติดตัว ใช้งานอัตโนมัติ', 1500); return; }
-      if (!lvl) { toast('ต้องเรียนสกิลก่อน', 1500); return; }
-      startFloat('skill:' + sk.id);
-    };
-    grid.appendChild(c);
+  const rows = [], rowOf = {};
+  for (const sk of RPG.SK_BY_JOB[skTab] || []) {   // จัดเป็นแถวตามสายสกิล (เชื่อมกันด้วยเส้น)
+    let r = sk.ln !== undefined ? rowOf['ln:' + sk.ln] : (sk.pre && rowOf[[].concat(sk.pre)[0]]);
+    if (!r) { r = []; rows.push(r); if (sk.ln !== undefined) rowOf['ln:' + sk.ln] = r; }
+    r.push(sk); rowOf[sk.id] = r;
+  }
+  grid.className = 'sgrid2';
+  for (const r of rows) {
+    const rowEl = mkEl('div', 'skrow');
+    for (const sk of r) {
+      const lock = RPG.skillLock(my, sk), lvl = RPG.skillLevel(my, sk.id);
+      const c = mkEl('div', 'sc ' + RPG.skillShape(sk) + (skSel === sk.id ? ' sel' : '') + (lock ? ' lk' : '') + (lvl ? ' got' : ''));
+      if (lock) c.appendChild(mkEl('span', '', '?')); else { c.appendChild(iconEl('skill:' + sk.id, 44)); c.appendChild(mkEl('i', '', lvl + '/' + sk.max)); }
+      c.onclick = () => {
+        if (lock) { toast('ยังไม่ปลดล็อก', 1200); return; }
+        if (skSel !== sk.id) { skSel = sk.id; renderSkills(); return; }
+        if (sk.k === 'P') { toast('สกิลติดตัว ใช้งานอัตโนมัติ', 1500); return; }
+        if (!lvl) { toast('ต้องเรียนสกิลก่อน', 1500); return; }
+        startFloat('skill:' + sk.id);
+      };
+      rowEl.appendChild(c);
+    }
+    grid.appendChild(rowEl);
   }
   b.appendChild(grid);
   b.appendChild(mkEl('div', 'sec', 'วงกลม = ใช้งาน · มนเหลี่ยม = บัฟ · สี่เหลี่ยมคม = ติดตัว'));
@@ -2292,7 +2456,7 @@ function handle(m) {
         if (mo) { mo.atkT = now; }
       } else {
         const mo = mons.get(m.id), e = ents.get(m.from);
-        if (mo) { mo.hp = m.hp; mo.hitT = now; if (m.heavy) floatText(mo.x, mo.y - 0.9, 'โจมตีหนัก!', '#ff5a4d', true); floatText(mo.x, mo.y, m.dmg + (m.crit ? '!' : ''), m.crit ? '#ffd23c' : '#ffffff', !!m.crit); }
+        if (mo) { mo.hp = m.hp; mo.hitT = now; if (m.heavy) { floatText(mo.x, mo.y - 0.9, 'โจมตีหนัก!', '#ff5a4d', true); fx.push({ k: 'burst', x: mo.x, y: mo.y, color: '#ff5a4d', rot: 0.2, dur: 600, t0: now }); fx.push({ k: 'shock', x: mo.x, y: mo.y, color: 'rgba(255,90,70,0.9)', dirA: 0, dur: 520, t0: now }); shakeCam(8, 280); } floatText(mo.x, mo.y, m.dmg + (m.crit ? '!' : ''), m.crit ? '#ffd23c' : '#ffffff', !!m.crit); }
         if (e) { e.swingT = now; if (mo) e.dir = Math.round(Math.atan2(mo.y - e.y, mo.x - e.x) / (Math.PI / 4) + 8) % 8; }
       }
       break;
@@ -2332,6 +2496,7 @@ function handle(m) {
       const e = ents.get(m.id); if (!e) break;
       const rgb = hex2rgb(accentOf(m.job || 'Adventurer')).join(','), k = m.k;
       e.swingT = performance.now();
+      if (m.job === 'Swordman') skillFx(m, e);
       if (m.job === 'Swordman' && G.SKILLS[m.s]) floatText(e.x, e.y - 0.8, G.SKILLS[m.s].name.replace(/ I+$/, '') + '!', '#ffe27a', true);
       if (k === 'A' || k === 'Z') { ring(m.tx, m.ty, rgb, k === 'Z' ? 1.6 : 0.9); }
       else if (k === 'R') { fx.push({ k: 'proj', x: e.x, y: e.y, x2: m.tx, y2: m.ty, color: 'rgb(' + rgb + ')', shape: 'arrow', dur: 240, t0: performance.now() }); ring(m.tx, m.ty, rgb, 0.8); }
@@ -2992,6 +3157,8 @@ function render(now, dt) {
     if (f.k === 'ring') {
       ctx.strokeStyle = 'rgba(' + f.color + ',' + (1 - age) + ')'; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.ellipse(sx, sy, (10 + age * 46) * (f.sc || 1) * zoom, (5 + age * 23) * (f.sc || 1) * zoom, 0, 0, 6.3); ctx.stroke();
+    } else if (f.k === 'slash' || f.k === 'shock' || f.k === 'chips' || f.k === 'flame' || f.k === 'burst') {
+      drawFx2(f, age, sx, sy);
     } else if (f.k === 'proj') {
       const p2 = proj(f.x2, f.y2), ex = S2X(p2[0]), ey = S2Y(p2[1]), lift = 26 * zoom;
       const hx = sx + (ex - sx) * age, hy = sy + (ey - sy) * age - lift - Math.sin(age * Math.PI) * 8 * zoom;
@@ -3473,7 +3640,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 window.__bc = {
-  ents, mons, my, get map() { return map; }, get zone() { return curZone; }, get zoom() { return zoom; }, set zoom(v) { zoom = v; },
+  ents, mons, my, fx, skillFx, get map() { return map; }, get zone() { return curZone; }, get zoom() { return zoom; }, set zoom(v) { zoom = v; },
   setMode(m, snap) { timeMode = m; if (snap) { const h = targetHour(); tintNow = tintAt(h); LIGHTS = lightsAt(h); } },
   cam, send(m) { return net && net.send(m); },
   gallery(c, types, cols, sc, t, extra) {   // ใช้ตรวจภาพมอนสเตอร์ทั้งหมดบนผืนผ้าใบแยก

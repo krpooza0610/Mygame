@@ -245,16 +245,16 @@
     for (const sk of SK_BY_JOB.Swordman) delete SK[sk.id];
     SK_BY_JOB.Swordman = [];
     const S = (i, id, name, k, o) => addSkill('Swordman', i, name, k, Object.assign({ id, sty: 's', rng: 0, pas: null }, o));
-    S(0, 'log_cleave', 'ดาบผ่าซุง I', 'A', { min: 1, need: ['sword', 'sword2h'], needSlot: 'weapon', needTh: 'ต้องถือดาบ' });
-    S(1, 'shield_slam', 'โล่กระแทก I', 'A', { min: 5, need: ['shield'], needSlot: 'off', needTh: 'ต้องถือโล่' });
-    S(2, 'valor', 'ฮึกเหิม I', 'U', { min: 9 });
+    S(0, 'log_cleave', 'ดาบผ่าซุง I', 'A', { ln: 'a', min: 1, need: ['sword', 'sword2h'], needSlot: 'weapon', needTh: 'ต้องถือดาบ' });
+    S(1, 'shield_slam', 'โล่กระแทก I', 'A', { ln: 'a', min: 5, need: ['shield'], needSlot: 'off', needTh: 'ต้องถือโล่' });
+    S(2, 'valor', 'ฮึกเหิม I', 'U', { ln: 'a', min: 9 });
     S(3, 'combo', 'โจมตีต่อเนื่อง', 'P', { min: 4, pas: 'combo' });
     S(4, 'heavy', 'โจมตีหนัก', 'P', { min: 20, pas: 'heavy', pre: ['combo'] });
     S(5, 'sword_mastery', 'ชำนาญดาบ I', 'P', { min: 1, pas: 'swordatk' });
     S(6, 'onehand', 'ผู้ใช้ดาบมือเดียว I', 'P', { min: 12, pas: 'onespd', pre: ['sword_mastery'] });
     S(7, 'twohand_mastery', 'ชำนาญดาบสองมือ I', 'P', { min: 1, pas: 'twoatk' });
-    S(8, 'shield_mastery', 'ชำนาญโล่ I', 'P', { min: 1, pas: 'shdef' });
-    S(9, 'battle_ready', 'ชำนาญอาวุธพร้อมรบ I', 'P', { min: 14, pas: 'ready', pre: ['sword_mastery', 'shield_mastery'] });
+    S(8, 'shield_mastery', 'ชำนาญโล่ I', 'P', { ln: 'e', min: 1, pas: 'shdef' });
+    S(9, 'battle_ready', 'ชำนาญอาวุธพร้อมรบ I', 'P', { ln: 'e', min: 14, pas: 'ready', pre: ['sword_mastery', 'shield_mastery'] });
   })();
   const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
   // ค่าจริงของสกิลที่เลเวล l (rb = จำนวนครั้งที่เกิดใหม่, fac = ฝ่าย)
