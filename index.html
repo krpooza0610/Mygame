@@ -38,6 +38,27 @@ button{font-family:inherit}
 #tbtn{font-size:14px;font-variant-numeric:tabular-nums}
 @media (max-width:460px){#ttxt{display:none}#tr{gap:6px}}
 @media (max-width:460px){#ttxt{display:none}#tr{gap:6px}}
+#autobtn{pointer-events:auto;right:max(60px,calc(env(safe-area-inset-right) + 54px));bottom:calc(max(10px,env(safe-area-inset-bottom)) + 196px);width:56px;height:56px;border-radius:50%;
+  flex-direction:column;gap:0;padding:0;z-index:7;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#autobtn b{font-size:12px;letter-spacing:.5px;line-height:1.1}
+#autobtn small{font-size:10px;color:var(--muted);line-height:1}
+#autobtn.on{background:rgba(40,150,80,.9);border-color:#7be39c;box-shadow:0 0 0 3px rgba(90,220,130,.35);animation:autop 1.2s ease-in-out infinite}
+#autobtn.on small{color:#eaffef}
+@keyframes autop{50%{box-shadow:0 0 0 7px rgba(90,220,130,.08)}}
+#autowin .arow{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(0,0,0,.25);border-radius:8px;padding:7px 9px}
+#autowin .arow>span{flex:1;min-width:0;line-height:1.3}
+#autowin .arow small{display:block;color:var(--muted);font-size:11.5px}
+#autowin .tg{min-width:52px;height:28px;border:0;border-radius:14px;background:rgba(255,255,255,.14);color:#ddd;padding:0 10px}
+#autowin .tg.on{background:#2e9a54;color:#fff}
+#autowin .stp{display:flex;align-items:center;gap:4px;flex:none}
+#autowin .stp button{width:28px;height:28px;border:0;border-radius:7px;background:rgba(255,255,255,.16);color:#fff;padding:0}
+#autowin .stp b{min-width:42px;text-align:center}
+#autowin .sks{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+#autowin .sk{display:flex;align-items:center;gap:6px;border:0;border-radius:8px;background:rgba(0,0,0,.25);color:var(--text);padding:5px 7px;text-align:left;min-width:0}
+#autowin .sk span{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#autowin .sk.off{opacity:.38}
+#autowin .sk.on{outline:1px solid #4fc27a}
+#autowin .go{height:38px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:14px}
 #startbtn{pointer-events:auto;left:max(10px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));height:46px;min-width:48px;padding:0 6px;z-index:26;flex-direction:column;gap:0}
 #startbtn .sico{font-size:19px;line-height:1}
 #startbtn b{font-size:10.5px;line-height:1.1;letter-spacing:.3px}
@@ -53,10 +74,10 @@ button{font-family:inherit}
 #startbtn.has:after{content:"";position:absolute;right:3px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--accent2);border:1px solid #000}
 #startbtn{position:fixed}
 #hotbar .slot.lift{opacity:.35}
-#qmenu,#mail{left:50%;top:max(66px,calc(env(safe-area-inset-top) + 56px));transform:translateX(-50%);width:min(92vw,370px);padding:10px;pointer-events:auto;display:flex;flex-direction:column;gap:7px;max-height:74vh;overflow:auto;font-size:13px}
-#qmenu h4,#mail h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center;gap:8px}
-#qmenu button,#mail button{font:600 12.5px var(--font);cursor:pointer}
-#qmenu h4 button,#mail h4 button{height:26px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;padding:0 10px}
+#qmenu,#mail,#autowin{left:50%;top:max(66px,calc(env(safe-area-inset-top) + 56px));transform:translateX(-50%);width:min(92vw,370px);padding:10px;pointer-events:auto;display:flex;flex-direction:column;gap:7px;max-height:74vh;overflow:auto;font-size:13px}
+#qmenu h4,#mail h4,#autowin h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center;gap:8px}
+#qmenu button,#mail button,#autowin button{font:600 12.5px var(--font);cursor:pointer}
+#qmenu h4 button,#mail h4 button,#autowin h4 button{height:26px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;padding:0 10px}
 .qtabs{display:flex;gap:5px}
 .qtabs button{flex:1;height:30px;border:0;border-radius:8px;background:rgba(255,255,255,.12);color:var(--text)}
 .qtabs button.on{background:var(--accent);color:#fff}
@@ -219,7 +240,7 @@ button{font-family:inherit}
 .chips button.on{background:var(--accent2);color:#2a1a06}
 #shop .bad{color:#ff9a8f;font-size:11px}
 #sbtn.has,#stbtn.has{animation:blink 1s ease-in-out infinite}
-#bag,#shop,#kafra,#qwin,#qmenu,#mail,#dialog{z-index:20}
+#bag,#shop,#kafra,#qwin,#qmenu,#mail,#autowin,#dialog{z-index:20}
 #bag h4,#qwin h4,#dialog h4{margin:0;font-size:14px;color:var(--accent2);display:flex;justify-content:space-between;align-items:center;gap:8px}
 #bag h4 button,#qwin h4 button{height:26px;border:0;border-radius:7px;background:rgba(255,255,255,.14);color:#fff;font:600 12.5px var(--font);padding:0 10px;cursor:pointer}
 .eqrow{display:flex;gap:8px}
@@ -411,6 +432,7 @@ button{font-family:inherit}
     <button id="tbtn" class="btn" type="button" aria-label="เวลาในเกม"><span id="ticon">☀</span><span id="ttxt">10:00</span></button>
   </div>
   <button id="startbtn" class="btn" type="button" aria-label="เมนู"><span class="sico">☰</span><b>Start</b></button>
+  <button id="autobtn" class="btn" type="button" aria-label="ออโต้"><b>AUTO</b><small>OFF</small></button>
   <div id="smenu" class="panel" aria-hidden="true">
     <button id="stbtn" class="btn" type="button" aria-label="สถานะ"><i>🧍</i><span>สถานะ</span></button>
     <button id="sbtn" class="btn" type="button" aria-label="สกิล"><i>✨</i><span>สกิล</span></button>
@@ -440,6 +462,7 @@ button{font-family:inherit}
   <div id="qwin" class="panel" hidden></div>
   <div id="qmenu" class="panel" hidden></div>
   <div id="mail" class="panel" hidden></div>
+  <div id="autowin" class="panel" hidden></div>
   <div id="wmap" class="panel" hidden></div>
   <div id="dialog" class="panel" hidden></div>
   <div id="joy" aria-label="จอยสติ๊ก"><i id="knob"></i></div>
@@ -1434,7 +1457,7 @@ let hbSize = 12; try { const z = +localStorage.getItem('bc-hbsize'); if (z === 3
 const skCd = {}; let skSel = null;
 try { const s = JSON.parse(localStorage.getItem('bc-hotbar') || 'null'); if (Array.isArray(s)) s.slice(0, 12).forEach((k, i) => { if ((G.ITEMS[k] && (G.ITEMS[k].heal || G.ITEMS[k].mp)) || (typeof k === 'string' && k.indexOf('skill:') === 0 && (G.SKILLS[k.slice(6)] || k.slice(6) === 'basic' || /^b[0-3]$/.test(k.slice(6))))) hb[i] = k; }); } catch (e) {}
 try { if (!localStorage.getItem('bc-basic1')) { localStorage.setItem('bc-basic1', '1'); const f = hb.indexOf(null); if (f >= 0 && hb.indexOf('skill:basic') < 0) { hb[f] = 'skill:basic'; localStorage.setItem('bc-hotbar', JSON.stringify(hb)); } } } catch (e) {}
-const PANELS = ['bag', 'shop', 'kafra', 'qmenu', 'mail', 'qwin', 'dialog', 'skills', 'stwin', 'adwin', 'gmwin', 'setwin', 'wmap'];
+const PANELS = ['bag', 'shop', 'kafra', 'qmenu', 'mail', 'autowin', 'qwin', 'dialog', 'skills', 'stwin', 'adwin', 'gmwin', 'setwin', 'wmap'];
 function showPanel(name) { for (const p of PANELS) $(p).hidden = p !== name; }
 function closePanels() { for (const p of PANELS) $(p).hidden = true; }
 function mkEl(tag, cls, text) { const d = document.createElement(tag); if (cls) d.className = cls; if (text != null) d.textContent = text; return d; }
@@ -1933,7 +1956,7 @@ function renderDialog() {
 }
 
 /* ---- นำทางอัตโนมัติ ---- */
-function talkTo(npcId) { closePanels(); nav = { k: 'npc', id: npcId }; navTick(); }
+function talkTo(npcId) { if (auto.on) setAuto(false, 'ไปคุยกับ NPC'); closePanels(); nav = { k: 'npc', id: npcId }; navTick(); }
 function navMonster(type, qid) { closePanels(); nav = { k: 'mon', type, qid }; navTick(); }
 function goPortal(to) {
   const pt = (map.portals || []).find(p => p.to === to), me = ents.get(myId);
@@ -1945,7 +1968,7 @@ function goToZone(z) {   // เดินข้ามแมพไปทีละ�
   const r = WD.route(curZone, z); if (!r || r.length < 2) return false;
   goPortal(r[1]); return true;
 }
-function navZone(z) { closePanels(); nav = { k: 'zone', z }; navTick(); }
+function navZone(z) { if (auto.on) setAuto(false, 'เดินทางข้ามแมพ'); closePanels(); nav = { k: 'zone', z }; navTick(); }
 let navMsgT = 0;
 function navTick() {
   if (!nav || !joined) return;
@@ -2463,7 +2486,7 @@ cv.addEventListener('pointerup', e => {
       return;
     }
   }
-  myTarget = null;
+  myTarget = null; if (auto.on) setAuto(false, 'คุณสั่งเดินเอง');
   const t = screenToTile(e.clientX, e.clientY);
   if (t[0] < 0 || t[1] < 0 || t[0] >= MW || t[1] >= MH) return;
   marker = { x: Math.floor(t[0]) + 0.5, y: Math.floor(t[1]) + 0.5, t0: performance.now() };
@@ -2492,7 +2515,7 @@ function joyPush() {
 }
 jEl.addEventListener('pointerdown', e => {
   if (!joined) return;
-  e.preventDefault(); joy.on = true; joy.id = e.pointerId; jEl.classList.add('on');
+  e.preventDefault(); joy.on = true; joy.id = e.pointerId; jEl.classList.add('on'); if (auto.on) setAuto(false, 'คุณสั่งเดินเอง');
   try { jEl.setPointerCapture(e.pointerId); } catch (err) {}
   if (floating) cancelFloat();
   nav = null; pendingSkill = null; myTarget = null; marker = null;
@@ -2569,6 +2592,114 @@ window.addEventListener('keydown', e => {
   const fm = /^F(\d{1,2})$/.exec(e.key);
   if (fm && joined && document.activeElement !== $('cin') && +fm[1] >= 1 && +fm[1] <= 12) { e.preventDefault(); hotbarTap(+fm[1] - 1); }
 });
+
+/* ============================================================ ออโต้: เดินไปตีมอน ปล่อยสกิล กดยา */
+const AUTO_DEF = { hpOn: 1, hp: 50, mpOn: 1, mp: 30, skOn: 1, buffOn: 1, stopOn: 1, stop: 20, range: 30, off: {} };
+const auto = { on: false, set: Object.assign({}, AUTO_DEF, { off: {} }), t: 0, act: 0 };
+try { const sv = JSON.parse(localStorage.getItem('bc-auto') || 'null'); if (sv && typeof sv === 'object') { for (const k of Object.keys(AUTO_DEF)) if (k !== 'off' && typeof sv[k] === 'number') auto.set[k] = sv[k]; if (sv.off && typeof sv.off === 'object') auto.set.off = sv.off; } } catch (e) {}
+function autoSave() { try { localStorage.setItem('bc-auto', JSON.stringify(auto.set)); } catch (e) {} }
+const ATK_K = ['A', 'R', 'B', 'T', 'X', 'Y', 'Z'], BUFF_K = ['U', 'D'];
+function autoSkills() {   // สกิลที่เรียนแล้วและกดใช้ได้ → [{id, sk, skId}]
+  const out = [];
+  for (const tab of skTabs()) {
+    if (tab === 'borrow') continue;
+    for (const sk of RPG.SK_BY_JOB[tab] || []) if (sk.k !== 'P' && RPG.skillLevel(my, sk.id) > 0 && !RPG.skillLock(my, sk)) out.push({ id: sk.id, sk, bid: sk.id });
+  }
+  for (let i = 0; i < (my.bsl || 0); i++) { const bs = G.SKILLS[my.borrow[i]]; if (bs && bs.k !== 'P') out.push({ id: 'b' + i, sk: bs, bid: bs.id }); }
+  return out;
+}
+function setAuto(v, why) {
+  if (auto.on === v) return;
+  auto.on = v; const b = $('autobtn'); b.classList.toggle('on', v); b.querySelector('small').textContent = v ? 'ON' : 'OFF';
+  toast(v ? 'ออโต้: เริ่ม — ตีมอน/ปล่อยสกิล/กดยาให้เอง (แตะอีกครั้งเพื่อหยุด)' : 'ออโต้: หยุด' + (why ? ' · ' + why : ''), v ? 2200 : 2600);
+  if (!$('autowin').hidden) renderAuto();
+}
+function autoPotion(kind) {   // เลือกยาที่มีในถุง: kind 'hp' | 'mp'
+  const me = kind === 'hp' ? my.maxHp - my.hp : my.maxMp - my.mp; let best = null;
+  for (const k of ITEM_ORDER) {
+    const it = G.ITEMS[k]; if (!(my.inv[k] > 0)) continue;
+    const v = kind === 'hp' ? (it.heal && !it.mp ? it.heal : 0) : (it.mp && !it.heal ? it.mp : 0); if (!v) continue;
+    if (!best || (v >= me ? (best.v < me || v < best.v) : (best.v < me && v > best.v))) best = { k, v };
+  }
+  return best && best.k;
+}
+function autoTick() {
+  if (!auto.on || !joined || !net) return;
+  const me = ents.get(myId); if (!me) return;
+  if (me.dead || my.hp <= 0) { setAuto(false, 'ตัวละครพ่ายแพ้'); return; }
+  if (isTown(curZone)) return;   // อยู่ในเมือง: รอ (ไม่ทำอะไร)
+  const S = auto.set, now = performance.now(), hpP = my.hp / my.maxHp * 100, mpP = my.mp / my.maxMp * 100;
+  if (now - auto.act < 230) return;   // เซิร์ฟเวอร์รับคำสั่งได้ครั้งละ ~100ms: ทำทีละอย่าง
+  const sks = autoSkills(), off = S.off;
+  const send = f => { auto.act = now; f(); };
+  // 1) เลือดต่ำ → สกิลฟื้นฟู / ยาเลือด
+  if (S.hpOn && hpP < S.hp) {
+    const hs = sks.find(x => x.sk.k === 'H' && !off[x.id] && skillReady(x.id, true));
+    if (hs) return send(() => net.send({ t: 'skill', id: hs.id }));
+    const pk = autoPotion('hp'); if (pk) return send(() => net.send({ t: 'use', item: pk }));
+  }
+  if (S.stopOn && hpP < S.stop && !autoPotion('hp') && !sks.some(x => x.sk.k === 'H' && skillReady(x.id, true))) { setAuto(false, 'เลือดต่ำและไม่มียา'); return; }
+  // 2) MP ต่ำ → ยา MP
+  if (S.mpOn && mpP < S.mp) { const pk = autoPotion('mp'); if (pk) return send(() => net.send({ t: 'use', item: pk })); }
+  // 3) บัฟ
+  if (S.buffOn) {
+    const bs = sks.find(x => BUFF_K.indexOf(x.sk.k) >= 0 && !off[x.id] && !(my.buffs && my.buffs[x.bid]) && skillReady(x.id, true));
+    if (bs) return send(() => { nav = null; pendingSkill = null; net.send({ t: 'skill', id: bs.id }); });
+  }
+  // 4) หาเป้าหมาย
+  let tgt = myTarget && mons.get(myTarget); if (tgt && tgt.dead) tgt = null;
+  if (!tgt) {
+    let best = null, bd = S.range;
+    for (const m of mons.values()) { if (m.dead) continue; const d = Math.hypot(m.x - me.x, m.y - me.y); if (d < bd) { bd = d; best = m; } }
+    if (!best) return;
+    return send(() => { nav = null; pendingSkill = null; myTarget = best.id; net.send({ t: 'attack', id: best.id }); });
+  }
+  // 5) ปล่อยสกิลโจมตี (เซิร์ฟเวอร์วิ่งเข้าระยะให้เอง)
+  if (S.skOn && Math.hypot(tgt.x - me.x, tgt.y - me.y) < 12) {
+    const ak = sks.find(x => ATK_K.indexOf(x.sk.k) >= 0 && !off[x.id] && skillReady(x.id, true));
+    if (ak) return send(() => { nav = null; pendingSkill = null; net.send({ t: 'skill', id: ak.id }); });
+  }
+}
+setInterval(autoTick, 250);
+/* ปุ่ม AUTO: แตะ = เปิด/ปิด · กดค้าง = ตั้งค่า */
+{
+  const b = $('autobtn'); let lp = null, held = false;
+  b.addEventListener('pointerdown', e => { e.preventDefault(); held = false; clearTimeout(lp); lp = setTimeout(() => { held = true; lp = null; if (navigator.vibrate) try { navigator.vibrate(25); } catch (x) {} showPanel('autowin'); renderAuto(); }, 480); });
+  const end = e => { if (lp) { clearTimeout(lp); lp = null; if (!held && e.type === 'pointerup') { if (isTown(curZone) && !auto.on) toast('ออโต้ใช้ในแมพล่ามอนสเตอร์ — ออกจากเมืองก่อนนะ', 2000); else setAuto(!auto.on); } } };
+  b.addEventListener('pointerup', end); b.addEventListener('pointerleave', end); b.addEventListener('pointercancel', end);
+  b.addEventListener('contextmenu', e => e.preventDefault());
+}
+function renderAuto() {
+  const b = $('autowin'); if (b.hidden) return;
+  b.textContent = '';
+  const S = auto.set;
+  const h = mkEl('h4'); h.appendChild(mkEl('span', '', 'ตั้งค่าออโต้')); h.appendChild(btnEl('ปิด', () => { b.hidden = true; })); b.appendChild(h);
+  const tog = (key, label, sub, step) => {
+    const r = mkEl('div', 'arow'), l = mkEl('span', '', label); if (sub) l.appendChild(mkEl('small', '', sub)); r.appendChild(l);
+    if (step) {
+      const st = mkEl('div', 'stp'), val = mkEl('b', '', S[step.k] + step.u);
+      st.appendChild(btnEl('−', () => { S[step.k] = Math.max(step.lo, S[step.k] - step.s); autoSave(); renderAuto(); })); st.appendChild(val);
+      st.appendChild(btnEl('+', () => { S[step.k] = Math.min(step.hi, S[step.k] + step.s); autoSave(); renderAuto(); })); r.appendChild(st);
+    }
+    if (key) { const t = btnEl(S[key] ? 'เปิดอยู่' : 'ปิดอยู่', () => { S[key] = S[key] ? 0 : 1; autoSave(); renderAuto(); }, 'tg' + (S[key] ? ' on' : '')); r.appendChild(t); }
+    b.appendChild(r);
+  };
+  tog('hpOn', 'กดยาเลือดเอง', 'เมื่อเลือดต่ำกว่า (ใช้สกิลฟื้นฟูก่อนถ้ามี)', { k: 'hp', lo: 10, hi: 90, s: 5, u: '%' });
+  tog('mpOn', 'กดยา MP เอง', 'เมื่อ MP ต่ำกว่า', { k: 'mp', lo: 5, hi: 90, s: 5, u: '%' });
+  tog('skOn', 'ปล่อยสกิลโจมตีเอง', 'ใช้สกิลที่เรียนแล้วเมื่อพร้อม (เลือกสกิลด้านล่าง)');
+  tog('buffOn', 'ใช้บัฟเอง', 'ต่อบัฟอัตโนมัติเมื่อหมดเวลา');
+  tog('stopOn', 'หยุดออโต้ถ้าเลือดต่ำและยาหมด', 'เมื่อเลือดต่ำกว่า', { k: 'stop', lo: 5, hi: 60, s: 5, u: '%' });
+  tog(null, 'ระยะหามอนสเตอร์', 'ไกลสุดจากตัวละคร', { k: 'range', lo: 5, hi: 40, s: 5, u: ' ช่อง' });
+  b.appendChild(mkEl('div', 'sec', 'สกิลที่ให้ใช้ (แตะเพื่อเปิด/ปิด)'));
+  const sks = autoSkills();
+  if (!sks.length) b.appendChild(mkEl('div', 'em', 'ยังไม่มีสกิลที่เรียน — ออโต้จะตีธรรมดา (โจมตีปกติ)'));
+  else {
+    const g = mkEl('div', 'sks');
+    for (const x of sks) { const off = !!S.off[x.id], c = btnEl('', () => { if (S.off[x.id]) delete S.off[x.id]; else S.off[x.id] = 1; autoSave(); renderAuto(); }, 'sk ' + (off ? 'off' : 'on')); c.appendChild(iconEl('skill:' + x.id, 28)); c.appendChild(mkEl('span', '', x.sk.name)); g.appendChild(c); }
+    b.appendChild(g);
+  }
+  b.appendChild(btnEl(auto.on ? 'หยุดออโต้' : 'เริ่มออโต้', () => { b.hidden = true; if (isTown(curZone) && !auto.on) { toast('ออโต้ใช้ในแมพล่ามอนสเตอร์ — ออกจากเมืองก่อนนะ', 2000); return; } setAuto(!auto.on); }, 'go'));
+}
 
 /* ============================================================ rendering */
 const items = [];
