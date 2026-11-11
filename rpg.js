@@ -240,6 +240,22 @@
       }
     }
   })();
+  // ===== Swordman: ชุดสกิลใหม่ (แทนของเดิม) =====
+  (function swordSkills() {
+    for (const sk of SK_BY_JOB.Swordman) delete SK[sk.id];
+    SK_BY_JOB.Swordman = [];
+    const S = (i, id, name, k, o) => addSkill('Swordman', i, name, k, Object.assign({ id, sty: 's', rng: 0, pas: null }, o));
+    S(0, 'log_cleave', 'ดาบผ่าซุง I', 'A', { min: 1, need: ['sword', 'sword2h'], needSlot: 'weapon', needTh: 'ต้องถือดาบ' });
+    S(1, 'shield_slam', 'โล่กระแทก I', 'A', { min: 5, need: ['shield'], needSlot: 'off', needTh: 'ต้องถือโล่' });
+    S(2, 'valor', 'ฮึกเหิม I', 'U', { min: 9 });
+    S(3, 'combo', 'โจมตีต่อเนื่อง', 'P', { min: 4, pas: 'combo' });
+    S(4, 'heavy', 'โจมตีหนัก', 'P', { min: 20, pas: 'heavy', pre: ['combo'] });
+    S(5, 'sword_mastery', 'ชำนาญดาบ I', 'P', { min: 1, pas: 'swordatk' });
+    S(6, 'onehand', 'ผู้ใช้ดาบมือเดียว I', 'P', { min: 12, pas: 'onespd', pre: ['sword_mastery'] });
+    S(7, 'twohand_mastery', 'ชำนาญดาบสองมือ I', 'P', { min: 1, pas: 'twoatk' });
+    S(8, 'shield_mastery', 'ชำนาญโล่ I', 'P', { min: 1, pas: 'shdef' });
+    S(9, 'battle_ready', 'ชำนาญอาวุธพร้อมรบ I', 'P', { min: 14, pas: 'ready', pre: ['sword_mastery', 'shield_mastery'] });
+  })();
   const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
   // ค่าจริงของสกิลที่เลเวล l (rb = จำนวนครั้งที่เกิดใหม่, fac = ฝ่าย)
   function skillEff(sk, l, rb, fac) {
@@ -252,6 +268,14 @@
       e.mult = (b[0] + 0.22 * (l - 1)) * rbm * adh; e.mp = b[1] + 2 * (l - 1); e.cd = b[2];
       if (sk.id === 'whirl') e.radius = 2.4 + 0.1 * (l - 1);
       if (sk.id === 'mend') e.heal = (0.35 + 0.05 * (l - 1)) * dha;
+      return e;
+    }
+    if (sk.job === 'Swordman') {
+      const q = l - 1;
+      if (sk.id === 'log_cleave') { e.mult = (2.2 + 0.35 * q) * rbm * adh; e.mp = 10 + 2 * l; e.cd = 3; return e; }
+      if (sk.id === 'shield_slam') { e.mult = (1.8 + 0.3 * q) * rbm * adh; e.mp = 8 + 2 * l; e.cd = 4; return e; }
+      if (sk.id === 'valor') { e.dur = 20 + 5 * l; e.buff = { atk: 0.08 + 0.03 * l, def: 0.08 + 0.03 * l, hp: 0.1 + 0.04 * l }; e.mp = 14 + 3 * l; e.cd = e.dur + 20; return e; }
+      e.pas = sk.pas; e.v = { combo: 0.05, heavy: 0.02, swordatk: 0.03, onespd: 0.02, twoatk: 0.035, shdef: 0.04, ready: 0.025 }[sk.pas] * l;
       return e;
     }
     const big = sk.c4;
@@ -271,6 +295,21 @@
   function skillDesc(sk, l) {
     const e = skillEff(sk, l || 1, 0, null), r = e.rng ? ' · ระยะ ' + e.rng + ' ช่อง' : '';
     const pc = v => Math.round(v * 100) + '%';
+    if (sk.job === 'Swordman') {
+      const v = e.v ? pc(e.v) : '';
+      switch (sk.id) {
+        case 'log_cleave': return 'ฟาดดาบตรง ๆ ไปด้านหน้าเหมือนผ่าท่อนซุง ดาเมจ ' + pc(e.mult) + ' (ศัตรูตัวเดียว · ต้องถือดาบ)';
+        case 'shield_slam': return 'กระแทกโล่ไปด้านหน้า ดาเมจ ' + pc(e.mult) + ' (ศัตรูตัวเดียว · ต้องถือโล่)';
+        case 'valor': return 'ฮึกเหิม! โจมตี +' + pc(e.buff.atk) + ' ป้องกัน +' + pc(e.buff.def) + ' เลือดสูงสุด +' + pc(e.buff.hp) + ' นาน ' + e.dur + ' วินาที';
+        case 'combo': return 'โอกาส ' + v + ' ที่โจมตีปกติจะตีซ้ำอีกครั้งทันที';
+        case 'heavy': return 'เมื่อโจมตีต่อเนื่องติด มีโอกาส ' + v + ' ที่จะตีหนักจนศัตรูตายทันที (ไม่ได้ผลกับบอส)';
+        case 'sword_mastery': return 'ถือดาบมือเดียว: พลังโจมตี +' + v;
+        case 'onehand': return 'ถือแค่ดาบ (ไม่มีโล่): ความเร็วโจมตี +' + v;
+        case 'twohand_mastery': return 'ถือดาบสองมือ: พลังโจมตี +' + v;
+        case 'shield_mastery': return 'ถือโล่: พลังป้องกัน +' + v;
+        case 'battle_ready': return 'ถือดาบมือเดียว+โล่: พลังโจมตีและป้องกัน +' + v;
+      }
+    }
     switch (sk.k) {
       case 'A': case 'R': case 'Z': return 'ดาเมจ ' + pc(e.mult) + ' ของพลังโจมตี' + r;
       case 'B': case 'X': return 'โจมตีศัตรูรอบตัวในรัศมี ' + e.radius.toFixed(1) + ' ช่อง ดาเมจ ' + pc(e.mult);
@@ -311,7 +350,7 @@
     if (p.lv < sk.min) return 'ต้องเลเวล ' + sk.min;
     if (sk.c4 && !p.c4) return 'ต้องเลื่อนเป็นคลาส 4 (Lv 80)';
     if (sk.sp && !(p.rb >= 1 && p.job === p.orig)) return 'ปลดล็อกหลังเกิดใหม่ (เฉพาะอาชีพเดิม)';
-    if (sk.pre && !skillLevel(p, sk.pre)) return 'ต้องเรียน ' + SK[sk.pre].name + ' ก่อน';
+    for (const pid of [].concat(sk.pre || [])) if (!skillLevel(p, pid)) return 'ต้องเรียน ' + SK[pid].name + ' ก่อน';
     return null;
   }
   function skillCanUp(p, sk) {   // → '' ถ้าอัปได้
@@ -342,17 +381,18 @@
   function derive(p, ITEMS, time) {
     const st = p.st, lv = p.lv, rb = p.rb || 0;
     const w = ITEMS[p.equip.weapon], off = ITEMS[p.equip.off], ar = ITEMS[p.equip.armor];
-    const gb = { atk: 0, def: 0, aspd: 0, crit: 0, dodge: 0, hp: 0, mp: 0, heal: 0, spd: 0 };
+    const gb = { atk: 0, def: 0, aspd: 0, crit: 0, dodge: 0, hp: 0, mp: 0, heal: 0, spd: 0 }, cp = {};
     for (const id of Object.keys(p.skills || {})) {
       const sk = SK[id]; if (!sk || sk.k !== 'P' || !p.skills[id]) continue;
       if (chain(p.job, p.via).indexOf(sk.job) < 0 && sk.job !== 'Adventurer') continue;
-      const e = skillEff(sk, p.skills[id], rb, p.fac); gb[sk.pas] += e.v;
+      const e = skillEff(sk, p.skills[id], rb, p.fac);
+      if (gb[sk.pas] === undefined) cp[sk.pas] = (cp[sk.pas] || 0) + e.v; else gb[sk.pas] += e.v;
     }
-    let bAtk = 0, bDef = 0, bAspd = 0, bSpd = 0;
+    let bAtk = 0, bDef = 0, bAspd = 0, bSpd = 0, bHp = 0;
     for (const id of Object.keys(p.buffs || {})) {
       const b = p.buffs[id];
       if (b.until <= time) { delete p.buffs[id]; continue; }
-      bAtk += b.atk || 0; bDef += b.def || 0; bAspd += b.aspd || 0; bSpd += b.spd || 0;
+      bAtk += b.atk || 0; bDef += b.def || 0; bAspd += b.aspd || 0; bSpd += b.spd || 0; bHp += b.hp || 0;
     }
     const ammo = ITEMS[p.equip.ammo];
     const wtA = (w && w.atk) || 0, wtM = (w && w.matk) || 0, oA = (off && off.atk) || 0, oM = (off && off.matk) || 0;
@@ -361,7 +401,16 @@
     p.dual = dual ? 1 : 0;
     const base = 6 + lv / 2;
     const luk = st.luk * 0.3;
-    const fm = (1 + bAtk) * (p.fac === 'a' ? 1.0 : 1.0);
+    // ชำนาญอาวุธ (นักดาบ): เงื่อนไขตามของที่ถืออยู่
+    const wtn = w && w.wt, shd = !!(off && off.wt === 'shield'), one = wtn === 'sword', two = wtn === 'sword2h';
+    let mA = 0, mD = 0, mS = 0;
+    if (one) mA += cp.swordatk || 0;
+    if (two) mA += cp.twoatk || 0;
+    if (shd) mD += cp.shdef || 0;
+    if (one && shd) { mA += cp.ready || 0; mD += cp.ready || 0; }
+    if (one && !off) mS += cp.onespd || 0;
+    p.combo = cp.combo || 0; p.heavy = cp.heavy || 0;
+    const fm = (1 + bAtk + mA) * (p.fac === 'a' ? 1.0 : 1.0);
     p.atkS = Math.round((base + st.str * 1.6 + st.dex * 0.4 + luk + gb.atk + wtA + oA + ammoA * 0) * fm);
     p.atkD = Math.round((base + st.dex * 1.6 + st.str * 0.4 + luk + gb.atk + wtA + oA + ammoA) * fm);
     p.atkI = Math.round((base + st.int * 1.8 + st.dex * 0.3 + luk + gb.atk + wtA + wtM + oM + oA) * fm);
@@ -371,15 +420,15 @@
     if (dual) p.atk = Math.round(p.atk * 1.1);
     p.rng = wt && wt.rng ? wt.rng : 1.6;
     p.ammoKind = wt && wt.ammo ? wt.ammo : null;
-        const aspdB = Math.min(0.6, st.agi * 0.005 + st.dex * 0.002 + gb.aspd + bAspd + (dual ? 0.15 : 0));
+        const aspdB = Math.min(0.6, st.agi * 0.005 + st.dex * 0.002 + gb.aspd + bAspd + mS + (dual ? 0.15 : 0));
     p.acd = Math.max(0.3, (wt && wt.cd ? wt.cd : 1.0) * (1 - aspdB));
     p.crit = Math.min(0.75, 0.05 + st.luk * 0.003 + gb.crit);
     p.dodge = Math.min(0.5, st.agi * 0.004 + gb.dodge);
     p.def = Math.floor(st.vit * 0.5 + lv / 4 + gb.def + ((ar && ar.def) || 0) + ((off && off.def) || 0) + ((w && w.def) || 0));
-    p.def = Math.round(p.def * (1 + bDef) * (p.fac === 'd' ? 1.05 : 1));
+    p.def = Math.round(p.def * (1 + bDef + mD) * (p.fac === 'd' ? 1.05 : 1));
     p.healMul = 1 + gb.heal + st.int * 0.003;
     const hpm = (LINE_HP[rootOf(p)] || 1) * (1 + 0.1 * rb), mpm = LINE_MP[rootOf(p)] || 1;
-    p.maxHp = Math.round((60 + 15 * (lv - 1)) * hpm * (1 + st.vit * 0.012 + gb.hp));
+    p.maxHp = Math.round((60 + 15 * (lv - 1)) * hpm * (1 + st.vit * 0.012 + gb.hp + bHp));
     p.maxMp = Math.round((30 + 6 * (lv - 1)) * mpm * (1 + st.int * 0.012 + gb.mp + ((ar && ar.mpp) || 0)));
     p.spdMul = 1 + bSpd;
     return p;

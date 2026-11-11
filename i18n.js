@@ -366,7 +366,32 @@
     ['เป้าหมาย:', 'Goal:', 'Mục tiêu:', '목표:'],
     ['re:^ล่า', 'Hunt ', 'Săn ', '사냥: '],
     ['re:^เก็บ', 'Collect ', 'Thu thập ', '수집: '],
-    ['Black Swordsman', 'Black Swordsman', 'Black Swordsman', 'Black Swordsman']
+    ['Black Swordsman', 'Black Swordsman', 'Black Swordsman', 'Black Swordsman'],
+    ['x:ดาบผ่าซุง I', 'Log Splitter I', 'Chẻ khúc gỗ I', '통나무 가르기 I'],
+    ['x:โล่กระแทก I', 'Shield Slam I', 'Húc khiên I', '방패 강타 I'],
+    ['x:ฮึกเหิม I', 'Valor I', 'Hừng hực khí thế I', '사기충천 I'],
+    ['x:โจมตีต่อเนื่อง', 'Chain Attack', 'Đòn liên tiếp', '연속 공격'],
+    ['x:โจมตีหนัก', 'Crushing Blow', 'Đòn nặng', '강타 일격'],
+    ['x:ชำนาญดาบ I', 'Sword Mastery I', 'Tinh thông kiếm I', '검 숙련 I'],
+    ['x:ผู้ใช้ดาบมือเดียว I', 'One-hand Swordsman I', 'Kiếm sĩ một tay I', '한손검 사용자 I'],
+    ['x:ชำนาญดาบสองมือ I', 'Two-hand Mastery I', 'Tinh thông kiếm hai tay I', '양손검 숙련 I'],
+    ['x:ชำนาญโล่ I', 'Shield Mastery I', 'Tinh thông khiên I', '방패 숙련 I'],
+    ['x:ชำนาญอาวุธพร้อมรบ I', 'Battle-ready Mastery I', 'Tinh thông trang bị chiến đấu I', '전투 태세 숙련 I'],
+    ['ฟาดดาบตรง ๆ ไปด้านหน้าเหมือนผ่าท่อนซุง ดาเมจ', 'Swing straight ahead like splitting a log. Damage', 'Chém thẳng phía trước như chẻ khúc gỗ. Sát thương', '통나무를 쪼개듯 정면으로 내려칩니다. 피해'],
+    ['กระแทกโล่ไปด้านหน้า ดาเมจ', 'Slam your shield straight ahead. Damage', 'Húc khiên thẳng phía trước. Sát thương', '방패로 정면을 강타합니다. 피해'],
+    ['(ศัตรูตัวเดียว · ต้องถือดาบ)', '(single target · needs a sword)', '(một mục tiêu · cần kiếm)', '(단일 대상 · 검 필요)'],
+    ['(ศัตรูตัวเดียว · ต้องถือโล่)', '(single target · needs a shield)', '(một mục tiêu · cần khiên)', '(단일 대상 · 방패 필요)'],
+    ['ฮึกเหิม! โจมตี +', 'Valor! Attack +', 'Hừng hực! Tấn công +', '사기충천! 공격 +'],
+    ['เลือดสูงสุด +', 'Max HP +', 'HP tối đa +', '최대 HP +'],
+    ['ที่โจมตีปกติจะตีซ้ำอีกครั้งทันที', 'for a basic attack to strike again at once', 'đòn đánh thường đánh thêm một lần', '기본 공격이 즉시 한 번 더 적중'],
+    ['เมื่อโจมตีต่อเนื่องติด มีโอกาส', 'When a chain attack lands, chance', 'Khi đòn liên tiếp trúng, xác suất', '연속 공격이 적중하면 확률'],
+    ['ที่จะตีหนักจนศัตรูตายทันที (ไม่ได้ผลกับบอส)', 'to deal a killing blow instantly (no effect on bosses)', 'đánh chí mạng hạ gục ngay (vô hiệu với boss)', '즉사 일격 (보스에게는 무효)'],
+    ['ถือดาบมือเดียว+โล่: พลังโจมตีและป้องกัน +', 'One-hand sword + shield: attack and defense +', 'Kiếm một tay + khiên: tấn công và phòng thủ +', '한손검+방패: 공격·방어 +'],
+    ['ถือดาบมือเดียว: พลังโจมตี +', 'One-hand sword: attack +', 'Kiếm một tay: tấn công +', '한손검: 공격 +'],
+    ['ถือแค่ดาบ (ไม่มีโล่): ความเร็วโจมตี +', 'Sword only (no shield): attack speed +', 'Chỉ kiếm (không khiên): tốc độ đánh +', '검만 장착(방패 없음): 공격 속도 +'],
+    ['ถือดาบสองมือ: พลังโจมตี +', 'Two-hand sword: attack +', 'Kiếm hai tay: tấn công +', '양손검: 공격 +'],
+    ['ถือโล่: พลังป้องกัน +', 'Shield equipped: defense +', 'Cầm khiên: phòng thủ +', '방패 장착: 방어 +'],
+    ['โจมตีหนัก!', 'Crushing Blow!', 'Đòn nặng!', '강타 일격!']
   ];
   // ---- ชื่ออาวุธ/เกราะที่ประกอบจาก ชนิด + ระดับ (ลำดับคำต่างกันตามภาษา)
   const TIER = [['ฝึกหัด', 'Apprentice', 'Tập sự', '수련용'], ['เหล็กกล้า', 'Steel', 'Thép', '강철'], ['เงินแท้', 'Silver', 'Bạc', '순은'], ['มังกร', 'Dragon', 'Rồng', '용'], ['ตำนาน', 'Legendary', 'Huyền thoại', '전설']];

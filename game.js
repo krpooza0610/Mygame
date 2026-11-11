@@ -670,6 +670,7 @@
       const sk = r.sk, e = RPG.skillEff(sk, r.lvl, p.rb, p.fac);
       if (sk.k === 'P') { this.note(p, sk.name + ' เป็นสกิลติดตัว ไม่ต้องกดใช้'); return false; }
       if ((p.cd[sid] || 0) > this.time) return false;
+      if (sk.need) { const it = ITEMS[p.equip[sk.needSlot]]; if (!it || sk.need.indexOf(it.wt) < 0) { this.note(p, sk.needTh + 'ก่อนใช้ ' + sk.name); return false; } }
       if (p.mp < e.mp) { this.note(p, 'MP ไม่พอ (ต้องใช้ ' + e.mp + ')'); return false; }
       const needT = sk.k === 'A' || sk.k === 'R' || sk.k === 'Z' || sk.k === 'T' || sk.k === 'Y';
       if (needT) {
@@ -1086,7 +1087,7 @@
         }
       }
     }
-    playerHit(p, m, mult, sty) {
+    playerHit(p, m, mult, sty, extra) {
       const D = MON[m.type];
       const crit = Math.random() < p.crit;
       const basic = !mult;
@@ -1103,7 +1104,15 @@
       if (m.state !== 'chase') { m.state = 'chase'; m.path = []; m.repath = 0; }
       m.target = p.id; m.dirty = true;
       this.emit(m.zone, { t: 'hit', id: m.id, dmg, crit: crit ? 1 : 0, hp: m.hp, from: p.id });
-      if (m.hp <= 0) this.killMonster(m, p, D);
+      if (m.hp <= 0) { this.killMonster(m, p, D); return; }
+      if (basic && !extra && p.combo && Math.random() < p.combo) {   // โจมตีต่อเนื่อง
+        this.playerHit(p, m, 0, sty, true);
+        if (m.hp > 0 && p.heavy && !D.boss && Math.random() < p.heavy) {   // โจมตีหนัก: ตายทันที (ไม่รวมบอส)
+          const dmg2 = m.hp; m.hp = 0;
+          this.emit(m.zone, { t: 'hit', id: m.id, dmg: dmg2, crit: 1, hp: 0, from: p.id, heavy: 1 });
+          this.killMonster(m, p, D);
+        }
+      }
     }
     killMonster(m, p, D) {
       m.state = 'dead'; m.hp = 0; m.path = []; m.moving = false; m.target = null; m.respawn = D.respawn; m.dirty = true;

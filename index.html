@@ -2292,7 +2292,7 @@ function handle(m) {
         if (mo) { mo.atkT = now; }
       } else {
         const mo = mons.get(m.id), e = ents.get(m.from);
-        if (mo) { mo.hp = m.hp; mo.hitT = now; floatText(mo.x, mo.y, (m.crit ? '' : '') + m.dmg + (m.crit ? '!' : ''), m.crit ? '#ffd23c' : '#ffffff', !!m.crit); }
+        if (mo) { mo.hp = m.hp; mo.hitT = now; if (m.heavy) floatText(mo.x, mo.y - 0.9, 'โจมตีหนัก!', '#ff5a4d', true); floatText(mo.x, mo.y, m.dmg + (m.crit ? '!' : ''), m.crit ? '#ffd23c' : '#ffffff', !!m.crit); }
         if (e) { e.swingT = now; if (mo) e.dir = Math.round(Math.atan2(mo.y - e.y, mo.x - e.x) / (Math.PI / 4) + 8) % 8; }
       }
       break;
@@ -2332,6 +2332,7 @@ function handle(m) {
       const e = ents.get(m.id); if (!e) break;
       const rgb = hex2rgb(accentOf(m.job || 'Adventurer')).join(','), k = m.k;
       e.swingT = performance.now();
+      if (m.job === 'Swordman' && G.SKILLS[m.s]) floatText(e.x, e.y - 0.8, G.SKILLS[m.s].name.replace(/ I+$/, '') + '!', '#ffe27a', true);
       if (k === 'A' || k === 'Z') { ring(m.tx, m.ty, rgb, k === 'Z' ? 1.6 : 0.9); }
       else if (k === 'R') { fx.push({ k: 'proj', x: e.x, y: e.y, x2: m.tx, y2: m.ty, color: 'rgb(' + rgb + ')', shape: 'arrow', dur: 240, t0: performance.now() }); ring(m.tx, m.ty, rgb, 0.8); }
       else if (k === 'B' || k === 'X') { ring(e.x, e.y, rgb, (m.r || 2.4) / 1.5); setTimeout(() => ring(e.x, e.y, '255,255,255', (m.r || 2.4) / 2.2), 120); }
