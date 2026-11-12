@@ -278,7 +278,8 @@ const FILES = {
   '/icon-192.png': ['icon-192.png', 'image/png'],
   '/icon-512.png': ['icon-512.png', 'image/png'],
   '/icon-maskable-512.png': ['icon-maskable-512.png', 'image/png'],
-  '/swordman.png': ['swordman.png', 'image/png']
+  '/swordman.png': ['swordman.png', 'image/png'],
+  '/archer.png': ['archer.png', 'image/png']
 };
 
 const server = http.createServer((req, res) => {
