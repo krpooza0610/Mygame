@@ -617,6 +617,7 @@ const $ = id => document.getElementById(id);
 function hex2rgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
 const css = c => 'rgb(' + (c[0] | 0) + ',' + (c[1] | 0) + ',' + (c[2] | 0) + ')';
 const shade = (h, f) => css(hex2rgb(h).map(v => clamp(v * f, 0, 255)));
+const hexmix = (h1, h2, t) => { const a = hex2rgb(h1), b = hex2rgb(h2); return '#' + a.map((v, i) => Math.round(lerp(v, b[i], t)).toString(16).padStart(2, '0')).join(''); };
 const mixc = (h1, h2, t) => { const a = hex2rgb(h1), b = hex2rgb(h2); return css(a.map((v, i) => lerp(v, b[i], t))); };
 function hsh(x, y, n) {
   let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(n || 0, 2147483647)) | 0;
@@ -1345,7 +1346,7 @@ function drawSkillIcon(g, id) {
   let sk = G.SKILLS[id];
   if (/^b[0-4]$/.test(id)) sk = G.SKILLS[my.borrow[+id[1]]];
   if (!sk) { g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(32, 32, 22, 0, 6.3); g.fill(); g.restore(); return; }
-  const J = JobArt.J[sk.job], col = J ? J[6] : '#c9b37a', shape = RPG.skillShape(sk);
+  const J = JobArt.J[sk.job], mo0 = sk.job === 'Swordman' ? null : motifOf(sk), col = mo0 ? hexmix(J ? J[6] : '#c9b37a', MCOL[mo0], 0.5) : (J ? J[6] : '#c9b37a'), shape = RPG.skillShape(sk);
   const path = (ins) => {
     g.beginPath();
     if (shape === 'ci') g.arc(32, 32, 28 - ins, 0, 6.3);
@@ -1361,6 +1362,11 @@ function drawSkillIcon(g, id) {
   g.fillStyle = 'rgba(255,255,255,.22)'; g.beginPath(); g.ellipse(32, 14, 22, 9, 0, 0, 6.3); g.fill();   // เงาสะท้อนด้านบน
   g.restore();
   if (swordSym(g, sk)) { tierBadge(g, sk); g.restore(); return; }
+  if (mo0) {
+    let h = 0; for (let i = 0; i < sk.id.length; i++) h = (h * 31 + sk.id.charCodeAt(i)) >>> 0;
+    g.save(); g.translate(32, 32); g.rotate(((h % 7) - 3) * 0.06); if (h & 8) g.scale(-1, 1); g.translate(-32, -32);
+    const okm = motifSym(g, mo0, sk); g.restore(); if (okm) { tierBadge(g, sk); g.restore(); return; }
+  }
   g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 3;
   g.strokeStyle = '#fff'; g.fillStyle = '#fff'; g.lineWidth = 5;
   const k = sk.k;
@@ -1379,6 +1385,71 @@ function drawSkillIcon(g, id) {
   g.restore();
 }
 
+
+/* ---------- ธีมสกิลของทุกอาชีพ: เลือกลวดลาย/สีจากชื่อสกิล ---------- */
+const MCOL = { fire: '#ff8a3c', ice: '#7fd0ff', bolt: '#ffe44d', dark: '#a76bff', holy: '#ffe08a', poison: '#7bd45a', blood: '#ff4d5e', wind: '#9fe8d4', star: '#b6a4ff', gold: '#ffd24a', steel: '#9fc4e8', earth: '#c9a06a', claw: '#e8a860', tech: '#6fd0ff', cloud: '#9aa4b8', shield: '#7ba6d8', crown: '#ffc83c', book: '#8fb6ff', portal: '#c06aff', cross: '#8ff0a8', moon: '#8a7ab8', fist: '#ffb070', hammer: '#b8c0cc', arrow: '#d9c9a0', spear: '#bfe0ff', dagger: '#cfe9ff', blade: '#9fc4e8' };
+const MOTIFS = [
+  [/smoke|mist|shadow clone|hidden/, 'cloud'], [/cosmic|galaxy|star|nova|gravity|orbital|singularity|collapse|eclipse|moon|infinite|arcane|mana|spell|rune|attunement|elemental|primordial|chaos|surge|cataclysm/, 'star'],
+  [/summon|legion|horde|gate|bond|pact|call |abyss|stampede/, 'portal'], [/heal|mend|grace|resurrection|hymn|sanctuary|gloria|angel/, 'cross'],
+  [/shield|bulwark|aegis|wall|fortress|guard|armor|plating|hide|skin|protection/, 'shield'], [/crown|king|overlord|royal|peerless|titan|masterwork|awakening/, 'crown'],
+  [/fire|inferno|meteor|flame|hoop|phoenix|blaze|torch|ragnarok/, 'fire'], [/cold|frost|ice|snow|freeze/, 'ice'],
+  [/lightning|thunder|laser|beam|photon|neural|overclock|saber|prototype|core|tinker|judgement thunder/, 'bolt'],
+  [/poison|venom|sand|thorn|trap|snare/, 'poison'], [/blood|crimson|red moon|frenzy|berserk|fury|rage|savage|execution/, 'blood'],
+  [/void|nether|nightfall|midnight|vow|covenant|ruin|umbra|shadow step|shadow|night/, 'moon'], [/dark|doom|curse|hex|reaper|soul|wraith|demon|oni|death|grim/, 'dark'],
+  [/holy|divine|seraph|heaven|lux|blessing|radiant|light|judgement|faith|archangel|sanctum/, 'holy'],
+  [/coin|gold|greed|heist|plunder|luck|fool|finale|carnival|show|parade|circus|hype|viral/, 'gold'],
+  [/book|tome|library|ages|insight|sage|mind/, 'book'], [/wind|tornado|storm|wings|gust|sky|swift|sprint|ride|flying|dive|step|mirage/, 'wind'],
+  [/wolf|fang|howl|fenrir|panther|jungle|beast|bear|instinct|bond|pack|primal|wild|whip|talon|claw|trail|hunt/, 'claw'],
+  [/gun|grenade|mine|cannon|rifle|missile|barrage|mecha|robo|protocol|arsenal|siege/, 'tech'],
+  [/palm|fist|kick|heel|elbow|knee|combo|roundhouse|asura|tiger|wai kru|golden body|punch/, 'fist'], [/hammer|smash|slam|pound|club|bash|billboard|print|poster|rampage|mountain|quake/, 'hammer'],
+  [/shot|snipe|aim|eye|arrow|volley|hawk|headshot|dead|longshot|pinpoint|round|bow/, 'arrow'],
+  [/pierce|spear|lance|stab|charge/, 'spear'], [/dagger|knife|kunai|backstab|cutthroat|juggle|toss|shuriken|edge/, 'dagger'],
+  [/slash|cut|blade|sword|dance|draw|iai|cleave|strike|hack|dual|whirl|rush|flurry|thousand|ten thousand|bushido|way of/, 'blade']
+];
+const motifOf = sk => { const n = (sk.name || '').toLowerCase(); for (const [re, m] of MOTIFS) if (re.test(n)) return m; return null; };
+function motifSym(g, mo, sk) {
+  const K = 'rgba(25,14,8,.9)', C = MCOL[mo] || '#fff', k = sk.k;
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  const L = (c, w, pts) => { g.strokeStyle = c; g.lineWidth = w; g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.stroke(); };
+  const B = (w, pts, c) => { L(K, w + 3.5, pts); L(c || '#fff', w, pts); };
+  const fillP = (pts, c, o) => { g.fillStyle = c; g.strokeStyle = K; g.lineWidth = 2.2; g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.fill(); if (!o) g.stroke(); };
+  const circ = (x, y, r, c) => { g.fillStyle = c; g.strokeStyle = K; g.lineWidth = 2.2; g.beginPath(); g.arc(x, y, r, 0, 6.3); g.fill(); g.stroke(); };
+  const spark = (x, y, r, c) => { g.fillStyle = c || '#fff6c0'; g.beginPath(); for (let i = 0; i < 8; i++) { const a = i * 0.7854, rr = i % 2 ? r * 0.38 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); };
+  const rot = (x, y, a, fn) => { g.save(); g.translate(x, y); g.rotate(a); fn(); g.restore(); };
+  switch (mo) {
+    case 'blade': rot(34, 50, 0.7, () => { fillP([[-4, 0], [-4, -30], [0, -37], [4, -30], [4, 0]], '#f2f6fa'); fillP([[-10, 0], [10, 0], [10, 4], [-10, 4]], '#e2b24a'); fillP([[-2, 4], [2, 4], [2, 12], [-2, 12]], '#6b3f1f'); }); B(3, [[8, 52], [18, 40], [30, 28]], C); break;
+    case 'dagger': rot(32, 50, 0.55, () => { fillP([[-3.5, 0], [-3, -22], [0, -30], [3.5, -22], [3.5, 0]], '#eef3f8'); fillP([[-8, 0], [8, 0], [8, 3.5], [-8, 3.5]], '#c9a23a'); fillP([[-2, 3.5], [2, 3.5], [2, 11], [-2, 11]], '#4a2f1c'); }); B(2.6, [[10, 20], [22, 26]], C); B(2.6, [[46, 16], [54, 26]], C); break;
+    case 'spear': rot(32, 54, 0.6, () => { L(K, 7, [[0, 0], [0, -42]]); L('#8a5a30', 3.6, [[0, 0], [0, -34]]); fillP([[-6, -34], [0, -50], [6, -34], [0, -38]], '#e8f0f6'); }); B(2.6, [[8, 40], [22, 44]], C); break;
+    case 'shield': fillP([[32, 10], [50, 16], [48, 36], [32, 54], [16, 36], [14, 16]], '#6f93c4'); fillP([[32, 17], [43, 21], [42, 34], [32, 46], [22, 34], [21, 21]], '#e8c15a'); circ(32, 32, 5, '#6f93c4'); break;
+    case 'fire': fillP([[32, 8], [46, 24], [46, 40], [32, 54], [18, 40], [20, 28], [26, 34], [28, 20]], '#ff8a3c'); fillP([[32, 28], [39, 38], [36, 48], [28, 48], [25, 38]], '#ffe07a'); break;
+    case 'ice': for (let i = 0; i < 3; i++) rot(32, 32, i * 1.047, () => { B(3.5, [[0, -22], [0, 22]], '#e2f6ff'); B(2.4, [[0, -13], [-6, -19]], '#bfe8ff'); B(2.4, [[0, -13], [6, -19]], '#bfe8ff'); B(2.4, [[0, 13], [-6, 19]], '#bfe8ff'); B(2.4, [[0, 13], [6, 19]], '#bfe8ff'); }); break;
+    case 'bolt': fillP([[36, 6], [18, 34], [30, 34], [24, 58], [46, 26], [33, 26]], '#ffe84d'); break;
+    case 'dark': circ(32, 30, 17, '#e8e0f0'); fillP([[20, 40], [44, 40], [40, 54], [24, 54]], '#e8e0f0'); circ(25, 29, 5, '#2a1840'); circ(39, 29, 5, '#2a1840'); fillP([[32, 34], [29, 41], [35, 41]], '#2a1840', 1); break;
+    case 'holy': for (let i = 0; i < 8; i++) { const a = i * 0.7854; B(i % 2 ? 2.4 : 3.6, [[32 + Math.cos(a) * 9, 32 + Math.sin(a) * 9], [32 + Math.cos(a) * (i % 2 ? 19 : 25), 32 + Math.sin(a) * (i % 2 ? 19 : 25)]], '#fff3c4'); } circ(32, 32, 9, '#fff3c4'); break;
+    case 'cross': fillP([[26, 10], [38, 10], [38, 26], [54, 26], [54, 38], [38, 38], [38, 54], [26, 54], [26, 38], [10, 38], [10, 26], [26, 26]], '#7ef0a0'); spark(48, 14, 6); break;
+    case 'poison': fillP([[32, 8], [46, 34], [44, 46], [32, 54], [20, 46], [18, 34]], '#7bd45a'); circ(27, 40, 4, '#d4f5b8'); spark(44, 16, 5, '#e6ffc0'); break;
+    case 'blood': fillP([[32, 8], [46, 34], [44, 46], [32, 54], [20, 46], [18, 34]], '#e0364a'); circ(27, 40, 4, '#ff9aa6'); B(2.6, [[8, 18], [16, 26]], '#ff7a8a'); B(2.6, [[56, 18], [48, 26]], '#ff7a8a'); break;
+    case 'wind': for (const [y, r] of [[22, 15], [34, 18], [46, 13]]) { g.strokeStyle = K; g.lineWidth = 7; g.beginPath(); g.arc(30 + (y - 34) * 0.3, y, r, 3.4, 5.9); g.stroke(); g.strokeStyle = '#effffa'; g.lineWidth = 3.4; g.beginPath(); g.arc(30 + (y - 34) * 0.3, y, r, 3.4, 5.9); g.stroke(); } break;
+    case 'star': fillP([[32, 6], [38, 24], [58, 24], [42, 36], [48, 56], [32, 44], [16, 56], [22, 36], [6, 24], [26, 24]], '#d8ccff'); circ(32, 32, 6, '#fff'); break;
+    case 'gold': circ(32, 32, 20, '#ffd24a'); circ(32, 32, 13, '#ffe58a'); B(3.4, [[32, 22], [32, 42]], '#b88a1a'); B(3.4, [[26, 26], [38, 26]], '#b88a1a'); B(3.4, [[26, 38], [38, 38]], '#b88a1a'); break;
+    case 'claw': for (const x of [-12, 0, 12]) B(4.4, [[32 + x - 6, 12], [32 + x + 6, 52]], '#fff1d0'); break;
+    case 'tech': circ(32, 34, 16, '#8aa0b4'); circ(32, 34, 9, '#cfeaff'); fillP([[28, 8], [36, 8], [36, 20], [28, 20]], '#8aa0b4'); B(3, [[44, 22], [56, 12]], C); spark(54, 12, 6, '#fff3a0'); break;
+    case 'fist': fillP([[16, 30], [18, 18], [44, 16], [50, 26], [48, 44], [34, 52], [18, 46]], '#ffd7b0'); for (const x of [24, 31, 38, 45]) B(1.8, [[x, 18], [x, 28]], '#c28a5a'); B(3, [[8, 12], [16, 20]], C); B(3, [[56, 12], [50, 20]], C); break;
+    case 'hammer': rot(32, 54, 0.5, () => { L(K, 8, [[0, 0], [0, -34]]); L('#8a5a30', 4.4, [[0, 0], [0, -34]]); fillP([[-15, -48], [15, -48], [15, -30], [-15, -30]], '#9aa8b6'); }); spark(48, 50, 6); break;
+    case 'arrow': B(3.6, [[10, 52], [48, 14]], '#d9c9a0'); fillP([[56, 6], [44, 14], [50, 20]], '#eef3f8'); fillP([[10, 52], [20, 52], [14, 46]], '#e86a5a'); fillP([[10, 52], [10, 42], [18, 46]], '#e86a5a'); circ(30, 32, 0.1, '#fff'); break;
+    case 'crown': fillP([[10, 42], [10, 20], [22, 32], [32, 14], [42, 32], [54, 20], [54, 42]], '#ffc83c'); fillP([[10, 42], [54, 42], [54, 50], [10, 50]], '#e0a020'); for (const x of [10, 32, 54]) circ(x, x === 32 ? 14 : 20, 3, '#fff'); break;
+    case 'book': fillP([[10, 16], [30, 20], [30, 52], [10, 48]], '#5a7ac0'); fillP([[54, 16], [34, 20], [34, 52], [54, 48]], '#4a68a8'); B(2, [[15, 26], [26, 28]], '#dbe6ff'); B(2, [[15, 33], [26, 35]], '#dbe6ff'); B(2, [[49, 26], [38, 28]], '#dbe6ff'); spark(32, 12, 6); break;
+    case 'portal': for (const r of [20, 13, 6]) { g.strokeStyle = K; g.lineWidth = 6.5; g.beginPath(); g.ellipse(32, 34, r, r * 1.15, 0, 0, 6.3); g.stroke(); g.strokeStyle = r === 13 ? '#e6b8ff' : '#c06aff'; g.lineWidth = 3; g.stroke(); } spark(32, 34, 5); break;
+    case 'moon': g.fillStyle = '#e9e2ff'; g.strokeStyle = K; g.lineWidth = 2.4; g.beginPath(); g.arc(30, 32, 20, 0.7, 5.6); g.arc(40, 30, 15, 5.2, 1.0, true); g.closePath(); g.fill(); g.stroke(); spark(48, 14, 5); spark(52, 40, 3.5); break;
+    case 'cloud': for (const [x, y, r] of [[22, 38, 10], [34, 30, 13], [46, 38, 10], [32, 42, 11]]) circ(x, y, r, '#cfd6e6'); break;
+    default: return false;
+  }
+  // เครื่องหมายชนิดสกิลเล็ก ๆ มุมขวาล่าง
+  if (k === 'U') { B(2.6, [[46, 56], [52, 50], [58, 56]], '#fff6a8'); }
+  else if (k === 'B' || k === 'X') { g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 2.4; g.beginPath(); g.ellipse(32, 58, 22, 5, 0, 0, 6.3); g.stroke(); }
+  else if (k === 'Z' || k === 'Y') spark(52, 52, 7, '#fff6c0');
+  return true;
+}
 function tierBadge(g, sk) {   // เลขโรมันมุมซ้ายบน เหมือนในภาพตัวอย่าง
   const m = / (I{1,3}|IV|V)$/.exec(sk.name || ''); if (!m) return;
   g.save(); g.shadowBlur = 0; g.fillStyle = 'rgba(30,18,10,.85)'; g.strokeStyle = '#c79b5a'; g.lineWidth = 1.2;
@@ -1472,15 +1543,44 @@ function drawFx2(f, age, sx, sy) {
     for (let i = 0; i < n; i++) {
       const ph = (i / n + age * 1.3) % 1, ang = i * 2.4, rad = (14 + 6 * Math.sin(i)) * z * (1 - ph * 0.4);
       const x = Math.cos(ang) * rad, y = -ph * 84 * z + Math.sin(ang) * rad * 0.4 - 4 * z;
-      const gg = ctx.createRadialGradient(x, y, 0, x, y, 12 * z); gg.addColorStop(0, 'rgba(255,240,170,' + 0.9 * (1 - ph) * (1 - age * 0.6) + ')'); gg.addColorStop(0.5, 'rgba(255,150,40,' + 0.6 * (1 - ph) + ')'); gg.addColorStop(1, 'rgba(255,80,20,0)');
+      const gg = ctx.createRadialGradient(x, y, 0, x, y, 12 * z); gg.addColorStop(0, 'rgba(255,240,170,' + 0.9 * (1 - ph) * (1 - age * 0.6) + ')'); gg.addColorStop(0.5, 'rgba(' + (f.rgb || '255,150,40') + ',' + 0.6 * (1 - ph) + ')'); gg.addColorStop(1, 'rgba(' + (f.rgb || '255,80,20') + ',0)');
       ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(x, y, 12 * z, 0, 6.3); ctx.fill();
     }
-    ctx.strokeStyle = 'rgba(255,200,90,' + (1 - age) + ')'; ctx.lineWidth = 3 * z; ctx.beginPath(); ctx.ellipse(0, 0, (14 + age * 36) * z, (7 + age * 18) * z, 0, 0, 6.3); ctx.stroke();
+    ctx.strokeStyle = 'rgba(' + (f.rgb || '255,200,90') + ',' + (1 - age) + ')'; ctx.lineWidth = 3 * z; ctx.beginPath(); ctx.ellipse(0, 0, (14 + age * 36) * z, (7 + age * 18) * z, 0, 0, 6.3); ctx.stroke();
   } else if (f.k === 'burst') {
     ctx.translate(sx, sy - H); ctx.globalAlpha = 1 - age; ctx.strokeStyle = f.color; ctx.lineWidth = 5 * z;
     for (let i = 0; i < 12; i++) { const a = i * 0.5236 + (f.rot || 0), r0 = (8 + age * 20) * z, r1 = (22 + age * 52) * z; ctx.beginPath(); ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); ctx.stroke(); }
   }
   ctx.restore();
+}
+
+function genericFx(m, e, dirA) {   // เอฟเฟกต์ตามธีมของสกิล (ทุกอาชีพ) — เลือกสีจากชื่อสกิล
+  const sk = G.SKILLS[m.s]; if (!sk) return;
+  const now = performance.now(), mo = motifOf(sk) || 'steel', hex = MCOL[mo] || '#ffffff', rgb = hex2rgb(hex).join(','), tx = m.tx, ty = m.ty, k = m.k;
+  const at = (fn, ms) => setTimeout(fn, ms);
+  const slash = (ox, oy, x, y, col, len, tilt, d, dl) => fx.push({ k: 'slash', ox, oy, x, y, color: col, len, tilt, dur: d || 380, t0: now + (dl || 0) });
+  const rgba = a => 'rgba(' + rgb + ',' + a + ')';
+  const impact = (x, y, big) => { fx.push({ k: 'burst', x, y, color: hex, rot: Math.random(), dur: 480, t0: performance.now() }); fx.push({ k: 'shock', x, y, color: rgba(0.95), dirA: 0, dur: big ? 560 : 420, t0: performance.now() }); if (mo === 'fire' || mo === 'ice' || mo === 'poison' || mo === 'blood' || mo === 'dark' || mo === 'bolt') fx.push({ k: 'flame', x, y, rgb, dur: 800, t0: performance.now() }); };
+  const physical = ['blade', 'dagger', 'spear', 'wind'].indexOf(mo) >= 0, melee = ['fist', 'hammer'].indexOf(mo) >= 0;
+  if (k === 'A' || k === 'Z') {
+    const big = k === 'Z', n = big ? 3 : 1;
+    if (mo === 'claw') { for (let i = 0; i < 3; i++) slash(e.x, e.y, tx + (i - 1) * 0.12, ty - (i - 1) * 0.12, rgba(0.95), 62, -1.4, 360, i * 40); }
+    else if (melee) { impact(tx, ty, big); shakeCam(big ? 9 : 5, 220); }
+    else { for (let i = 0; i < n; i++) slash(e.x, e.y, tx, ty, rgba(0.9), 70 - i * 8, -1.4 + i * 0.9, 400, i * 70); if (big) impact(tx, ty, true); }
+    if (big) shakeCam(8, 260);
+    if (!melee && mo !== 'claw' && !physical) impact(tx, ty, big);
+  } else if (k === 'R' || k === 'T' || k === 'Y') {
+    const shape = mo === 'arrow' ? 'arrow' : mo === 'tech' ? 'bullet' : 'orb';
+    at(() => { impact(tx, ty, k !== 'R'); if (k === 'Y') shakeCam(6, 240); }, 240);
+    if (k !== 'R') at(() => fx.push({ k: 'burst', x: tx, y: ty, color: hex, rot: 0.4, dur: 520, t0: performance.now() }), 330);
+  } else if (k === 'B' || k === 'X') {
+    fx.push({ k: 'shock', x: e.x, y: e.y, color: rgba(0.95), dirA: 0, dur: 520, t0: now }); fx.push({ k: 'shock', x: e.x, y: e.y, color: 'rgba(255,255,255,0.8)', dirA: 0, dur: 620, t0: now + 90 });
+    fx.push({ k: 'burst', x: e.x, y: e.y, color: hex, rot: 0, dur: 520, t0: now }); if (k === 'X') { fx.push({ k: 'flame', x: e.x, y: e.y, rgb, dur: 1000, t0: now }); shakeCam(6, 260); } else shakeCam(3, 160);
+  } else if (k === 'U' || k === 'D') {
+    fx.push({ k: 'flame', x: e.x, y: e.y, rgb, dur: 1300, t0: now }); fx.push({ k: 'burst', x: e.x, y: e.y, color: hex, dur: 520, t0: now });
+  } else if (k === 'H') {
+    fx.push({ k: 'flame', x: e.x, y: e.y, rgb: '120,240,160', dur: 1400, t0: now }); fx.push({ k: 'burst', x: e.x, y: e.y, color: '#bff5c8', dur: 520, t0: now });
+  }
 }
 function skillFx(m, e) {   // เอฟเฟกต์ของสกิลนักดาบ (เรียกจาก event 'sk')
   const now = performance.now(), tx = m.tx, ty = m.ty, dirA = Math.atan2(S2Y(proj(tx, ty)[1]) - S2Y(proj(e.x, e.y)[1]), S2X(proj(tx, ty)[0]) - S2X(proj(e.x, e.y)[0]));
@@ -1495,6 +1595,7 @@ function skillFx(m, e) {   // เอฟเฟกต์ของสกิลน�
       fx.push({ k: 'burst', x: tx, y: ty, color: '#fff3b0', rot: 0.3, dur: 420, t0: now }); shakeCam(6, 230); break;
     case 'valor':
       fx.push({ k: 'flame', x: e.x, y: e.y, dur: 1300, t0: now }); fx.push({ k: 'burst', x: e.x, y: e.y, color: '#ffc861', dur: 520, t0: now }); shakeCam(2.5, 200); break;
+    default: genericFx(m, e, dirA);
   }
 }
 function drawIcon(g, key) {
@@ -2496,8 +2597,9 @@ function handle(m) {
       const e = ents.get(m.id); if (!e) break;
       const rgb = hex2rgb(accentOf(m.job || 'Adventurer')).join(','), k = m.k;
       e.swingT = performance.now();
-      if (m.job === 'Swordman') skillFx(m, e);
-      if (m.job === 'Swordman' && G.SKILLS[m.s]) floatText(e.x, e.y - 0.8, G.SKILLS[m.s].name.replace(/ I+$/, '') + '!', '#ffe27a', true);
+      if (/^b[0-4]$/.test(m.s) && e.id === myId && my.borrow[+m.s[1]]) m = Object.assign({}, m, { s: my.borrow[+m.s[1]] });
+      skillFx(Object.assign({ k }, m), e);
+      if (G.SKILLS[m.s] && !/^(strike|whirl|mend)$/.test(m.s)) floatText(e.x, e.y - 0.8, G.SKILLS[m.s].name.replace(/ I+$/, '') + '!', '#ffe27a', true);
       if (k === 'A' || k === 'Z') { ring(m.tx, m.ty, rgb, k === 'Z' ? 1.6 : 0.9); }
       else if (k === 'R') { fx.push({ k: 'proj', x: e.x, y: e.y, x2: m.tx, y2: m.ty, color: 'rgb(' + rgb + ')', shape: 'arrow', dur: 240, t0: performance.now() }); ring(m.tx, m.ty, rgb, 0.8); }
       else if (k === 'B' || k === 'X') { ring(e.x, e.y, rgb, (m.r || 2.4) / 1.5); setTimeout(() => ring(e.x, e.y, '255,255,255', (m.r || 2.4) / 2.2), 120); }
@@ -3640,7 +3742,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 window.__bc = {
-  ents, mons, my, fx, skillFx, get map() { return map; }, get zone() { return curZone; }, get zoom() { return zoom; }, set zoom(v) { zoom = v; },
+  ents, mons, my, fx, skillFx, iconEl, G, get map() { return map; }, get zone() { return curZone; }, get zoom() { return zoom; }, set zoom(v) { zoom = v; },
   setMode(m, snap) { timeMode = m; if (snap) { const h = targetHour(); tintNow = tintAt(h); LIGHTS = lightsAt(h); } },
   cam, send(m) { return net && net.send(m); },
   gallery(c, types, cols, sc, t, extra) {   // ใช้ตรวจภาพมอนสเตอร์ทั้งหมดบนผืนผ้าใบแยก
